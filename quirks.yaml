@@ -1,0 +1,8 @@
+0010FA:
+  name: 'Apple'
+  power_on:
+    op: 0x44
+    data: 0x6D
+  power_off:
+    op: 0x44
+    data: 0x6C

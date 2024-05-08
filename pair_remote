@@ -1,0 +1,5 @@
+#!/usr/bin/sh
+
+. ./bin/activate
+
+sudo `which python` ./pair_tool.py $1 $2 $3

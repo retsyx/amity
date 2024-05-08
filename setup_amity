@@ -1,0 +1,165 @@
+#!/usr/bin/sh
+
+set -xe
+
+NAME=amity
+ROOT_DIR=~
+APP_DIR=$ROOT_DIR/$NAME
+LOG_DIR=$APP_DIR/log
+LOG_PATH=$LOG_DIR/$NAME.log
+
+ACTION=$1
+
+# This script is idempotent.
+
+# Perform overall setup if not asked to perform a specific action
+
+if [ -z ${ACTION} ]; then
+
+# System setup
+
+CONFIG_TXT_DIR=/boot/firmware
+CONFIG_TXT_PATH=$CONFIG_TXT_DIR/config.txt
+
+MARKER="# $NAME config.txt changes"
+
+if ! grep -q "$MARKER" "$CONFIG_TXT_PATH"; then
+
+echo "Disabling boot time CEC shenanigans"
+
+sudo fsck -y "$CONFIG_TXT_DIR" || true
+sudo mount "$CONFIG_TXT_DIR" --options remount,rw
+sudo cp "$CONFIG_TXT_PATH" "$CONFIG_TXT_PATH".$NAME.backup
+TEMP_PATH=`mktemp`
+
+cp "$CONFIG_TXT_PATH" "$TEMP_PATH"
+
+# Add these lines to the raspbian config.txt file to change the OSD display string, and
+# to stop this machine from display stealing.
+sudo cat >> "$TEMP_PATH" << EOF
+$MARKER
+hdmi_ignore_cec_init:0=1
+hdmi_ignore_cec_init:1=1
+cec_osd_name=$NAME
+EOF
+
+sudo cp "$TEMP_PATH" "$CONFIG_TXT_PATH"
+
+sudo mount "$CONFIG_TXT_DIR" --options remount,ro
+
+fi
+
+sudo apt update
+sudo apt install -y cec-utils
+sudo apt install -y git
+sudo apt install -y libcec-dev build-essential python3-dev
+sudo apt install -y libglib2.0-dev
+sudo apt install -y vim
+
+# App setup
+
+cd "$ROOT_DIR"
+
+if [ ! -d "$APP_DIR" ]; then
+    git clone https://github.com/retsyx/amity $NAME
+    # Setup a venv
+    python -m venv "$APP_DIR"
+else
+    cd $APP_DIR
+    git pull
+    cd ..
+fi
+
+mkdir -p "$LOG_DIR"
+
+cd "$LOG_DIR"
+
+# Activate venv, and pip install requirements
+cd "$APP_DIR"
+
+. ./bin/activate
+pip install --upgrade -r requirements.txt
+
+# Clone, build, and install our custom version of bluepy
+cd "$ROOT_DIR"
+if [ ! -d "$ROOT_DIR/bluepy" ]; then
+    git clone https://github.com/retsyx/bluepy
+else
+    cd bluepy
+    git pull
+    cd ..
+fi
+
+cd bluepy
+python ./setup.py install
+
+# Clone, build, and install our custom version of python-cec
+cd "$ROOT_DIR"
+if [ ! -d "$ROOT_DIR/python-cec" ]; then
+    git clone https://github.com/retsyx/python-cec
+else
+    cd python-cec
+    git pull
+    cd ..
+fi
+
+cd python-cec
+python ./setup.py install
+
+cd "$APP_DIR"
+
+# Warm up pycache
+python -c "import gestures, hdmi, remote, tools"
+
+fi # Overall setup
+
+cd "$APP_DIR"
+
+# Startup setup
+
+RUN_PATH="$APP_DIR/bin/run-$NAME.sh"
+
+cat > "$RUN_PATH" << EOF
+#!/usr/bin/sh
+
+cd "$APP_DIR"
+. ./bin/activate
+
+export CEC_OSD_NAME="$NAME"
+
+echo Running...
+$APP_DIR/main.py
+EOF
+
+chmod +x "$RUN_PATH"
+
+mkdir -p ~/.config/systemd/user
+
+cat > ~/.config/systemd/user/$NAME.service << EOF
+[Unit]
+Description=$NAME HDMI-CEC controller
+
+[Service]
+ExecStart=$RUN_PATH
+Restart=always
+WorkingDirectory=$APP_DIR
+
+[Install]
+WantedBy=default.target
+EOF
+
+loginctl enable-linger
+
+if [ "$ACTION" = "enable" ]; then
+
+systemctl --user start "$NAME"
+systemctl --user enable "$NAME"
+
+fi # "$ACTION" = "enable"
+
+if [ "$ACTION" = "disable" ]; then
+
+systemctl --user stop "$NAME"
+systemctl --user disable "$NAME"
+
+fi # "$ACTION" = "disable"
