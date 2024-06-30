@@ -54,6 +54,7 @@ sudo apt install -y cec-utils
 sudo apt install -y git
 sudo apt install -y libcec-dev build-essential python3-dev
 sudo apt install -y libglib2.0-dev
+sudo apt install -y libgl1 libegl1
 sudo apt install -y vim
 
 # App setup

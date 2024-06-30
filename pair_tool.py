@@ -5,8 +5,6 @@
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
-#
-# This code is derived from code written by Yanndroid (https://github.com/Yanndroid)
 
 import tools
 
@@ -17,9 +15,6 @@ import argparse, logging, os, subprocess, shutil, sys, time, yaml
 from bluepy import btle
 from bluepy.btle import AssignedNumbers
 from remote import PnpInfo
-
-PNP_GEN_1 = 0x0266
-PNP_GEN_2 = 0x0314
 
 class Scanner(object):
     def __init__(self):
@@ -157,7 +152,6 @@ def main():
         if not args.keep and old_addr is not None and old_addr != public_addr:
             log.debug(f'Unpairing previous remote {old_addr}')
             subprocess.run(['/usr/bin/bluetoothctl', 'remove', old_addr], capture_output=True)
-
     else:
         log.info(f'Remote configuration is:\n')
         log.info(f'remote:\n    mac: {public_addr}\n\n')

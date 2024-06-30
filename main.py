@@ -19,7 +19,7 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, os, pprint, sched, subprocess, time, yaml
+import asyncio, os, pprint, subprocess, time, yaml
 
 if os.environ.get('CEC_OSD_NAME') is None:
     os.environ['CEC_OSD_NAME'] = 'amity'
@@ -27,15 +27,16 @@ if os.environ.get('CEC_OSD_NAME') is None:
 import remote
 import gestures
 import hdmi
+import messaging
+import ui
 
 class Hub(remote.RemoteListener):
     def __init__(self, controller):
-        self.sched = sched.scheduler(time.time, time.sleep)
         self.controller = controller
-        self.wait_for_release = True
+        self.wait_for_release = False
         self.button_state = 0
         self.active_button = 0
-        self.active_key = 0
+        self.active_key = hdmi.Key.NO_KEY
         self.repeat_timer = None
         self.repeat_delay_sec = 0.2
         self.repeat_period_sec = 0.1
@@ -44,26 +45,68 @@ class Hub(remote.RemoteListener):
         self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback)
         self.swipe_key = None
         self.swipe_counter = 0
+        self.pipe = None
+        self.set_wait_for_release()
+
+    def set_wait_for_release(self):
+        self.wait_for_release = True
+        loop = asyncio.get_running_loop()
+        loop.call_later(1, self.auto_clear_wait_for_release)
+
+    def auto_clear_wait_for_release(self):
+        self.wait_for_release = False
+
+    def set_pipe(self, pipe):
+        self.pipe = pipe
+        self.pipe.start_server_task(self)
+
+    # Duck typed methods for messaging
+    def client_set_activity(self, index):
+        if index == -1:
+            self.standby()
+        else:
+            self.set_activity(index)
+
+    def client_press_key(self, key):
+        log.info(f'Client press key {key:02X}')
+        self.press_key(key, self.repeat_delay_sec)
+
+    def client_release_key(self, key):
+        log.info(f'Client release key {key:02X}')
+        self.release_key()
+
+    def standby(self):
+        if self.controller.current_activity is hdmi.no_activity:
+            log.info('Forcing standby')
+            self.controller.force_standby()
+        else:
+            self.controller.standby()
+        self.set_wait_for_release()
 
     def set_activity(self, index):
-        self.controller.set_activity(index)
-        self.wait_for_release = True
+        if not self.controller.set_activity(index):
+            return False
+        self.set_wait_for_release()
+        self.pipe.notify_set_activity(index)
+        return True
 
-    def press_key(self, remote, key, repeat_in_sec=None):
+    def press_key(self, key, repeat_in_sec=None):
         self.active_key = key
-        self.controller.press_key(key)
-        if repeat_in_sec:
-            loop = asyncio.get_running_loop()
-            self.repeat_timer = loop.call_later(repeat_in_sec, self.event_timer, remote)
-
-    def change_volume(self, remote, button, repeat_in_sec=None):
-        if button & remote.profile.buttons.VOLUME_UP:
+        if key == hdmi.Key.VOLUME_UP:
             self.controller.volume_up()
-        elif button & remote.profile.buttons.VOLUME_DOWN:
+        elif key == hdmi.Key.VOLUME_DOWN:
             self.controller.volume_down()
+        else:
+            self.controller.press_key(key)
         if repeat_in_sec:
             loop = asyncio.get_running_loop()
-            self.repeat_timer = loop.call_later(repeat_in_sec, self.event_timer, remote)
+            self.repeat_timer = loop.call_later(repeat_in_sec, self.event_timer)
+
+    def release_key(self):
+        if self.active_key != hdmi.Key.NO_KEY:
+            if self.active_key not in (hdmi.Key.VOLUME_UP, hdmi.Key.VOLUME_DOWN):
+                self.controller.release_key()
+            self.active_key = hdmi.Key.NO_KEY
 
     def swipe(self):
         if self.swipe_counter == 0: return False
@@ -72,22 +115,19 @@ class Hub(remote.RemoteListener):
         self.swipe_counter -= 1
         if self.swipe_counter > 0:
             loop = asyncio.get_running_loop()
-            self.repeat_timer = loop.call_later(self.repeat_period_sec, self.event_timer, None)
+            self.repeat_timer = loop.call_later(self.repeat_period_sec, self.event_timer)
         else:
             log.info(f'Swipe is complete')
             self.controller.release_key()
             self.swipe_key = None
         return True
 
-    def event_timer(self, remote):
+    def event_timer(self):
         if self.swipe():
             return
-        if self.active_button == 0:
+        if self.active_key == hdmi.Key.NO_KEY:
             return
-        if self.active_button & (remote.profile.buttons.VOLUME_UP | remote.profile.buttons.VOLUME_DOWN):
-            self.change_volume(remote, self.active_button, self.repeat_period_sec)
-        else:
-            self.press_key(remote, self.active_key, self.repeat_period_sec)
+        self.press_key(self.active_key, self.repeat_period_sec)
 
     def event_button(self, remote, buttons: int):
         btns = remote.profile.buttons
@@ -121,8 +161,7 @@ class Hub(remote.RemoteListener):
             elif buttons & btns.POWER:
                 # Broadcast a standby only on the initial button press, not other state changes
                 if self.button_state == btns.RELEASED:
-                    log.info('Forcing standby')
-                    self.controller.force_standby()
+                    self.standby()
                     self.active_button = btns.POWER
         else: # We are in an activity, control it...
             self.handle_activity_button(remote, buttons)
@@ -186,9 +225,7 @@ class Hub(remote.RemoteListener):
                 if self.repeat_timer is not None:
                     self.repeat_timer.cancel()
                 self.active_button = btns.RELEASED
-                if self.active_key != 0:
-                    self.controller.release_key()
-                    self.active_key = 0
+                self.release_key()
                 # We can process other keys now...
 
         released_button = self.button_state & ~button
@@ -207,48 +244,48 @@ class Hub(remote.RemoteListener):
         elif is_macro(button, MACRO_4):
             self.set_activity(4)
         elif button & btns.HOME:
-            self.press_key(remote, hdmi.Key.ROOT_MENU, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.ROOT_MENU, self.repeat_delay_sec)
             self.active_button = btns.HOME
         elif button & btns.VOLUME_UP:
+            self.press_key(hdmi.Key.VOLUME_UP, self.repeat_delay_sec)
             self.active_button = btns.VOLUME_UP
-            self.change_volume(remote, self.active_button, self.repeat_delay_sec)
         elif button & btns.VOLUME_DOWN:
+            self.press_key(hdmi.Key.VOLUME_DOWN, self.repeat_delay_sec)
             self.active_button = btns.VOLUME_DOWN
-            self.change_volume(remote, self.active_button, self.repeat_delay_sec)
         elif button & btns.SELECT:
-            self.press_key(remote, hdmi.Key.SELECT, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.SELECT, self.repeat_delay_sec)
             self.active_button = btns.SELECT
         elif button & btns.BACK:
-            self.press_key(remote, hdmi.Key.BACK, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.BACK, self.repeat_delay_sec)
             self.active_button = btns.BACK
         elif button & btns.MUTE:
             self.controller.toggle_mute()
             self.active_button = btns.MUTE
         elif button & btns.PLAY_PAUSE:
-            self.press_key(remote, hdmi.Key.PAUSE_PLAY, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.PAUSE_PLAY, self.repeat_delay_sec)
             self.active_button = btns.PLAY_PAUSE
         elif button & btns.UP:
-            self.press_key(remote, hdmi.Key.UP, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.UP, self.repeat_delay_sec)
             self.active_button = btns.UP
         elif button & btns.RIGHT:
-            self.press_key(remote, hdmi.Key.RIGHT, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.RIGHT, self.repeat_delay_sec)
             self.active_button = btns.RIGHT
         elif button & btns.DOWN:
-            self.press_key(remote, hdmi.Key.DOWN, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.DOWN, self.repeat_delay_sec)
             self.active_button = btns.DOWN
         elif button & btns.LEFT:
-            self.press_key(remote, hdmi.Key.LEFT, self.repeat_delay_sec)
+            self.press_key(hdmi.Key.LEFT, self.repeat_delay_sec)
             self.active_button = btns.LEFT
         elif released_button & btns.POWER:
-            self.controller.standby()
-            self.wait_for_release = True
+            self.pipe.notify_set_activity(-1)
+            self.standby()
 
 async def main():
     global args
     loop = asyncio.get_running_loop()
 
-    log.info('Initializing CEC...')
-    hdmi.cec_init()
+    interface = ui.Main()
+
     log.info('Loading config...')
     with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
@@ -257,13 +294,36 @@ async def main():
     activities = [hdmi.Activity(ad) for ad in config['activities']]
     log.info('Runtime activities:')
     log.info(pprint.pformat(activities))
+
+    dev = None
+    adapter = config.get('adapter')
+    if adapter is not None:
+        dev = adapter['device']
+
+    log.info(f'Initializing CEC on device {dev}...')
+    hdmi.cec_init(dev)
+
+    activity_names = [activity.name for activity in activities]
+    interface.set_activity_names(['Off',] + activity_names)
+
     controller = hdmi.Controller(loop, activities)
+    hub = Hub(controller)
+
+    # Wire hub and interface to talk to each other
+    pipe = messaging.Pipe()
+    hub.set_pipe(pipe)
+    interface.set_pipe(pipe)
+
+    # Write hub and remote to talk to each other
+    wrapper = remote.RemoteListenerAsyncWrapper(loop, hub)
+
     mac = config['remote']['mac']
     log.info(f'Calling bluetoothctl to disconnect MAC {mac}')
     subprocess.run(['/usr/bin/bluetoothctl', 'disconnect', mac], capture_output=True)
     log.info(f'Connecting to remote with MAC {mac}')
-    wrapper = remote.RemoteListenerAsyncWrapper(loop, Hub(controller))
-    await asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
+    siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
+
+    await asyncio.gather(siri, interface.run())
 
 if __name__ == '__main__':
     asyncio.run(main())

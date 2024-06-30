@@ -17,6 +17,7 @@ import pprint, sched, time, yaml
 import remote
 
 class Key(IntEnum):
+    NO_KEY = -1
     SELECT = 0x00
     UP = 0x01
     DOWN = 0x02
@@ -24,6 +25,8 @@ class Key(IntEnum):
     RIGHT = 0x04
     ROOT_MENU = 0x09
     BACK = 0x0D
+    VOLUME_UP = 0x41
+    VOLUME_DOWN = 0x42
     TOGGLE_MUTE = 0x43
     PAUSE_PLAY = 0x61
     SET_INPUT = 0x69
@@ -39,10 +42,10 @@ def isiterable(o):
 
 # Calling cec.init() twice locks up the process. Guard it so I can be lazy during development...
 cec_initialized = False
-def cec_init():
+def cec_init(dev=None):
     global cec_initialized
     if not cec_initialized:
-        cec.init()
+        cec.init(dev)
         cec_initialized = True
 
 no_activity_descriptor = { 'name': 'No Activity',
@@ -237,7 +240,7 @@ class Controller(object):
     def set_activity(self, index):
         if index < -1 or index >= len(self.activities):
             log.info(f'Activity index {index} is out of bounds')
-            return
+            return False
         ca = self.current_activity
         if index >= 0:
             na = self.activities[index]
@@ -248,7 +251,7 @@ class Controller(object):
         log.info(f'Setting activity {na.name} from activity {ca.name}')
         if na is ca:
             self.fix_current_activity()
-            return
+            return True
         # Order probably matters so don't use a set().
         current_devices = [ca.audio, ca.switch.device, ca.source, ca.display]
         new_devices = [na.audio, na.switch.device, na.source, na.display]
@@ -274,6 +277,7 @@ class Controller(object):
         # XXX May need to add a delay before SET INPUT
         self.set_activity_input(na)
         self.current_activity = na
+        return True
 
     def fix_current_activity(self):
         ca = self.current_activity
