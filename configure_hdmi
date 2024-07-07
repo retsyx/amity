@@ -2,6 +2,4 @@
 
 . ./bin/activate
 
-export CEC_OSD_NAME="amity"
-
 ./hdmi_tool.py $1 $2 $3 $4

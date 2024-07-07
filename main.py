@@ -19,10 +19,7 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, os, pprint, subprocess, time, yaml
-
-if os.environ.get('CEC_OSD_NAME') is None:
-    os.environ['CEC_OSD_NAME'] = 'amity'
+import asyncio, pprint, subprocess, time, yaml
 
 import remote
 import gestures
@@ -295,18 +292,17 @@ async def main():
     log.info('Runtime activities:')
     log.info(pprint.pformat(activities))
 
+    log.info(f'Initializing UI...')
+    activity_names = [activity.name for activity in activities]
+    interface.set_activity_names(['Off',] + activity_names)
+
     dev = None
     adapter = config.get('adapter')
     if adapter is not None:
         dev = adapter['device']
 
     log.info(f'Initializing CEC on device {dev}...')
-    hdmi.cec_init(dev)
-
-    activity_names = [activity.name for activity in activities]
-    interface.set_activity_names(['Off',] + activity_names)
-
-    controller = hdmi.Controller(loop, activities)
+    controller = hdmi.Controller(dev, 'amity', loop, activities)
     hub = Hub(controller)
 
     # Wire hub and interface to talk to each other

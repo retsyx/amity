@@ -40,14 +40,6 @@ def isiterable(o):
     except:
         return False
 
-# Calling cec.init() twice locks up the process. Guard it so I can be lazy during development...
-cec_initialized = False
-def cec_init(dev=None):
-    global cec_initialized
-    if not cec_initialized:
-        cec.init(dev)
-        cec_initialized = True
-
 no_activity_descriptor = { 'name': 'No Activity',
                 'display': None,
                 'source': None,
@@ -167,24 +159,39 @@ class Device(object):
         self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_RELEASE)
 
 class Controller(object):
-    def __init__(self, loop, activities):
+    def __init__(self, cec_dev, osd_name, loop, activities):
+        if cec_dev is None:
+            self.adapter = cec.Adapter(name=osd_name, type=cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
+        else:
+            self.adapter = cec.Adapter(dev=cec_dev, name=osd_name, type=cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
         self.loop = loop
         self.rescan_devices()
         self.activities = activities
         self.current_activity = no_activity
-        cec.add_callback(self.cec_callback, cec.EVENT_ALL)
+        self.adapter.add_callback(self.cec_callback, cec.EVENT_ALL)
 
-    def cec_callback(self, event_type, event):
-        #log.info(f'EVENT {event_type} {event}')
-        if len(self.activities) == 0:
-            # We are running as a tool, not a controller, don't do anything
-            return
-        if event_type & cec.EVENT_COMMAND:
-            if event['opcode'] == cec.CEC_OPCODE_REQUEST_ACTIVE_SOURCE:
-                if self.loop is None:
-                    self.stop_source_thief(event['initiator'])
-                else:
-                    self.loop.call_soon_threadsafe(self.stop_source_thief, event['initiator'])
+    def cec_callback(self, *event):
+        #log.info(f'EVENT {event}')
+        event_type = event[0]
+        event = event[1:]
+        match event_type:
+            case cec.EVENT_LOG:
+                level, time, msg = event
+                log.info(f'EVENT LOG {time}: {level} - {msg}')
+            case cec.EVENT_COMMAND:
+                log.info(f'EVENT COMMAND {event_type} {event}')
+                if len(self.activities) == 0:
+                    # We are running as a tool, not a controller, don't do anything
+                    return
+                if event_type & cec.EVENT_COMMAND:
+                    if event['opcode'] == cec.CEC_OPCODE_ACTIVE_SOURCE:
+                        if self.loop is None:
+                            self.stop_source_thief(event['initiator'])
+                        else:
+                            self.loop.call_soon_threadsafe(self.stop_source_thief, event['initiator'])
+            case cec.EVENT_ACTIVATED:
+                active, logical_address = event
+                log.info(f'EVENT ACTIVATED address {logical_address} {active}')
 
     def stop_source_thief(self, device_address):
         log.info(f'Device address {device_address} wants source')
@@ -214,7 +221,7 @@ class Controller(object):
 
     def scan_devices(self):
         log.info('Scanning devices...')
-        cec_devices = cec.list_devices()
+        cec_devices = self.adapter.list_devices()
         devices = {}
         for addr, cec_device in cec_devices.items():
             devices[cec_device.osd_string] = Device(cec_device)
@@ -302,19 +309,19 @@ class Controller(object):
             device.set_input(activity.switch.input)
 
     def volume_up(self):
-        cec.volume_up()
+        self.adapter.volume_up()
 
     def volume_down(self):
-        cec.volume_down()
+        self.adapter.volume_down()
 
     def toggle_mute(self):
-        cec.toggle_mute()
+        self.adapter.toggle_mute()
 
     def standby(self):
         self.set_activity(-1)
 
     def force_standby(self):
-        cec.transmit(cec.CECDEVICE_BROADCAST, cec.CEC_OPCODE_STANDBY)
+        self.adapter.transmit(cec.CECDEVICE_BROADCAST, cec.CEC_OPCODE_STANDBY)
 
     def press_key(self, key, repeat=None):
         cs = self.current_activity.source

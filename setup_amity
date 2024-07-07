@@ -126,8 +126,6 @@ cat > "$RUN_PATH" << EOF
 cd "$APP_DIR"
 . ./bin/activate
 
-export CEC_OSD_NAME="$NAME"
-
 echo Running...
 $APP_DIR/main.py
 EOF

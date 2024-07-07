@@ -12,15 +12,12 @@ import tools
 
 log = tools.logger('log/hdmi_tool')
 
-import argparse, logging, os, shutil, sys, time, yaml
-
-if os.environ.get('CEC_OSD_NAME') is None:
-    os.environ['CEC_OSD_NAME'] = 'amity'
+import argparse, logging, shutil, sys, time, yaml
 
 import hdmi
 
 def scan():
-    controller = hdmi.Controller(None, [])
+    controller = hdmi.Controller(None, 'amity', None, [])
     log.info('Scanning HDMI devices...')
     devices = controller.scan_devices()
     log.info('\nName      \tVendor     \tAddress   \tPhysical Address\n')
@@ -32,7 +29,7 @@ playback_device_addresses = (4, 8, 9, 11)
 audio_system_address = 5
 
 def recommend(should_write_config):
-    controller = hdmi.Controller(None, [])
+    controller = hdmi.Controller(None, 'amity', None, [])
 
     devices = controller.scan_devices()
 
@@ -107,7 +104,7 @@ def recommend(should_write_config):
         log.info(s)
 
 def scan_input(input_device_name):
-    controller = hdmi.Controller(None, [])
+    controller = hdmi.Controller(None, 'amity', None, [])
     log.info('Scanning HDMI devices...')
     devices = controller.scan_devices()
     if not input_device_name:
@@ -169,9 +166,6 @@ def main():
         tools.set_log_level('debug')
 
     log.addHandler(logging.StreamHandler(sys.stdout))
-
-    log.info('Initializing CEC...')
-    hdmi.cec_init()
 
     if args.action == 'scan':
         scan()
