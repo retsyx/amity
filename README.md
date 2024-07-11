@@ -11,7 +11,6 @@ Home theater control over HDMI-CEC with a Siri Remote
     * [Quick Sanity Scan](#quick-sanity-scan)
     * [Automatic Activity Recommendation](#automatic-activity-recommendation)
     * [Editing config.yaml](#editing-configyaml)
-    * [Scanning HDMI Inputs](#scanning-hdmi-inputs)
 * [Starting Amity](#starting-amity)
 * [Stopping Amity](#stopping-amity)
 * [Usage](#usage)
@@ -30,7 +29,9 @@ Testing of Amity has been limited to the equipment I have. It works for me. It m
 
 Amity is known to work (with my equipment, anyway) with a traditional setup centered around a receiver. In my case, I have an LG TV connected to a Denon receiver output. I have an Apple TV, PlayStation, and Nintendo Switch (that has a practically non-functioning HDMI-CEC implementation) connected to the receiver's inputs. When I want to change what I'm watching, I change inputs on the receiver.
 
-Amity does not support eArc (an Amity limitation), and may not be able to switch inputs on TVs - my LG TV doesn't respond to input selection HDMI-CEC commands (there may be workarounds, or secret vendor commands, but I haven't found them).
+Amity does not support eArc at the moment.
+
+Amity does not work with the Raspberry Pi's HDMI connectors. Amity works by pretending to be a TV to the receiver, and all the devices connected to it, and by tricking the TV into thinking there is only one device attached to it. This is done by splicing into the HDMI-CEC bus between the receiver, and the TV. Splicing requires either stripping an existing HDMI cable, carefully pulling out the CEC, and Ground wires without disturbing the other wires in the cable, and connecting them to Raspberry Pi GPIO pins or using a HDMI-CEC breakout board that preserves, and passes through the HDMI A/V signals without noticeably degrading them.
 
 With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Amity.
 
@@ -38,7 +39,7 @@ With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Am
 
 * Gen 2, and later, Siri Remotes require Bluetooth 5.0. As a result, Raspberry Pi 4, or later is required, along with an appropriate power supply. Network access is required for initial setup but not when controlling your home theater.
 * An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work.
-* An HDMI cable
+* An HDMI-CEC splice (either a stripped, spliced cable, or a dedicated board and an extra HDMI cable)
 
 ## Setup
 
@@ -78,12 +79,11 @@ If successful, then the remote has been paired, and is ready for use. In additio
 
 ### HDMI Configuration
 
-Amity uses a concept of activities to organize the different uses of a home theater system, similar to Harmony remotes. Every activity has a source device (i.e. Apple TV, or PlayStation), an audio output device (i.e. a receiver, or TV for volume commands), an HDMI input switching device (i.e. a receiver, or TV), and a display (typically a TV). Amity supports up to 5 activities (because of the small number of buttons on Siri remotes).
+Amity uses a concept of activities to organize the different uses of a home theater system, similar to Harmony remotes. Every activity has a source device (i.e. Apple TV, or PlayStation), an audio output device (i.e. a receiver, or TV for volume commands), an HDMI input switching device (i.e. a receiver, or TV), and a display (typically a TV). Amity supports up to 5 activities (because that is the number of buttons available on Siri remotes).
 
-Configuring activities is a bit confusing at first, but once the basics are configured, it's easy to manage.
+Configuring activities is fairly straightforward thanks to HDMI-CEC.
 
-
-Plug in Amity's HDMI cable into the receiver! Note that on Raspberry Pi 4, there are two micro HDMI ports. Insert the cable into the port closer to the USB-C power port.
+Plug in Amity's HDMI input into the requires GPIO pins...
 
 #### Quick Sanity Scan
 
@@ -91,11 +91,11 @@ Ensure that all home theater devices have HDMI-CEC enabled, and are discoverable
 
 `./configure_hdmi scan`
 
-Pay particular attention to the names of the devices. These are the HDMI On Screen Display (OSD) names of the devices, and are used to reference the devices in Amity configuration.
+Pay particular attention to the names of the devices. These are the HDMI On Screen Display (OSD) names of the devices, and are used to reference the devices in Amity configuration. Ensure that no two devices share the same name as that is presently not supported, and will lead to failures.
 
 Devices that don't appear in the list don't have HDMI-CEC enabled or have a very broken HDMI-CEC implementation (i.e. Nintendo Switch) that may only partially work in general.
 
-If you don't see any devices except the Amity device, ensure the HDMI cable is correctly inserted on both ends, and that it is inserted into the micro HDMI port closer to the USB-C power port on the Raspberry Pi.
+If you don't see any devices except the Amity device, ensure the HDMI-CEC splice cable is correctly attached.
 
 #### Automatic Activity Recommendation
 
@@ -110,6 +110,9 @@ The activity configuration was written into `config.yaml` in the Amity directory
 Here's an example `config.yaml` with two activities:
 
 ```yaml
+adapters:
+    front: /dev/cec1
+    back: /dev/cec0
 remote:
     mac: 12:34:56:78:9A:BC
 activities:
@@ -117,21 +120,17 @@ activities:
       display: TV
       source: Living Room
       audio: AVR-X3400H
-      switch:
-        device: AVR-X3400H
-        input: <SCAN INPUTS TO FIND ME>
     - name: Play PlayStation 5
       display: TV
       source: PlayStation 5
       audio: AVR-X3400H
-      switch:
-        device: AVR-X3400H
-        input: <SCAN INPUTS TO FIND ME>
 ```
 
-At the top is a `remote` section with the mac address of the paired remote. Below is the `activities` section with the activities that Amity guessed. The order of the activities matters. Each activity is assigned an activation button on the remote based on its position in the list of activities. More on this in the [usage](#usage) topic.
+At the top is an `adapters` section with the cec-gpio devices Amity discovered. The `front` adapter is connected to the TV (Amity pretending to be a playback device), the `back` adapter is connected to the receiver (Amity pretending to be a TV).
 
- Let's look at one activity in detail:
+After is a `remote` section with the mac address of the paired remote. Below is the `activities` section with the activities that Amity guessed. The order of the activities matters. Each activity is assigned an activation button on the remote based on its position in the list of activities. More on this in the [usage](#usage) topic.
+
+Let's look at one activity in detail:
 
 
 ```yaml
@@ -139,9 +138,6 @@ At the top is a `remote` section with the mac address of the paired remote. Belo
   display: TV
   source: Living Room
   audio: AVR-X3400H
-  switch:
-    device: AVR-X3400H
-    input: <SCAN INPUTS TO FIND ME>
 ```
 
 The fields are:
@@ -150,45 +146,10 @@ The fields are:
 * `display` - the HDMI OSD name of the display device. Typically a TV.
 * `source` - the HDMI OSD name of the AV source device.
 * `audio` - the HDMI OSD name of the audio output device, typically a receiver.
-* `switch` - a device that needs to have its inputs switched.
-* `switch device` - the HDMI OSD name of the device to be switched.
-* `switch input` - the index of the input to switch to.
 
-Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output, and HDMI input selection. That's pretty good but not complete. First, 'Living Room' is the OSD name of the Apple TV in the living room, so to make it easier to remember, we will change the name of the activity to 'Watch Apple TV'. In addition, instead of an index, the input is `<SCAN INPUTS TO FIND ME>`. So let's scan inputs..
+Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output. 'Living Room' is the OSD name of the Apple TV in the living. We can optionally change the name of the activity to 'Watch Apple TV' for our own reference but it is not necessary.
 
-#### Scanning HDMI inputs
-
-Scanning inputs consists of sequentially trying all the inputs on the switch device (i.e. a receiver, or TV) to see what they are connected to. You may need to turn on all the devices to know what each input is, or you can look at the input names on the TV or receiver display. In the example, the switch device is `AVR-X3400H`, a receiver.
-
-Turn on the TV, and receiver, grab a pencil, and paper and enter the scanning command into the terminal:
-
-`./configure_hdmi scan-inputs`
-
-Select the switch device to scan. Typically, this is the receiver. In our example, it is `AVR-X3400H`. Follow the prompts to sequentially try every HDMI input. Use pencil, and paper to write down what is connected to each input index as printed by `scan-inputs`.
-
-In the example, the receiver input for the Apple TV is 5, and for the PlayStation, it is 4. With input in hand, and a preferred activity name, we can now edit `config.yaml` to look like this:
-
-```yaml
-remote:
-    mac: 12:34:56:78:9A:BC
-activities:
-    - name: Watch Apple TV
-      display: TV
-      source: Living Room
-      audio: AVR-X3400H
-      switch:
-        device: AVR-X3400H
-        input: 5
-    - name: Play PlayStation 5
-      display: TV
-      source: PlayStation 5
-      audio: AVR-X3400H
-      switch:
-        device: AVR-X3400H
-        input: 4
-```
-
-Amity is now fully configured with a paired remote, and two activities for watching Apple TV, and playing with a PlayStation 5. Let's start it!
+And that's it... Amity is now fully configured with a paired remote, and two activities for watching Apple TV, and playing with a PlayStation 5. Let's start it!
 
 ## Starting Amity
 

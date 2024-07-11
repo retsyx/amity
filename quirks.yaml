@@ -1,8 +1,12 @@
-0010FA:
+'0010FA':
   name: 'Apple'
   power_on:
-    op: 0x44
-    data: 0x6D
+    data: '44:6D'
   power_off:
-    op: 0x44
-    data: 0x6C
+    data: '44:6C'
+'00E091':
+  name: 'LG'
+  power_on:
+    data: '89:03:00'
+
+

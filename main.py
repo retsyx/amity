@@ -88,21 +88,18 @@ class Hub(remote.RemoteListener):
         return True
 
     def press_key(self, key, repeat_in_sec=None):
-        self.active_key = key
-        if key == hdmi.Key.VOLUME_UP:
-            self.controller.volume_up()
-        elif key == hdmi.Key.VOLUME_DOWN:
-            self.controller.volume_down()
-        else:
-            self.controller.press_key(key)
+        self.controller.press_key(key)
         if repeat_in_sec:
+            self.active_key = key
             loop = asyncio.get_running_loop()
             self.repeat_timer = loop.call_later(repeat_in_sec, self.event_timer)
+        else:
+            self.active_key = hdmi.Key.NO_KEY
+            self.controller.release_key()
 
     def release_key(self):
         if self.active_key != hdmi.Key.NO_KEY:
-            if self.active_key not in (hdmi.Key.VOLUME_UP, hdmi.Key.VOLUME_DOWN):
-                self.controller.release_key()
+            self.controller.release_key()
             self.active_key = hdmi.Key.NO_KEY
 
     def swipe(self):
@@ -256,7 +253,7 @@ class Hub(remote.RemoteListener):
             self.press_key(hdmi.Key.BACK, self.repeat_delay_sec)
             self.active_button = btns.BACK
         elif button & btns.MUTE:
-            self.controller.toggle_mute()
+            self.press_key(hdmi.Key.TOGGLE_MUTE)
             self.active_button = btns.MUTE
         elif button & btns.PLAY_PAUSE:
             self.press_key(hdmi.Key.PAUSE_PLAY, self.repeat_delay_sec)
@@ -297,12 +294,20 @@ async def main():
     interface.set_activity_names(['Off',] + activity_names)
 
     dev = None
-    adapter = config.get('adapter')
-    if adapter is not None:
-        dev = adapter['device']
+    adapters = config.get('adapters')
+    if adapters is not None:
+        front_dev = adapters['front']
+        back_dev = adapters['back']
+    else:
+        front_dev = '/dev/cec1'
+        back_dev = '/dev/cec0'
 
     log.info(f'Initializing CEC on device {dev}...')
-    controller = hdmi.Controller(dev, 'amity', loop, activities)
+    controller = hdmi.Controller(front_dev,
+                                 back_dev,
+                                 'amity',
+                                 loop,
+                                 activities)
     hub = Hub(controller)
 
     # Wire hub and interface to talk to each other
@@ -319,7 +324,7 @@ async def main():
     log.info(f'Connecting to remote with MAC {mac}')
     siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
 
-    await asyncio.gather(siri, interface.run())
+    await asyncio.gather(siri, interface.run(), *controller.wait_on())
 
 if __name__ == '__main__':
     asyncio.run(main())

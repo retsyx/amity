@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2024.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
@@ -10,28 +8,10 @@ import tools
 
 log = tools.logger(__name__)
 
+import asyncio
+import pprint, yaml
 import cec
-from enum import IntEnum
-import pprint, sched, time, yaml
-
-import remote
-
-class Key(IntEnum):
-    NO_KEY = -1
-    SELECT = 0x00
-    UP = 0x01
-    DOWN = 0x02
-    LEFT = 0x03
-    RIGHT = 0x04
-    ROOT_MENU = 0x09
-    BACK = 0x0D
-    VOLUME_UP = 0x41
-    VOLUME_DOWN = 0x42
-    TOGGLE_MUTE = 0x43
-    PAUSE_PLAY = 0x61
-    SET_INPUT = 0x69
-    POWER_OFF = 0x6C
-    POWER_ON = 0x6D
+from cec import Device, DeviceType, Key, Message
 
 def isiterable(o):
     try:
@@ -40,23 +20,14 @@ def isiterable(o):
     except:
         return False
 
+def pretty_physical_address(address):
+    return '.'.join(list(f'{address:04X}'))
+
 no_activity_descriptor = { 'name': 'No Activity',
                 'display': None,
                 'source': None,
                 'audio': None,
-                'switch': { 'device': None, 'input': 0 }
                 }
-
-class Switch(object):
-    def __init__(self, d):
-        self.device = d['device']
-        self.input = d['input']
-
-    def __repr__(self):
-        d = { 'device': self.device,
-              'input': self.input
-            }
-        return pprint.pformat(d)
 
 class Activity(object):
     def __init__(self, d=no_activity_descriptor):
@@ -64,7 +35,6 @@ class Activity(object):
         self.display = d['display']
         self.source = d['source']
         self.audio = d['audio']
-        self.switch = Switch(d['switch'])
 
     def __repr__(self):
         d = {
@@ -72,7 +42,6 @@ class Activity(object):
             'display': self.display,
             'source': self.source,
             'audio': self.audio,
-            'switch': self.switch
         }
         return pprint.pformat(d)
 
@@ -80,16 +49,10 @@ no_activity = Activity()
 
 class Quirk(object):
     def __init__(self, d):
-        self.op = d['op']
-        data = d['data']
-        if not isiterable(data):
-            data = [data]
-        self.data = bytes(data)
+        self.data = [int(c, 16) for c in d['data'].split(':')]
+
     def __repr__(self):
-        return pprint.pformat({
-            'op': self.op,
-            'data': self.data
-        })
+        return ':'.join(f'{c:02X}' for c in self.data)
 
 class Device(object):
     quirks = None
@@ -99,99 +62,122 @@ class Device(object):
                 Device.quirks = yaml.safe_load(file)
         self.dev = dev
 
-    def name(self):
-        return self.dev.osd_string
+    @property
+    def osd_name(self):
+        return self.dev.osd_name
 
-    def vendor(self):
-        return self.dev.vendor
-
+    @property
     def address(self):
         return self.dev.address
 
+    @property
     def physical_address(self):
         return self.dev.physical_address
 
     def lookup_quirk(self, op):
-        v = Device.quirks.get(self.dev.vendor)
+        v = Device.quirks.get(f'{self.dev.vendor_id:06X}')
         if v is None: return None
         q = v.get(op)
         if q is None: return None
         return Quirk(q)
 
+    def be_quirky(self, op):
+        return False
+        quirk = self.lookup_quirk(op)
+        if not quirk:
+            return False
+        log.info(f'Using quirk {quirk} for {op}')
+        self.dev.transmit(quirk.data)
+        if quirk.data[0] == Message.KEY_PRESS:
+            self.dev.key_release()
+        return True
+
     def power_on(self):
-        quirk = self.lookup_quirk('power_on')
-        if quirk:
-            log.info(f'Using POWER ON quirk {quirk}')
-            self.dev.transmit(quirk.op, quirk.data)
-            if quirk.op == cec.CEC_OPCODE_USER_CONTROL_PRESSED:
-                self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_RELEASE)
+        if self.be_quirky('power_on'):
             return
         self.dev.power_on()
 
     def power_off(self):
-        quirk = self.lookup_quirk('power_off')
-        if quirk:
-            log.info(f'Using POWER OFF quirk {quirk}')
-            self.dev.transmit(quirk.op, quirk.data)
-            if quirk.op == cec.CEC_OPCODE_USER_CONTROL_PRESSED:
-                self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_RELEASE)
+        if self.be_quirky('power_off'):
             return
         self.standby()
 
     def standby(self):
         self.dev.standby()
-    #def toggle_mute(self):
-    #    data = bytes([Key.ToggleMute])
-    #    self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_PRESSED, data)
-    #    self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_RELEASE)
-    def set_input(self, index):
-        self.dev.set_av_input(index)
-        #data = bytes([Key.SET_INPUT, index])
-        #self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_PRESSED, data)
-        #self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_RELEASE)
+
     def press_key(self, key, repeat=None):
         if repeat is None: repeat = False
-        data = bytes([key])
-        self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_PRESSED, data)
+        self.dev.key_press(key)
         if not repeat:
             self.release_key()
+
     def release_key(self):
-        self.dev.transmit(cec.CEC_OPCODE_USER_CONTROL_RELEASE)
+        self.dev.key_release()
+
+    def set_stream_path(self):
+        # Some devices will change their physical address after being powered on?
+        #self.dev.get_physical_address_and_primary_device_type()
+        self.dev.set_stream_path()
+
+    def handle_report_physical_address(self, msg):
+        self.dev.parse_report_physical_address_message(msg)
 
 class Controller(object):
-    def __init__(self, cec_dev, osd_name, loop, activities):
-        if cec_dev is None:
-            self.adapter = cec.Adapter(name=osd_name, type=cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
-        else:
-            self.adapter = cec.Adapter(dev=cec_dev, name=osd_name, type=cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
+    def __init__(self, front_dev, back_dev, osd_name, loop, activities):
+        self.front_adapter = cec.Adapter(devname=front_dev,
+                                         device_types=DeviceType.PLAYBACK,
+                                         osd_name = osd_name)
+        self.back_adapter = cec.Adapter(devname=back_dev,
+                                         device_types=DeviceType.TV,
+                                         osd_name = osd_name)
         self.loop = loop
-        self.rescan_devices()
+        self.rescan_devices() # sets self.devices dict()
         self.activities = activities
         self.current_activity = no_activity
-        self.adapter.add_callback(self.cec_callback, cec.EVENT_ALL)
+        self.front_listener = asyncio.to_thread(self.front_listen)
+        self.back_listener = asyncio.to_thread(self.back_listen)
 
-    def cec_callback(self, *event):
-        #log.info(f'EVENT {event}')
-        event_type = event[0]
-        event = event[1:]
-        match event_type:
-            case cec.EVENT_LOG:
-                level, time, msg = event
-                log.info(f'EVENT LOG {time}: {level} - {msg}')
-            case cec.EVENT_COMMAND:
-                log.info(f'EVENT COMMAND {event_type} {event}')
-                if len(self.activities) == 0:
-                    # We are running as a tool, not a controller, don't do anything
-                    return
-                if event_type & cec.EVENT_COMMAND:
-                    if event['opcode'] == cec.CEC_OPCODE_ACTIVE_SOURCE:
-                        if self.loop is None:
-                            self.stop_source_thief(event['initiator'])
-                        else:
-                            self.loop.call_soon_threadsafe(self.stop_source_thief, event['initiator'])
-            case cec.EVENT_ACTIVATED:
-                active, logical_address = event
-                log.info(f'EVENT ACTIVATED address {logical_address} {active}')
+    def front_listen(self):
+        while True:
+            msg = self.front_adapter.listen()
+            # LG TVs love spamming this message every 10 seconds.
+            if msg.op == Message.VENDOR_ID and msg.dst == cec.BROADCAST_ADDRESS:
+                continue
+            log.info(f'Front got msg {msg}')
+
+    def handle_device_report_physical_address(self, adapter, msg):
+        new_device = True
+
+        # Update an existing device if any...
+        for device in self.devices.values():
+            if msg.src == device.address:
+                device.handle_report_physical_address(msg)
+                new_device = False
+                break
+
+        if new_device:
+            # This is a new device!
+            dev = cec.Device(adapter, msg.src)
+            device = Device(dev)
+            self.devices[dev.osd_name] = device
+
+        pa = pretty_physical_address(device.physical_address)
+        log.info(f'{device.osd_name} updated physical address to {pa}')
+        if device.osd_name == self.current_activity.source:
+            log.info(f'Setting stream path to updated {pa}')
+            device.set_stream_path()
+
+    def back_listen(self):
+        while True:
+            msg = self.back_adapter.listen()
+            log.info(f'Back got msg {msg}')
+            if msg.op == Message.REPORT_PHYSICAL_ADDR:
+                self.loop.call_soon_threadsafe(self.handle_device_report_physical_address, self.back_adapter, msg)
+            elif msg.op == Message.ACTIVE_SOURCE:
+                self.loop.call_soon_threadsafe(self.stop_source_thief, msg.src)
+
+    def wait_on(self):
+        return self.front_listener, self.back_listener
 
     def stop_source_thief(self, device_address):
         log.info(f'Device address {device_address} wants source')
@@ -201,38 +187,33 @@ class Controller(object):
             return
 
         ca = self.current_activity
-        no_devices = True
-        for name in [ca.display,
-                     ca.source,
-                     ca.audio,
-                     ca.switch.device]:
-            device = self.get_device(name)
-            if device is not None:
-                no_devices = False
-                if device.address() == device_address:
-                    log.info(f'Device {name} is not a thief')
-                    return
-        if no_devices:
+        source_device = self.get_device(ca.source)
+        if source_device is not None:
+            if source_device.address != device_address:
+                log.info(f'Taking back source!')
+                self.set_activity_input(ca)
+            else:
+                log.info(f'Device is not a thief')
+        else:
             log.info(f"Can't find source device for current activity so will let source thief win")
-            return
-
-        log.info(f'Taking back source!')
-        self.set_activity_input(ca)
 
     def scan_devices(self):
         log.info('Scanning devices...')
-        cec_devices = self.adapter.list_devices()
         devices = {}
-        for addr, cec_device in cec_devices.items():
-            devices[cec_device.osd_string] = Device(cec_device)
+        for adapter in (self.back_adapter, self.front_adapter):
+            cec_devices = adapter.list_devices()
+            for dev in cec_devices:
+                devices[dev.osd_name] = Device(dev)
         log.info('Scanned devices:')
-        log.info(pprint.pformat(list(devices.keys())))
+        log.info(f'{"Name":15s} Address Physical Address')
+        for name, device in devices.items():
+            log.info(f'{name:15s} {device.address:6X}   {pretty_physical_address(device.physical_address):10}')
         return devices
 
     def rescan_devices(self):
         self.devices = self.scan_devices()
 
-    def get_device(self, name):
+    def get_device(self, name, op=None):
         if name == None:
             return None
         device = self.devices.get(name)
@@ -241,7 +222,10 @@ class Controller(object):
             self.rescan_devices()
             device = self.devices.get(name)
             if device is None:
-                log.info(f'Failed to find device {name} after rescan')
+                if op is not None:
+                    log.info(f'Device {name} not found for {op}')
+                else:
+                    log.info(f'Device {name} not found')
         return device
 
     def set_activity(self, index):
@@ -260,13 +244,12 @@ class Controller(object):
             self.fix_current_activity()
             return True
         # Order probably matters so don't use a set().
-        current_devices = [ca.audio, ca.switch.device, ca.source, ca.display]
-        new_devices = [na.audio, na.switch.device, na.source, na.display]
+        current_devices = [ca.audio, ca.source, ca.display]
+        new_devices = [na.audio, na.source, na.display]
         for current_device in current_devices:
             if current_device not in new_devices:
-                device = self.get_device(current_device)
+                device = self.get_device(current_device, 'STANDBY')
                 if device is None:
-                    log.info(f'Device {current_device} not found for STANDBY')
                     continue
                 log.info(f'Device {current_device} STANDBY')
                 if is_power_off:
@@ -275,13 +258,11 @@ class Controller(object):
                     device.standby()
         for new_device in new_devices:
             if new_device not in current_devices:
-                device = self.get_device(new_device)
+                device = self.get_device(new_device, 'POWER ON')
                 if device is None:
-                    log.info(f'Device {new_device} not found for POWER ON')
                     continue
                 log.info(f'Device {new_device} POWER ON')
                 device.power_on()
-        # XXX May need to add a delay before SET INPUT
         self.set_activity_input(na)
         self.current_activity = na
         return True
@@ -289,54 +270,44 @@ class Controller(object):
     def fix_current_activity(self):
         ca = self.current_activity
         log.info(f'Fixing activity {ca.name}')
-        current_devices = [ca.audio, ca.switch.device, ca.source, ca.display]
+        current_devices = [ca.audio, ca.source, ca.display]
         for current_device in current_devices:
-            device = self.get_device(current_device)
+            device = self.get_device(current_device, 'POWER ON')
             if device is None:
-                log.info(f'Device {current_device} not found for POWER ON')
                 continue
             log.info(f'Device {current_device} POWER ON')
             device.power_on()
-        # XXX May need to add a delay before SET INPUT
         self.set_activity_input(ca)
 
     def set_activity_input(self, activity):
-        device = self.get_device(activity.switch.device)
+        device = self.get_device(activity.source, 'SET STREAM PATH')
         if device is None:
-            log.info(f'Device {activity.switch.device} not found for SET INPUT')
-        else:
-            log.info(f'Device {activity.switch.device} SET INPUT to index {activity.switch.input}')
-            device.set_input(activity.switch.input)
-
-    def volume_up(self):
-        self.adapter.volume_up()
-
-    def volume_down(self):
-        self.adapter.volume_down()
-
-    def toggle_mute(self):
-        self.adapter.toggle_mute()
+            return
+        log.info(f'Setting stream path to {pretty_physical_address(device.physical_address)}')
+        device.set_stream_path()
 
     def standby(self):
         self.set_activity(-1)
 
     def force_standby(self):
-        self.adapter.transmit(cec.CECDEVICE_BROADCAST, cec.CEC_OPCODE_STANDBY)
+        self.front_adapter.broadcast().standby()
+        self.back_adapter.broadcast().standby()
 
     def press_key(self, key, repeat=None):
-        cs = self.current_activity.source
-        device = self.get_device(cs)
+        if key in (Key.VOLUME_UP, Key.VOLUME_DOWN, Key.TOGGLE_MUTE):
+            device_name = self.current_activity.audio
+        else:
+            device_name = self.current_activity.source
+        device = self.get_device(device_name, 'PRESS KEY')
         if device is None:
-            log.info(f'Device {cs} not found for PRESS KEY')
             return
-        log.info(f'Device {cs} PRESS KEY 0x{key:02X}')
+        log.info(f'Device {device_name} PRESS KEY 0x{key:02X}')
         device.press_key(key, repeat)
 
     def release_key(self):
         cs = self.current_activity.source
-        device = self.get_device(cs)
+        device = self.get_device(cs, 'RELEASE KEY')
         if device is None:
-            log.info(f'Device {cs} not found for RELEASE KEY')
             return
         log.info(f'Device {cs} RELEASE KEY')
         device.release_key()
