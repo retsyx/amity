@@ -24,24 +24,31 @@ class TouchState(object):
         return self.start_touch.timestamp == touch.timestamp
 
 class GestureRecognizer(object):
-    def __init__(self, max_touches, callback):
+    def __init__(self, max_touches, callback, pressure_threshold=None):
         self.touch_states = {}
         self.max_touches = max_touches
         self.callback = callback
+        if pressure_threshold is None:
+            pressure_threshold = 20
+        self.pressure_threshold = pressure_threshold
 
     def reset(self):
         self.touch_states = {}
 
     def state_for_touch(self, touch):
-        et = 0
+        et = EventType.Inactive
         touch_state = self.touch_states.get(touch.id)
         if touch_state is None:
-            if len(self.touch_states) == self.max_touches:
-                return None, et
+            if touch.p < self.pressure_threshold:
+                # This touch is too light to count as anything
+                return None, EventType.Begin | EventType.End
+            elif len(self.touch_states) == self.max_touches:
+                # This is a multi-touch
+                return None, EventType.Cancelled
             touch_state = TouchState(touch)
             et |= EventType.Begin
             self.touch_states[touch.id] = touch_state
-        if touch.p == 0: # Touch is over
+        if touch.p < self.pressure_threshold: # Touch is over
             del self.touch_states[touch.id]
             et |= EventType.End
         return touch_state, et
@@ -60,18 +67,24 @@ class SwipeEvent(object):
         return f'0x{self.type:02X} ({self.x}, {self.y})'
 
 class OneAxisSwipeRecognizer(GestureRecognizer):
-    def __init__(self, axis, resolution, callback):
-        super().__init__(1, callback) # No multitouch
+    def __init__(self, axis, resolution, callback, pressure_threshold=None):
+        super().__init__(1, callback, pressure_threshold) # No multitouch
         self.axis = axis
         self.segments = resolution + 1
+
     def touches_internal(self, remote, touches):
         event_type = EventType.Running
         counter = 0
         for touch in touches:
             touch_state, et = self.state_for_touch(touch)
-            if touch_state is None: # Ignore multitouch
-                self.reset()
-                return SwipeEvent(EventType.Cancelled, (0, 0))
+            if touch_state is None:
+                if et & EventType.Cancelled:
+                    # Ignore multitouch
+                    self.reset()
+                    return SwipeEvent(EventType.Cancelled, (0, 0))
+                else:
+                    # This touch is too light to matter
+                    continue
             event_type |= et
             threshold_distance = remote.profile.touchpad.SIZE_MM // self.segments
             if touch.p > 0:
@@ -107,12 +120,12 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
 
 
 class SwipeRecognizer(object):
-    def __init__(self, resolutions, callback):
+    def __init__(self, resolutions, callback, pressure_threshold=None):
         self.callback = callback
         self.rs = []
         self.primary_axis = None
         for i in range(2):
-            self.rs.append(OneAxisSwipeRecognizer(i, resolutions[i], None))
+            self.rs.append(OneAxisSwipeRecognizer(i, resolutions[i], None, pressure_threshold))
     def reset(self):
         for r in self.rs:
             r.reset()
@@ -148,8 +161,8 @@ class TapEvent(object):
         self.y = y
 
 class TapRecognizer(GestureRecognizer):
-    def __init__(self, num_fingers, callback):
-        super().__init__(num_fingers, callback)
+    def __init__(self, num_fingers, callback, pressure_threshold=None):
+        super().__init__(num_fingers, callback, pressure_threshold)
         self.num_fingers = num_fingers
         self.reset()
 
@@ -228,11 +241,11 @@ class TapRecognizer(GestureRecognizer):
         self.callback(self, TapEvent(event_type, remote, x, y))
 
 class MultiTapRecognizer(object):
-    def __init__(self, num_fingers, num_taps, callback):
+    def __init__(self, num_fingers, num_taps, callback, pressure_threshold=None):
         self.num_fingers = num_fingers
         self.num_taps = num_taps
         self.callback = callback
-        self.tap_recognizer = TapRecognizer(self.num_fingers, self.tap_event)
+        self.tap_recognizer = TapRecognizer(self.num_fingers, self.tap_event, pressure_threshold)
         self.reset()
 
     def reset(self):

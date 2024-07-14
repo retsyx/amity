@@ -28,7 +28,7 @@ import messaging
 import ui
 
 class Hub(remote.RemoteListener):
-    def __init__(self, controller):
+    def __init__(self, controller, pressure_threshold=None):
         self.controller = controller
         self.wait_for_release = False
         self.button_state = 0
@@ -37,9 +37,11 @@ class Hub(remote.RemoteListener):
         self.repeat_timer = None
         self.repeat_delay_sec = 0.2
         self.repeat_period_sec = 0.1
-        self.swipe_recognizer = gestures.SwipeRecognizer((5, 5), self.swipe_callback)
+        self.swipe_recognizer = gestures.SwipeRecognizer((5, 5), self.swipe_callback,
+            pressure_threshold)
         self.dpad_emulator = gestures.DPadEmulator()
-        self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback)
+        self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback,
+            pressure_threshold)
         self.swipe_key = None
         self.swipe_counter = 0
         self.pipe = None
@@ -308,7 +310,13 @@ async def main():
                                  'amity',
                                  loop,
                                  activities)
-    hub = Hub(controller)
+
+    remote_config = config['remote']
+    touchpad_config = remote_config.get('touchpad')
+    pressure_threshold = None
+    if touchpad_config:
+        pressure_threshold = touchpad_config.get('pressure_threshold')
+    hub = Hub(controller, pressure_threshold)
 
     # Wire hub and interface to talk to each other
     pipe = messaging.Pipe()
