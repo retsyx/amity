@@ -8,7 +8,7 @@ import tools
 
 log = tools.logger(__name__)
 
-import asyncio
+import asyncio, sys
 
 from enum import Enum, auto
 
@@ -44,7 +44,7 @@ class Pipe(object):
         e = task.exception()
         if e is not None:
             log.info(f'Task exception {e}')
-            raise e
+            sys.exit(1)
 
     def start_server_task(self, handler):
         self.server_t = asyncio.create_task(self.server_task(handler))
@@ -53,17 +53,14 @@ class Pipe(object):
     # Server handler
     async def server_task(self, handler):
         while True:
-            try:
-                msg = await self.server_q.get()
-                match msg.type:
-                    case Type.SetActivity:
-                        handler.client_set_activity(msg.val)
-                    case Type.KeyPress:
-                        handler.client_press_key(msg.val)
-                    case Type.KeyRelease:
-                        handler.client_release_key(msg.val)
-            except Exception as e:
-                log.info(f'server_task exception {e}')
+            msg = await self.server_q.get()
+            match msg.type:
+                case Type.SetActivity:
+                    handler.client_set_activity(msg.val)
+                case Type.KeyPress:
+                    handler.client_press_key(msg.val)
+                case Type.KeyRelease:
+                    handler.client_release_key(msg.val)
 
     # Client calls
     def set_activity(self, index):
@@ -86,4 +83,3 @@ class Pipe(object):
             match msg.type:
                 case Type.SetActivity:
                     handler.server_notify_set_activity(msg.val)
-

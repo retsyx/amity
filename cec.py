@@ -9,10 +9,12 @@ import tools
 log = tools.logger(__name__)
 
 from ctypes import Structure, Union, c_char, c_uint8, c_uint16, c_uint32, c_uint64, sizeof
+from concurrent.futures import ThreadPoolExecutor
 from enum import IntEnum
 import errno
 import fcntl
 import select
+import sys
 
 _IOC_NRBITS   =  8
 _IOC_TYPEBITS =  8
@@ -567,17 +569,24 @@ class Adapter(object):
             log.info(f'RX {msg}')
         return ret
 
+    def poll_device(self, i):
+        msg = Message(self.address, i)
+        self.transmit(msg)
+        if msg.ok():
+            return Device(self, i)
+        if msg.tx_status & Message.TX_STATUS_MAX_RETRIES:
+            log.info(f'{msg.status_text()} for addr {i}')
+        return None
+
     def list_devices(self):
-        devices = []
+        exec = ThreadPoolExecutor(max_workers=2)
         # Poll all possible device addresses
-        for i in range(0xf):
-            msg = Message(self.address, i)
-            self.transmit(msg)
-            if msg.ok():
-                device = Device(self, i)
-                devices.append(device)
-            elif msg.tx_status & Message.TX_STATUS_MAX_RETRIES:
-                log.info(f'{msg.status_text()} for addr {i}')
+        futures = [exec.submit(self.poll_device, i) for i in range(0xf)]
+        devices = []
+        for future in futures:
+            device = future.result()
+            if device is None: continue
+            devices.append(device)
         return devices
 
     def broadcast(self):
@@ -599,3 +608,6 @@ class Adapter(object):
                 except OSError as e:
                     if e.errno == errno.ENODEV:
                         log.info('Disconnected')
+                    else:
+                        log.info(f'Unexpected IOCTL error {e}')
+                    sys.exit(1)

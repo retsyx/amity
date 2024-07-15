@@ -295,7 +295,6 @@ async def main():
     activity_names = [activity.name for activity in activities]
     interface.set_activity_names(['Off',] + activity_names)
 
-    dev = None
     adapters = config.get('adapters')
     if adapters is not None:
         front_dev = adapters['front']
@@ -304,7 +303,7 @@ async def main():
         front_dev = '/dev/cec1'
         back_dev = '/dev/cec0'
 
-    log.info(f'Initializing CEC on device {dev}...')
+    log.info(f'Initializing CEC on devices front: {front_dev} back: {back_dev}...')
     controller = hdmi.Controller(front_dev,
                                  back_dev,
                                  'amity',

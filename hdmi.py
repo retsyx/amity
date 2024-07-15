@@ -8,8 +8,7 @@ import tools
 
 log = tools.logger(__name__)
 
-import asyncio
-import pprint, yaml
+import asyncio, pprint, yaml, time
 import cec
 from cec import Device, DeviceType, Key, Message
 
@@ -131,6 +130,8 @@ class Controller(object):
                                          device_types=DeviceType.TV,
                                          osd_name = osd_name)
         self.loop = loop
+        self.last_device_rescan_time = 0
+        self.rescan_wait_time_sec = 2 * 60
         self.rescan_devices() # sets self.devices dict()
         self.activities = activities
         self.current_activity = no_activity
@@ -211,10 +212,17 @@ class Controller(object):
         return devices
 
     def rescan_devices(self):
+        now = time.time()
+        delta = now - self.last_device_rescan_time
+        if delta < self.rescan_wait_time_sec:
+            time_left = self.rescan_wait_time_sec - delta
+            log.info(f'Device rescan is too frequent, {time_left:0.2f}s until allowed')
+            return
+        self.last_device_rescan_time = now
         self.devices = self.scan_devices()
 
     def get_device(self, name, op=None):
-        if name == None:
+        if name is None:
             return None
         device = self.devices.get(name)
         if device is None:
