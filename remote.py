@@ -323,7 +323,7 @@ class SiriRemote(DefaultDelegate):
                 while True:
                     self.__device.waitForNotifications(5)
 
-            except BTLEDisconnectError as e:
+            except (BTLEDisconnectError, BrokenPipeError) as e:
                 self.__listener.event_button(self, 0)  # release all keys
                 time.sleep(0.5)
 
