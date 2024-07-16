@@ -10,7 +10,7 @@ log = tools.logger(__name__)
 
 import asyncio, pprint, yaml, time
 import cec
-from cec import Device, DeviceType, Key, Message
+from cec import Device, DeviceType, Key, Message, PowerStatus
 
 def isiterable(o):
     try:
@@ -138,13 +138,28 @@ class Controller(object):
         self.front_listener = asyncio.to_thread(self.front_listen)
         self.back_listener = asyncio.to_thread(self.back_listen)
 
+    def handle_give_device_power_status(self, adapter, msg):
+        log.info('Power status requested')
+        msg = Message(adapter.address, msg.src)
+        if self.current_activity == no_activity:
+            status = PowerStatus.STANDBY
+        else:
+            status = PowerStatus.ON
+        log.info(f'Responding with power status {status.name}')
+        msg.set_data((Message.REPORT_POWER_STATUS, status))
+        adapter.transmit(msg)
+
     def front_listen(self):
         while True:
             msg = self.front_adapter.listen()
             # LG TVs love spamming this message every 10 seconds.
             if msg.op == Message.VENDOR_ID and msg.dst == cec.BROADCAST_ADDRESS:
                 continue
-            log.info(f'Front got msg {msg}')
+            log.info(f'Front RX {msg}')
+            match msg.op:
+                case Message.GIVE_DEVICE_POWER_STATUS:
+                    self.loop.call_soon_threadsafe(self.handle_give_device_power_status,
+                                                   self.front_adapter, msg)
 
     def handle_device_report_physical_address(self, adapter, msg):
         new_device = True
@@ -172,11 +187,15 @@ class Controller(object):
     def back_listen(self):
         while True:
             msg = self.back_adapter.listen()
-            log.info(f'Back got msg {msg}')
-            if msg.op == Message.REPORT_PHYSICAL_ADDR:
-                self.loop.call_soon_threadsafe(self.handle_device_report_physical_address, self.back_adapter, msg)
-            elif msg.op == Message.ACTIVE_SOURCE:
-                self.loop.call_soon_threadsafe(self.stop_source_thief, msg.src)
+            log.info(f'Back RX {msg}')
+            match msg.op:
+                case Message.REPORT_PHYSICAL_ADDR:
+                    self.loop.call_soon_threadsafe(self.handle_device_report_physical_address, self.back_adapter, msg)
+                case Message.ACTIVE_SOURCE:
+                    self.loop.call_soon_threadsafe(self.stop_source_thief, msg.src)
+                case Message.GIVE_DEVICE_POWER_STATUS:
+                    self.loop.call_soon_threadsafe(self.handle_give_device_power_status, self.back_adapter, msg)
+
 
     def wait_on(self):
         return self.front_listener, self.back_listener

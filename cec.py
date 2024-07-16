@@ -104,6 +104,12 @@ class Key(IntEnum):
     POWER_OFF = 0x6C
     POWER_ON = 0x6D
 
+class PowerStatus(IntEnum):
+    ON = 0
+    STANDBY = 1
+    IN_TRANSITION_STANDBY_TO_ON = 2
+    IN_TRANSITION_ON_TO_STANDBY = 3
+
 class Message(Structure):
     IMAGE_VIEW_ON = 0x04
     STANDBY = 0x36
@@ -117,6 +123,8 @@ class Message(Structure):
     REQUEST_ACTIVE_SOURCE = 0x85
     SET_STREAM_PATH = 0x86
     VENDOR_ID = 0x87
+    GIVE_DEVICE_POWER_STATUS = 0x8f
+    REPORT_POWER_STATUS = 0x90
     GIVE_VENDOR_ID = 0x8c
 
     TX_STATUS_OK = (1 << 0)
