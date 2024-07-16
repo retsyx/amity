@@ -16,6 +16,8 @@ Home theater control over HDMI-CEC with a Siri Remote
 * [Usage](#usage)
   * [Standby](#standby)
   * [Active](#active)
+* [Strange Devices](#strange-devices)
+* [License](#license)
 
 ## Introduction
 
@@ -23,11 +25,11 @@ Use a Raspberry Pi, and a Siri Remote to control a home theater system over HDMI
 
 ## Caveats
 
-HDMI-CEC is a terrible control protocol. Different equipment manufacturers implement it in often incompatible ways. It often behaves unpredictably, and it can be an endless source of headaches. Using it for anything is a very bad idea. Even more so when it is used in ways unintended by its designers, like Amity uses it.
+HDMI-CEC is a terrible control protocol. Different equipment manufacturers implement it in often incompatible ways. Some HDMI devices don't support HDMI-CEC at all. HDMI-CEC devices often behave unpredictably, and it can be an endless source of headaches. Using it for anything is a very bad idea.
 
 Testing of Amity has been limited to the equipment I have. It works for me. It may very well not work for you. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious.
 
-Amity is known to work (with my equipment, anyway) with a traditional setup centered around a receiver. In my case, I have an LG TV connected to a Denon receiver output. I have an Apple TV, PlayStation, and Nintendo Switch (that has a practically non-functioning HDMI-CEC implementation) connected to the receiver's inputs. When I want to change what I'm watching, I change inputs on the receiver.
+Amity is known to work (with my equipment, anyway) with a traditional setup centered around a receiver. In my case, I have an LG TV connected to a Denon receiver output. I have an Apple TV, a PlayStation, and a Nintendo Switch (that has minimal HDMI-CEC functionality) connected to the receiver's inputs. When I want to change what I'm watching, I change inputs on the receiver.
 
 Amity does not support eArc at the moment.
 
@@ -37,7 +39,7 @@ With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Am
 
 ## Prerequisites
 
-* Gen 2, and later, Siri Remotes require Bluetooth 5.0. As a result, Raspberry Pi 4, or later is required, along with an appropriate power supply. Network access is required for initial setup but not when controlling your home theater.
+* A Raspberry Pi 3 Model B+, or Pi Zero W, or newer with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
 * An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work.
 * An HDMI-CEC splice (either a stripped, spliced cable, or a dedicated board and an extra HDMI cable)
 
@@ -53,11 +55,13 @@ It is assumed that this will be a dedicated device for home theater control. It 
 2. Insert the MicroSD into the Rpi, power it on, and login via SSH, or hook up a keyboard and mouse, and use the console (unless configured, the default user created by Raspberry Pi Imager is `pi`. All examples will assume the user is `pi`)
 3. In the console (or SSH) ensure you are in the `pi` user home directory:
 
-    `cd ~`
+    ```commandline
+    cd ~
+    ```
 
 4. Copy the line below, paste it into the terminal, and press enter. This will download Amity, install all of Amity's dependencies, create a venv, and do some initial configuration of the system. It may take a while. Once complete, there will be a new sub directory `amity`, i.e. `/home/pi/amity`
 
-    ```
+    ```commandline
     /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/retsyx/amity/main/setup_amity)"
     ```
 
@@ -67,11 +71,15 @@ The remote **MUST** be unpaired from any other device. If the remote is paired t
 
 In the terminal, ensure you are in the Amity directory:
 
-`cd ~/amity`
+```commandline
+cd ~/amity
+```
 
 Then, to pair the remote, enter:
 
-`./pair_remote`
+```commandline
+./pair_remote
+```
 
 Hold the remote near the Raspberry Pi and simultaneously press the Menu/Back and the Volume Up (+) buttons for a couple seconds. Follow the prompts.
 
@@ -89,9 +97,11 @@ Plug in Amity's HDMI input into the requires GPIO pins...
 
 Ensure that all home theater devices have HDMI-CEC enabled, and are discoverable. To list all the devices available on HDMI-CEC, in the Amity directory, run:
 
-`./configure_hdmi scan`
+```commandline
+./configure_hdmi scan
+```
 
-Pay particular attention to the names of the devices. These are the HDMI On Screen Display (OSD) names of the devices, and are used to reference the devices in Amity configuration. Ensure that no two devices share the same name as that is presently not supported, and will lead to failures.
+Pay particular attention to the names of the devices. These are the HDMI On Screen Display (OSD) names of the devices, and are used to reference the devices in Amity configuration. Ensure that no two devices share the same name. Duplicate names are not supported, and will lead to confusion, failure, and disappointment.
 
 Devices that don't appear in the list don't have HDMI-CEC enabled or have a very broken HDMI-CEC implementation (i.e. Nintendo Switch) that may only partially work in general.
 
@@ -101,7 +111,9 @@ If you don't see any devices except the Amity device, ensure the HDMI-CEC splice
 
 Now that all the devices are accounted for, Amity can guess a set of activities:
 
-`./configure_hdmi recommend`
+```commandline
+./configure_hdmi recommend
+```
 
 The activity configuration was written into `config.yaml` in the Amity directory (i.e. `~/amity/config.yaml`). Open `config.yaml` with your favorite text editor.
 
@@ -155,7 +167,7 @@ And that's it... Amity is now fully configured with a paired remote, and two act
 
 To start Amity, type:
 
-```
+```commandline
 ./setup_amity enable
 ```
 
@@ -165,7 +177,7 @@ Amity is now running. Now, close the terminal, and start playing with the remote
 
 To change configuration, or pair a different remote, Amity must be stopped. To stop Amity, and to prevent it from starting at every system start, type:
 
-```
+```commandline
 ./setup_amity disable
 ```
 
@@ -188,6 +200,25 @@ When active, all the buttons should behave as expected for the selected activity
 On a Gen 2, or later, remote press the power button to end the activity and put the system in standby. On Gen 1 remotes, triple tap (not press) on the touchpad to signal a power button press, to end the activity, and put the system in standby.
 
 On a Gen 2, or later, remote press the power button, and one of the activity selection buttons (select, and directional) at the same time, to jump directly from one activity to another, without putting the system in standby.
+
+## Strange Devices
+
+Many HDMI-CEC devices do strange things. Here are some known workarounds.
+
+### Nintendo Switch
+
+The Nintendo switch has a minimal HDMI-CEC implementation that appears to be nearly always dormant and ignores practically every command except standby. The Switch only appears when it is powered on directly by the user, or placed in the cradle, and then it automatically requests to be displayed.
+
+As a result, the Switch will often not show up in bus scans, and be auto-configured. The solution is to edit `config.yaml` manually to add an activity for the switch. When active, the Switch defaults to calling itself `NintendoSwitch`, so an example activity configuration for a Switch would be:
+
+```yaml
+- name: Play Switch
+  display: TV
+  source: NintendoSwitch
+  audio: AVR-X3400H
+```
+
+Then to play, you would turn on the Switch, and select the `Play Switch` activity on the Siri remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
 
 ## License
 
