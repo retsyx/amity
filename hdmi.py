@@ -161,11 +161,12 @@ class Controller(object):
             dev = cec.Device(adapter, msg.src)
             device = Device(dev)
             self.devices[dev.osd_name] = device
+            log.info(f'Adding new found device {dev.osd_name}')
 
         pa = pretty_physical_address(device.physical_address)
         log.info(f'{device.osd_name} updated physical address to {pa}')
         if device.osd_name == self.current_activity.source:
-            log.info(f'Setting stream path to updated {pa}')
+            log.info(f'Setting stream path to updated address {pa}')
             device.set_stream_path()
 
     def back_listen(self):
