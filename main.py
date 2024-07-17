@@ -19,7 +19,7 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, pprint, subprocess, time, yaml
+import asyncio, pprint, subprocess, sys, traceback, yaml
 
 import remote
 import gestures
@@ -276,7 +276,7 @@ class Hub(remote.RemoteListener):
             self.pipe.notify_set_activity(-1)
             self.standby()
 
-async def main():
+async def _main():
     global args
     loop = asyncio.get_running_loop()
 
@@ -332,6 +332,16 @@ async def main():
     siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
 
     await asyncio.gather(siri, interface.run(), *controller.wait_on())
+
+# asyncio.run() swallows, and disappears exceptions on the main thread if there are other
+# threads running. So... use a catchall try/except to actively kill the entire process in case of
+# an exception on the main thread.
+async def main():
+    try:
+        await _main()
+    except Exception as e:
+        log.info(f'Exiting because of exception {e}\n{traceback.print_exc()}')
+        sys.exit(1)
 
 if __name__ == '__main__':
     asyncio.run(main())
