@@ -53,10 +53,20 @@ def _IOW(type, nr, size):
 def _IOWR(type, nr, size):
     return _IOC(_IOC_READ|_IOC_WRITE, type, nr, size)
 
-PHYSICAL_ADDRESS_INVALID = 0xffff
+INVALID_PHYSICAL_ADDRESS = 0xffff
 BROADCAST_ADDRESS = 0x0f
+INVALID_ADDRESS = 0xff
 
 class Capabilities(Structure):
+    PHYS_ADDR = (1 << 0) # Userspace has to configure the physical address
+    LOG_ADDRS = (1 << 1) # Userspace has to configure the logical addresses
+    TRANSMIT = (1 << 2) # Userspace can transmit messages (and thus become follower as well)
+    PASSTHROUGH = (1 << 3) # Passthrough all messages instead of processing them
+    RC = (1 << 4) # Supports remote control
+    MONITOR_ALL = (1 << 5) # Hardware can monitor all messages, not just directed and broadcast
+    NEEDS_HPD = (1 << 6) # Hardware can use CEC only if the HDMI HPD pin is high.
+    MONITOR_PIN = (1 << 7) # Hardware can monitor CEC pin transitions
+
     _fields_ = [
         ('driver', c_char * 32),
         ('name', c_char * 32),
@@ -357,7 +367,7 @@ class Device(object):
     def __init__(self, adapter, address):
         self.adapter = adapter
         self.address = address
-        self.physical_address = PHYSICAL_ADDRESS_INVALID
+        self.physical_address = INVALID_PHYSICAL_ADDRESS
         self.primary_device_type = DeviceType.INVALID
         self.osd_name = ''
         self.vendor_id = 0
@@ -386,7 +396,7 @@ class Device(object):
                 self.physical_address = 0
                 self.primary_device_type = DeviceType.TV
             else:
-                self.physical_address = PHYSICAL_ADDRESS_INVALID
+                self.physical_address = INVALID_PHYSICAL_ADDRESS
                 self.primary_device_type = DeviceType.INVALID
 
     def get_physical_address_and_primary_device_type(self):
@@ -484,6 +494,9 @@ def isiterable(o):
     except:
         return False
 
+class AdapterInitException(Exception):
+    pass
+
 class Adapter(object):
     MODE_INITIATOR = (1 << 0)
     MODE_FOLLOWER = (1 << 4)
@@ -534,20 +547,35 @@ class Adapter(object):
         laddrs = LogAddrs()
         self.ioctl(Ioctl.ADAP_S_LOG_ADDRS, laddrs)
 
+        if not self.device_types:
+            device_types = (DeviceType.PLAYBACK, )
+        else:
+            device_types = self.device_types
+        self.device_types = device_types
+        if len(device_types) > self.caps.available_log_addrs:
+            raise AdapterInitException('Too many logical addresses')
+
+        # cec-gpio devices must have their physical addresses configured at least once.
+        # As a TV, we claim 0.0.0.0 by fiat.
+        # As any other device we need to read the address from the EDID of the device we are
+        # connected to. For Amity's limited aims, reading the EDID introduces a mountain of
+        # unnecessary complexity that is best avoided. It would require routing HDMI's DDC pins
+        # (SDA & SCL). We would then be able to read EDID info from the TV but would also need to
+        # supply it to downstream devices! So it's best to let the TV continue to handle EDID
+        # functionality.
+        if (self.caps.capabilities & Capabilities.PHYS_ADDR and
+            (self.physical_address == INVALID_PHYSICAL_ADDRESS)):
+            if self.device_types[0] == DeviceType.TV:
+                self.physical_address = 0x0000
+            else:
+                # Hopefully, this guessed address works universally.
+                self.physical_address = 0x8888
+
         # And configure...
         laddrs = LogAddrs()
         laddrs.cec_version = LogAddrs.CEC_VERSION_2_0
         laddrs.osd_name = self.osd_name.encode()[:laddrs.MAX_OSD_NAME - 1]
         laddrs.vendor_id = self.vendor_id
-
-        if not self.device_types:
-            device_types = set((DeviceType.PLAYBACK, ))
-        else:
-            device_types = set(self.device_types)
-        self.device_types = device_types
-
-        if len(device_types) > self.caps.available_log_addrs:
-            raise Exception('Too many logical addresses')
 
         primary_type = 0xff
         all_device_types = 0
@@ -571,6 +599,10 @@ class Adapter(object):
 
         self.ioctl(Ioctl.ADAP_G_LOG_ADDRS, self.laddrs)
 
+        if self.laddrs.log_addr[0] >= INVALID_ADDRESS:
+            s = f'Logical address allocation failed. Is HDMI-CEC {self.devname} pin attached?'
+            log.info(s)
+
         return self.laddrs
 
     def transmit(self, msg: Message):
@@ -593,7 +625,7 @@ class Adapter(object):
     def list_devices(self):
         exec = ThreadPoolExecutor(max_workers=2)
         # Poll all possible device addresses
-        futures = [exec.submit(self.poll_device, i) for i in range(0xf)]
+        futures = [exec.submit(self.poll_device, i) for i in range(0xf) if i != self.address]
         devices = []
         for future in futures:
             device = future.result()
