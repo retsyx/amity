@@ -29,26 +29,26 @@ class Pipe(object):
         self.client_q = asyncio.Queue()
         self.server_t = None
         self.client_t = None
-        self.background_tasks = set()
+        self.tasks = set()
 
     def taskit(self, coro):
         task = asyncio.create_task(coro)
-        self.background_tasks.add(task)
-        task.add_done_callback(self.background_tasks.discard)
+        self.tasks.add(task)
+        task.add_done_callback(self.check_task)
 
     # Server calls
     def notify_set_activity(self, index):
         self.taskit(self.client_q.put(Message(Type.SetActivity, index)))
 
     def check_task(self, task):
+        self.tasks.discard(task)
         e = task.exception()
         if e is not None:
             log.info(f'Task exception {e}')
             sys.exit(1)
 
     def start_server_task(self, handler):
-        self.server_t = asyncio.create_task(self.server_task(handler))
-        self.server_t.add_done_callback(self.check_task)
+        self.taskit(self.server_task(handler))
 
     # Server handler
     async def server_task(self, handler):
@@ -74,8 +74,7 @@ class Pipe(object):
 
     # Client handler
     def start_client_task(self, handler):
-        self.client_t = asyncio.create_task(self.client_task(handler))
-        self.client_t.add_done_callback(self.check_task)
+        self.taskit(self.client_task(handler))
 
     async def client_task(self, handler):
         while True:
@@ -83,3 +82,4 @@ class Pipe(object):
             match msg.type:
                 case Type.SetActivity:
                     handler.server_notify_set_activity(msg.val)
+
