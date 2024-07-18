@@ -95,10 +95,14 @@ class Key(IntEnum):
     RIGHT = 0x04
     ROOT_MENU = 0x09
     BACK = 0x0D
+    DISPLAY_INFO = 0x35
     POWER = 0x40
     VOLUME_UP = 0x41
     VOLUME_DOWN = 0x42
     TOGGLE_MUTE = 0x43
+    REWIND = 0x48
+    FAST_FORWARD = 0x49
+    GUIDE = 0x53
     PAUSE_PLAY = 0x61
     SET_INPUT = 0x69
     POWER_OFF = 0x6C

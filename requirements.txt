@@ -1,3 +1,5 @@
+evdev
 pygame-ce
 pygame_gui
 pyyaml
+watchdog
