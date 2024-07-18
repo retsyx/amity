@@ -22,6 +22,19 @@ sudo apt install -y build-essential python3-dev
 sudo apt install -y libglib2.0-dev
 sudo apt install -y libgl1 libegl1
 
+# Prevent keyboard power keys from rebooting or shutting down the machine
+if [ ! -f /etc/systemd/logind.conf.d/disable-power-key.conf ]; then
+    sudo mkdir -p /etc/systemd/logind.conf.d/
+    TEMP_CONF_PATH=`mktemp`
+    chmod 644 $TEMP_CONF_PATH
+cat > "$TEMP_CONF_PATH" << EOF
+[Login]
+HandlePowerKey=ignore
+EOF
+    sudo cp $TEMP_CONF_PATH /etc/systemd/logind.conf.d/disable-power-key.conf
+    sudo systemctl restart systemd-logind
+fi
+
 # App setup
 
 cd "$ROOT_DIR"
