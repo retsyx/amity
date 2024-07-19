@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2024.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
@@ -36,7 +34,11 @@ class Keyboard(object):
         self.loop = loop
         self.pipe = pipe
         self.tasks = set()
+        self.listen_to_all_devices()
         self.start_input_monitor()
+
+    def wait_on(self):
+        return self.tasks
 
     def start_input_monitor(self):
         path = '/dev/input/'
@@ -136,10 +138,9 @@ class Keyboard(object):
 async def main():
     loop = asyncio.get_event_loop()
     kb = Keyboard(loop, None)
-    kb.listen_to_all_devices()
     while True:
         await asyncio.gather(*list(kb.tasks))
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
 
 if __name__ == '__main__':
     asyncio.run(main())

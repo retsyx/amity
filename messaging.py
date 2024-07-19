@@ -35,10 +35,12 @@ class Pipe(object):
         task = asyncio.create_task(coro)
         self.tasks.add(task)
         task.add_done_callback(self.check_task)
+        return task
 
     # Server calls
     def notify_set_activity(self, index):
-        self.taskit(self.client_q.put(Message(Type.SetActivity, index)))
+        if self.client_t:
+            self.taskit(self.client_q.put(Message(Type.SetActivity, index)))
 
     def check_task(self, task):
         self.tasks.discard(task)
@@ -48,7 +50,7 @@ class Pipe(object):
             sys.exit(1)
 
     def start_server_task(self, handler):
-        self.taskit(self.server_task(handler))
+        self.server_t = self.taskit(self.server_task(handler))
 
     # Server handler
     async def server_task(self, handler):
@@ -64,17 +66,20 @@ class Pipe(object):
 
     # Client calls
     def set_activity(self, index):
-        self.taskit(self.server_q.put(Message(Type.SetActivity, index)))
+        if self.server_t:
+            self.taskit(self.server_q.put(Message(Type.SetActivity, index)))
 
     def key_press(self, key):
-        self.taskit(self.server_q.put(Message(Type.KeyPress, key)))
+        if self.server_t:
+            self.taskit(self.server_q.put(Message(Type.KeyPress, key)))
 
     def key_release(self, key):
-        self.taskit(self.server_q.put(Message(Type.KeyRelease, key)))
+        if self.server_t:
+            self.taskit(self.server_q.put(Message(Type.KeyRelease, key)))
 
     # Client handler
     def start_client_task(self, handler):
-        self.taskit(self.client_task(handler))
+        self.client_t = self.taskit(self.client_task(handler))
 
     async def client_task(self, handler):
         while True:
@@ -82,4 +87,3 @@ class Pipe(object):
             match msg.type:
                 case Type.SetActivity:
                     handler.server_notify_set_activity(msg.val)
-

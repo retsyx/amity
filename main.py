@@ -24,6 +24,7 @@ import asyncio, pprint, subprocess, sys, traceback, yaml
 import remote
 import gestures
 import hdmi
+import keyboard
 import messaging
 import ui
 
@@ -44,7 +45,7 @@ class Hub(remote.RemoteListener):
             pressure_threshold)
         self.swipe_key = None
         self.swipe_counter = 0
-        self.pipe = None
+        self.pipes = []
         self.set_wait_for_release()
 
     def set_wait_for_release(self):
@@ -55,9 +56,9 @@ class Hub(remote.RemoteListener):
     def auto_clear_wait_for_release(self):
         self.wait_for_release = False
 
-    def set_pipe(self, pipe):
-        self.pipe = pipe
-        self.pipe.start_server_task(self)
+    def add_pipe(self, pipe):
+        self.pipes.append(pipe)
+        pipe.start_server_task(self)
 
     # Duck typed methods for messaging
     def client_set_activity(self, index):
@@ -86,7 +87,8 @@ class Hub(remote.RemoteListener):
         if not self.controller.set_activity(index):
             return False
         self.set_wait_for_release()
-        self.pipe.notify_set_activity(index)
+        for pipe in self.pipes:
+            pipe.notify_set_activity(index)
         return True
 
     def press_key(self, key, repeat_in_sec=None):
@@ -273,7 +275,8 @@ class Hub(remote.RemoteListener):
             self.press_key(hdmi.Key.LEFT, self.repeat_delay_sec)
             self.active_button = btns.LEFT
         elif released_button & btns.POWER:
-            self.pipe.notify_set_activity(-1)
+            for pipe in self.pipes:
+                pipe.notify_set_activity(-1)
             self.standby()
 
 async def _main():
@@ -318,9 +321,13 @@ async def _main():
     hub = Hub(controller, pressure_threshold)
 
     # Wire hub and interface to talk to each other
-    pipe = messaging.Pipe()
-    hub.set_pipe(pipe)
-    interface.set_pipe(pipe)
+    if_pipe = messaging.Pipe()
+    hub.add_pipe(if_pipe)
+    interface.set_pipe(if_pipe)
+
+    kb_pipe = messaging.Pipe()
+    hub.add_pipe(kb_pipe)
+    kb = keyboard.Keyboard(loop, kb_pipe)
 
     # Write hub and remote to talk to each other
     wrapper = remote.RemoteListenerAsyncWrapper(loop, hub)
@@ -331,7 +338,9 @@ async def _main():
     log.info(f'Connecting to remote with MAC {mac}')
     siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
 
-    await asyncio.gather(siri, interface.run(), *controller.wait_on())
+    while True:
+        await asyncio.gather(siri, interface.run(), *controller.wait_on(), *kb.wait_on())
+        await asyncio.sleep(1)
 
 # asyncio.run() swallows, and disappears exceptions on the main thread if there are other
 # threads running. So... use a catchall try/except to actively kill the entire process in case of
