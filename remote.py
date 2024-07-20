@@ -6,8 +6,12 @@
 #
 # This code is derived from code written by Yanndroid (https://github.com/Yanndroid)
 
+import tools
+
+log = tools.logger(__name__)
+
 import time
-from bluepy.btle import AssignedNumbers, BTLEDisconnectError, DefaultDelegate, Peripheral
+from bluepy.btle import AssignedNumbers, BTLEDisconnectError, BTLEException, DefaultDelegate, Peripheral
 
 class PnpInfo(object):
     def __init__(self, data):
@@ -323,7 +327,8 @@ class SiriRemote(DefaultDelegate):
                 while True:
                     self.__device.waitForNotifications(5)
 
-            except (BTLEDisconnectError, BrokenPipeError) as e:
+            except (BTLEDisconnectError, BTLEException, BrokenPipeError) as e:
+                log.info(f'Ignoring remote exception {e}. Will restart.')
                 self.__listener.event_button(self, 0)  # release all keys
                 time.sleep(0.5)
 
