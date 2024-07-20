@@ -18,9 +18,10 @@ class Type(Enum):
     KeyRelease = auto()
 
 class Message(object):
-    def __init__(self, type, val):
+    def __init__(self, type, value, count=0):
         self.type = type
-        self.val = val
+        self.value = value
+        self.count = count
 
 # A trivial object for connecting the Hub and UI indirectly with duck typing.
 class Pipe(object):
@@ -58,20 +59,20 @@ class Pipe(object):
             msg = await self.server_q.get()
             match msg.type:
                 case Type.SetActivity:
-                    handler.client_set_activity(msg.val)
+                    handler.client_set_activity(msg.value)
                 case Type.KeyPress:
-                    handler.client_press_key(msg.val)
+                    handler.client_press_key(msg.value, msg.count)
                 case Type.KeyRelease:
-                    handler.client_release_key(msg.val)
+                    handler.client_release_key(msg.value)
 
     # Client calls
     def set_activity(self, index):
         if self.server_t:
             self.taskit(self.server_q.put(Message(Type.SetActivity, index)))
 
-    def key_press(self, key):
+    def key_press(self, key, count=0):
         if self.server_t:
-            self.taskit(self.server_q.put(Message(Type.KeyPress, key)))
+            self.taskit(self.server_q.put(Message(Type.KeyPress, key, count)))
 
     def key_release(self, key):
         if self.server_t:
@@ -86,4 +87,4 @@ class Pipe(object):
             msg = await self.client_q.get()
             match msg.type:
                 case Type.SetActivity:
-                    handler.server_notify_set_activity(msg.val)
+                    handler.server_notify_set_activity(msg.value)

@@ -21,35 +21,29 @@ log = tools.logger(log_name)
 
 import asyncio, pprint, subprocess, sys, traceback, yaml
 
-import remote
-import gestures
+import remote, remote_adapter
 import hdmi
+from hdmi import Key
 import keyboard
 import messaging
 import ui
 
 class Hub(remote.RemoteListener):
+    REPEAT_COUNT_FLAG = 0x8000
+
     def __init__(self, controller, pressure_threshold=None):
         self.controller = controller
+        self.key_state = set()
         self.wait_for_release = False
-        self.button_state = 0
-        self.active_button = 0
-        self.active_key = hdmi.Key.NO_KEY
-        self.repeat_timer = None
+        self.repeat_timers = {}
         self.repeat_delay_sec = 0.2
         self.repeat_period_sec = 0.1
-        self.swipe_recognizer = gestures.SwipeRecognizer((5, 5), self.swipe_callback,
-            pressure_threshold)
-        self.dpad_emulator = gestures.DPadEmulator()
-        self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback,
-            pressure_threshold)
-        self.swipe_key = None
-        self.swipe_counter = 0
         self.pipes = []
         self.in_macro = False
         self.set_wait_for_release()
 
     def set_wait_for_release(self):
+        self.repeat_timers.clear()
         self.wait_for_release = True
         loop = asyncio.get_running_loop()
         loop.call_later(1, self.auto_clear_wait_for_release)
@@ -63,18 +57,83 @@ class Hub(remote.RemoteListener):
 
     # Duck typed methods for messaging
     def client_set_activity(self, index):
-        if index == -1:
-            self.standby()
-        else:
-            self.set_activity(index)
+        self.set_activity(index)
 
-    def client_press_key(self, key):
-        log.info(f'Client press key {key:02X}')
-        self.press_key(key, self.repeat_delay_sec)
+    def client_press_key(self, key, count):
+        log.info(f'Client press key {key:02X} count {count}')
+        hkey = key
+        if count > 0:
+            key |= self.REPEAT_COUNT_FLAG
+
+        self.key_state.add(key)
+
+        # Don't let key presses leak across selection/activity modes
+        if self.wait_for_release:
+            return
+
+        activity_map = {
+            Key.SELECT : 0,
+            Key.UP : 1,
+            Key.RIGHT : 2,
+            Key.DOWN : 3,
+            Key.LEFT : 4
+        }
+
+        if self.controller.current_activity is hdmi.no_activity:
+            # Ignore key sequences originating from swipes...
+            if count > 0:
+                self.key_state.discard(key)
+                return
+            index = activity_map.get(hkey)
+            if index is not None:
+                self.set_activity(index)
+            return
+
+        macros = {
+            (Key.POWER, Key.SELECT),
+            (Key.POWER, Key.UP),
+            (Key.POWER, Key.RIGHT),
+            (Key.POWER, Key.DOWN),
+            (Key.POWER, Key.LEFT),
+        }
+
+        for macro in macros:
+            key_count = 0
+            for k in macro:
+                if k in self.key_state:
+                    key_count += 1
+            if key_count == len(macro):
+                self.in_macro = True
+                index = activity_map.get(macro[1])
+                if index is not None:
+                    self.set_activity(index)
+                return
+
+        if hkey == Key.POWER:
+            return
+
+        self.controller.press_key(hkey)
+        loop = asyncio.get_running_loop()
+        self.repeat_timers[key] = loop.call_later(self.repeat_delay_sec,
+                                                  self.event_timer, key, count)
 
     def client_release_key(self, key):
         log.info(f'Client release key {key:02X}')
-        self.release_key()
+        self.key_state.discard(key)
+
+        if key == Key.POWER:
+            if self.in_macro:
+                self.in_macro = False
+            else:
+                self.standby()
+
+        if self.controller.current_activity is not hdmi.no_activity:
+            if (not self.key_state or
+                (len(self.key_state) == 1 and Key.POWER in self.key_state)):
+                self.controller.release_key()
+        if not self.key_state:
+            self.wait_for_release = False
+            self.in_macro = False
 
     def standby(self):
         if self.controller.current_activity is hdmi.no_activity:
@@ -83,6 +142,8 @@ class Hub(remote.RemoteListener):
         else:
             self.controller.standby()
         self.set_wait_for_release()
+        for pipe in self.pipes:
+            pipe.notify_set_activity(-1)
 
     def set_activity(self, index):
         if not self.controller.set_activity(index):
@@ -92,202 +153,23 @@ class Hub(remote.RemoteListener):
             pipe.notify_set_activity(index)
         return True
 
-    def press_key(self, key, repeat_in_sec=None):
-        self.controller.press_key(key)
-        if repeat_in_sec:
-            self.active_key = key
-            loop = asyncio.get_running_loop()
-            self.repeat_timer = loop.call_later(repeat_in_sec, self.event_timer)
-        else:
-            self.active_key = hdmi.Key.NO_KEY
-            self.controller.release_key()
-
-    def release_key(self):
-        if self.active_key != hdmi.Key.NO_KEY:
-            self.controller.release_key()
-            self.active_key = hdmi.Key.NO_KEY
-
-    def swipe(self):
-        if self.swipe_counter == 0: return False
-        log.info(f'Swiping key {self.swipe_key}')
-        self.controller.press_key(self.swipe_key)
-        self.swipe_counter -= 1
-        if self.swipe_counter > 0:
-            loop = asyncio.get_running_loop()
-            self.repeat_timer = loop.call_later(self.repeat_period_sec, self.event_timer)
-        else:
-            log.info(f'Swipe is complete')
-            self.controller.release_key()
-            self.swipe_key = None
-        return True
-
-    def event_timer(self):
-        if self.swipe():
-            return
-        if self.active_key == hdmi.Key.NO_KEY:
-            return
-        self.press_key(self.active_key, self.repeat_period_sec)
-
-    def event_button(self, remote, buttons: int):
-        btns = remote.profile.buttons
-
-        log.info(f'Buttons {buttons:04X}')
-
-        buttons = self.dpad_emulator.buttons(remote, buttons)
-
-        log.info(f'Buttons dpad {buttons:04X}')
-
-        # Don't let key presses leak across selection/activity modes
-        if self.wait_for_release:
-            if buttons == btns.RELEASED:
-                self.active_button = btns.RELEASED
-                self.button_state = buttons
-                self.wait_for_release = False
-                self.in_macro = False
+    def event_timer(self, key, repeat_count):
+        if key not in self.key_state:
             return
 
-        if self.controller.current_activity is hdmi.no_activity:
-            # We are in standby, select an activity...
-            if buttons & btns.SELECT:
-                self.set_activity(0)
-            elif buttons & btns.UP:
-                self.set_activity(1)
-            elif buttons & btns.RIGHT:
-                self.set_activity(2)
-            elif buttons & btns.DOWN:
-                self.set_activity(3)
-            elif buttons & btns.LEFT:
-                self.set_activity(4)
-            elif buttons & btns.POWER:
-                # Broadcast a standby only on the initial button press, not other state changes
-                if self.button_state == btns.RELEASED:
-                    self.standby()
-                    self.active_button = btns.POWER
-        else: # We are in an activity, control it...
-            self.handle_activity_button(remote, buttons)
-        self.button_state = buttons
-
-    def swipe_callback(self, recognizer, event):
-        if event.type & gestures.EventType.Detected:
-            if self.active_button != 0:
-                log.info(f'Swipe with active button {self.active_button}. Ignoring!')
+        hkey = key
+        if repeat_count > 0:
+            hkey &= ~self.REPEAT_COUNT_FLAG
+            repeat_count -= 1
+            if repeat_count == 0:
+                log.info(f'Repeating key {hkey} count done')
+                self.key_state.discard(key)
                 return
-            if self.swipe_key is not None:
-                log.info(f'Got swipe event {event} while swipe is in progress? Ignoring!')
-                return
-            if event.x < 0:
-                counter = -event.x
-                key = hdmi.Key.LEFT
-            elif event.x > 0:
-                counter = event.x
-                key = hdmi.Key.RIGHT
-            elif event.y < 0:
-                counter = -event.y
-                key = hdmi.Key.DOWN
-            else: # event.y > 0
-                counter = event.y
-                key = hdmi.Key.UP
-            log.info(f'Swiping {key} {counter} times')
-            self.swipe_key = key
-            self.swipe_counter = counter
-            self.swipe()
 
-    def multitap_callback(self, recognizer, event):
-        if event.type & gestures.EventType.Detected:
-            buttons = self.button_state | event.remote.profile.buttons.POWER
-            self.event_button(event.remote, buttons)
-            buttons = self.button_state & ~event.remote.profile.buttons.POWER
-            self.event_button(event.remote, buttons)
-
-    def event_touches(self, remote, touches):
-        self.swipe_recognizer.touches(remote, touches)
-        self.dpad_emulator.touches(remote, touches)
-        self.multitap_recognizer.touches(remote, touches)
-
-    def handle_activity_button(self, remote, button):
-        btns = remote.profile.buttons
-
-        MACRO_0 = btns.POWER | btns.SELECT
-        MACRO_1 = btns.POWER | btns.UP
-        MACRO_2 = btns.POWER | btns.RIGHT
-        MACRO_3 = btns.POWER | btns.DOWN
-        MACRO_4 = btns.POWER | btns.LEFT
-
-        # HDMI-CEC seems to support only one key press at a time (no concurrent key presses),
-        # and we want to support key repeat, so we need to track key press/release of a single
-        # key.
-        # Are we in the midst of a repeat of a key?
-        if self.active_button != btns.RELEASED:
-            # If the key is still being pressed, ignore any changes
-            if button & self.active_button:
-                return
-            else: # The key was released
-                if self.repeat_timer is not None:
-                    self.repeat_timer.cancel()
-                self.active_button = btns.RELEASED
-                self.release_key()
-                # We can process other keys now...
-
-        released_button = self.button_state & ~button
-
-        def is_macro(button, macro):
-            return (button & macro) == macro
-
-        if is_macro(button, MACRO_0):
-            self.in_macro = True
-            self.set_activity(0)
-        elif is_macro(button, MACRO_1):
-            self.in_macro = True
-            self.set_activity(1)
-        elif is_macro(button, MACRO_2):
-            self.in_macro = True
-            self.set_activity(2)
-        elif is_macro(button, MACRO_3):
-            self.in_macro = True
-            self.set_activity(3)
-        elif is_macro(button, MACRO_4):
-            self.in_macro = True
-            self.set_activity(4)
-        elif button & btns.HOME:
-            self.press_key(hdmi.Key.ROOT_MENU, self.repeat_delay_sec)
-            self.active_button = btns.HOME
-        elif button & btns.VOLUME_UP:
-            self.press_key(hdmi.Key.VOLUME_UP, self.repeat_delay_sec)
-            self.active_button = btns.VOLUME_UP
-        elif button & btns.VOLUME_DOWN:
-            self.press_key(hdmi.Key.VOLUME_DOWN, self.repeat_delay_sec)
-            self.active_button = btns.VOLUME_DOWN
-        elif button & btns.SELECT:
-            self.press_key(hdmi.Key.SELECT, self.repeat_delay_sec)
-            self.active_button = btns.SELECT
-        elif button & btns.BACK:
-            self.press_key(hdmi.Key.BACK, self.repeat_delay_sec)
-            self.active_button = btns.BACK
-        elif button & btns.MUTE:
-            self.press_key(hdmi.Key.TOGGLE_MUTE)
-            self.active_button = btns.MUTE
-        elif button & btns.PLAY_PAUSE:
-            self.press_key(hdmi.Key.PAUSE_PLAY, self.repeat_delay_sec)
-            self.active_button = btns.PLAY_PAUSE
-        elif button & btns.UP:
-            self.press_key(hdmi.Key.UP, self.repeat_delay_sec)
-            self.active_button = btns.UP
-        elif button & btns.RIGHT:
-            self.press_key(hdmi.Key.RIGHT, self.repeat_delay_sec)
-            self.active_button = btns.RIGHT
-        elif button & btns.DOWN:
-            self.press_key(hdmi.Key.DOWN, self.repeat_delay_sec)
-            self.active_button = btns.DOWN
-        elif button & btns.LEFT:
-            self.press_key(hdmi.Key.LEFT, self.repeat_delay_sec)
-            self.active_button = btns.LEFT
-        elif released_button & btns.POWER:
-            if self.in_macro:
-                self.in_macro = False
-            else:
-                for pipe in self.pipes:
-                    pipe.notify_set_activity(-1)
-                self.standby()
+        log.info(f'Repeating key {hkey} count {repeat_count}')
+        self.controller.press_key(hkey)
+        loop = asyncio.get_running_loop()
+        self.repeat_timers[key] = loop.call_later(self.repeat_period_sec, self.event_timer, key, repeat_count)
 
 async def _main():
     global args
@@ -330,17 +212,21 @@ async def _main():
         pressure_threshold = touchpad_config.get('pressure_threshold')
     hub = Hub(controller, pressure_threshold)
 
-    # Wire hub and interface to talk to each other
+    # Wire hub and UI
     if_pipe = messaging.Pipe()
     hub.add_pipe(if_pipe)
     interface.set_pipe(if_pipe)
 
+    # Wire hub and keyboard
     kb_pipe = messaging.Pipe()
     hub.add_pipe(kb_pipe)
     kb = keyboard.Keyboard(loop, kb_pipe)
 
-    # Write hub and remote to talk to each other
-    wrapper = remote.RemoteListenerAsyncWrapper(loop, hub)
+    # Wire hub and Siri remote
+    sr_pipe = messaging.Pipe()
+    hub.add_pipe(sr_pipe)
+    ra = remote_adapter.Adapter(sr_pipe)
+    wrapper = remote.RemoteListenerAsyncWrapper(loop, ra)
 
     mac = config['remote']['mac']
     log.info(f'Calling bluetoothctl to disconnect MAC {mac}')

@@ -99,7 +99,7 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
                 # If this is a release event, the touch is over.
                 # Check for a swipe gesture, and remove the state.
                 v = touch.axis_velocities_from_touch(touch_state.start_touch)[self.axis]
-                a = -400 # mm/s^2
+                a = -100 # mm/s^2
                 if v < 0:
                     a = -a
                 t = -v / a

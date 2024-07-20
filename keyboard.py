@@ -83,7 +83,7 @@ class Keyboard(object):
         e.KEY_SEARCH : Key.DISPLAY_INFO,
         e.KEY_HOMEPAGE : Key.ROOT_MENU,
         e.KEY_REWIND : Key.REWIND,
-        e.KEY_PLAYPAUSE : Key.PAUSE_PLAY,
+        e.KEY_PLAYPAUSE : Key.SELECT,
         e.KEY_FASTFORWARD : Key.FAST_FORWARD,
         e.KEY_PROGRAM : Key.GUIDE
     }
