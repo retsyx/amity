@@ -46,6 +46,7 @@ class Hub(remote.RemoteListener):
         self.swipe_key = None
         self.swipe_counter = 0
         self.pipes = []
+        self.in_macro = False
         self.set_wait_for_release()
 
     def set_wait_for_release(self):
@@ -142,6 +143,7 @@ class Hub(remote.RemoteListener):
                 self.active_button = btns.RELEASED
                 self.button_state = buttons
                 self.wait_for_release = False
+                self.in_macro = False
             return
 
         if self.controller.current_activity is hdmi.no_activity:
@@ -232,14 +234,19 @@ class Hub(remote.RemoteListener):
             return (button & macro) == macro
 
         if is_macro(button, MACRO_0):
+            self.in_macro = True
             self.set_activity(0)
         elif is_macro(button, MACRO_1):
+            self.in_macro = True
             self.set_activity(1)
         elif is_macro(button, MACRO_2):
+            self.in_macro = True
             self.set_activity(2)
         elif is_macro(button, MACRO_3):
+            self.in_macro = True
             self.set_activity(3)
         elif is_macro(button, MACRO_4):
+            self.in_macro = True
             self.set_activity(4)
         elif button & btns.HOME:
             self.press_key(hdmi.Key.ROOT_MENU, self.repeat_delay_sec)
@@ -275,9 +282,12 @@ class Hub(remote.RemoteListener):
             self.press_key(hdmi.Key.LEFT, self.repeat_delay_sec)
             self.active_button = btns.LEFT
         elif released_button & btns.POWER:
-            for pipe in self.pipes:
-                pipe.notify_set_activity(-1)
-            self.standby()
+            if self.in_macro:
+                self.in_macro = False
+            else:
+                for pipe in self.pipes:
+                    pipe.notify_set_activity(-1)
+                self.standby()
 
 async def _main():
     global args
