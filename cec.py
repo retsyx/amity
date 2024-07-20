@@ -569,7 +569,7 @@ class Adapter(object):
                 self.physical_address = 0x0000
             else:
                 # Hopefully, this guessed address works universally.
-                self.physical_address = 0x8888
+                self.physical_address = 0x1000
 
         # And configure...
         laddrs = LogAddrs()

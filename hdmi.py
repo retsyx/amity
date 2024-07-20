@@ -28,12 +28,34 @@ no_activity_descriptor = { 'name': 'No Activity',
                 'audio': None,
                 }
 
+class Switch(object):
+    def __init__(self, d):
+        self.device = d['device']
+        self.input = d['input']
+
+    def __repr__(self):
+        d = { 'device': self.device,
+              'input': self.input
+            }
+        return pprint.pformat(d)
+
 class Activity(object):
     def __init__(self, d=no_activity_descriptor):
         self.name = d['name']
         self.display = d['display']
         self.source = d['source']
         self.audio = d['audio']
+        switch_d = d.get('switch')
+        if switch_d is not None:
+            self.switch = Switch(switch_d)
+        else:
+            self.switch = None
+
+    def devices(self):
+        ds = [self.display, self.source, self.audio]
+        if self.switch is not None:
+            ds.append(self.switch.device)
+        return ds
 
     def __repr__(self):
         d = {
@@ -114,12 +136,16 @@ class Device(object):
         self.dev.key_release()
 
     def set_stream_path(self):
-        # Some devices will change their physical address after being powered on?
-        #self.dev.get_physical_address_and_primary_device_type()
         self.dev.set_stream_path()
 
     def handle_report_physical_address(self, msg):
         self.dev.parse_report_physical_address_message(msg)
+
+    def set_input(self, index):
+        # Press the SET INPUT key with the input index
+        self.dev.transmit(bytes([Message.KEY_PRESS, Key.SET_INPUT, index]))
+        # And then release the key
+        self.dev.key_release()
 
 class Controller(object):
     def __init__(self, front_dev, back_dev, osd_name, loop, activities):
@@ -272,8 +298,8 @@ class Controller(object):
             self.fix_current_activity()
             return True
         # Order probably matters so don't use a set().
-        current_devices = [ca.audio, ca.source, ca.display]
-        new_devices = [na.audio, na.source, na.display]
+        current_devices = ca.devices()
+        new_devices = na.devices()
         for current_device in current_devices:
             if current_device not in new_devices:
                 device = self.get_device(current_device, 'STANDBY')
@@ -298,7 +324,7 @@ class Controller(object):
     def fix_current_activity(self):
         ca = self.current_activity
         log.info(f'Fixing activity {ca.name}')
-        current_devices = [ca.audio, ca.source, ca.display]
+        current_devices = ca.devices()
         for current_device in current_devices:
             device = self.get_device(current_device, 'POWER ON')
             if device is None:
@@ -308,11 +334,20 @@ class Controller(object):
         self.set_activity_input(ca)
 
     def set_activity_input(self, activity):
+        # Setting the stream path is the better way...
         device = self.get_device(activity.source, 'SET STREAM PATH')
-        if device is None:
+        if device is not None:
+            log.info(f'Setting stream path to {pretty_physical_address(device.physical_address)}')
+            device.set_stream_path()
             return
-        log.info(f'Setting stream path to {pretty_physical_address(device.physical_address)}')
-        device.set_stream_path()
+        # However, some devices aren't particularly HDMI-CEC compliant, so, as a fallback, the user
+        # can optionally configure the switch device on which we should et the input try changing
+        # the receiver input instead (assuming the receiver supports it...)
+        if activity.switch:
+            device = self.get_device(activity.switch.device, 'SET INPUT')
+            if device is None:
+                return
+            device.set_input(activity.switch.input)
 
     def standby(self):
         self.set_activity(-1)
