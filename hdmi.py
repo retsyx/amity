@@ -87,6 +87,9 @@ class Device(object):
     def osd_name(self):
         return self.dev.osd_name
 
+    def get_osd_name(self):
+        self.dev.get_osd_name()
+
     @property
     def address(self):
         return self.dev.address
@@ -206,6 +209,8 @@ class Controller(object):
 
         pa = pretty_physical_address(device.physical_address)
         log.info(f'{device.osd_name} updated physical address to {pa}')
+        if not device.osd_name:
+            device.get_osd_name()
         if device.osd_name == self.current_activity.source:
             log.info(f'Setting stream path to updated address {pa}')
             device.set_stream_path()
