@@ -421,6 +421,13 @@ class Device(object):
             else:
                 self.osd_name = ''
 
+    def send_osd_name(self, osd_name):
+        msg = self.new_msg()
+        data = [Message.SET_OSD_NAME]
+        data.extend([ord(x) for x in osd_name[:Message.MAX_MSG_SIZE - 2]])
+        msg.set_data(data)
+        self.transmit(msg)
+
     def get_vendor_id(self):
         msg = self.new_msg()
         msg.set_data([Message.GIVE_VENDOR_ID])
