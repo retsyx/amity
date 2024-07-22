@@ -178,17 +178,6 @@ class Controller(object):
         msg.set_data((Message.REPORT_POWER_STATUS, status))
         adapter.transmit(msg)
 
-    def handle_give_osd_name(self, adapter, msg):
-        # A device is asking for our OSD name...
-        # Give it the name of the current activity or simply 'Amity'
-        if self.current_activity == no_activity:
-            osd_name = 'Amity'
-        else:
-            osd_name = self.current_activity.name
-        log.info(f"Responding to OSD request with '{osd_name}'")
-        device = cec.Device(adapter, msg.src)
-        device.send_osd_name(osd_name)
-
     def front_listen(self):
         while True:
             msg = self.front_adapter.listen()
@@ -199,9 +188,6 @@ class Controller(object):
             match msg.op:
                 case Message.GIVE_DEVICE_POWER_STATUS:
                     self.loop.call_soon_threadsafe(self.handle_give_device_power_status,
-                                                   self.front_adapter, msg)
-                case Message.GIVE_OSD_NAME:
-                    self.loop.call_soon_threadsafe(self.handle_give_osd_name,
                                                    self.front_adapter, msg)
 
     def handle_device_report_physical_address(self, adapter, msg):
