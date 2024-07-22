@@ -97,6 +97,6 @@ class Adapter(remote.RemoteListener):
 
     def event_power(self, remote, charging: bool):
         if charging:
-            log.info('Charginig')
+            log.info('Charging')
         else:
             log.info('Not charging')

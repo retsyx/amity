@@ -302,7 +302,6 @@ class Controller(object):
         if na is ca:
             self.fix_current_activity()
             return True
-        # Order probably matters so don't use a set().
         current_devices = ca.devices()
         new_devices = na.devices()
         for current_device in current_devices:
@@ -353,6 +352,8 @@ class Controller(object):
             if device is None:
                 return
             device.set_input(activity.switch.input)
+        # Also, remind the TV that we are the source
+        self.front_adapter.active_source()
 
     def standby(self):
         self.set_activity(-1)

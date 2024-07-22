@@ -110,9 +110,12 @@ class Key(IntEnum):
     VOLUME_UP = 0x41
     VOLUME_DOWN = 0x42
     TOGGLE_MUTE = 0x43
+    PLAY = 0x44
+    PAUSE = 0x46
     REWIND = 0x48
     FAST_FORWARD = 0x49
     GUIDE = 0x53
+    PLAY_FUNCTION = 0x60
     PAUSE_PLAY = 0x61
     SET_INPUT = 0x69
     POWER_OFF = 0x6C
@@ -381,10 +384,8 @@ class Device(object):
     def is_broadcast(self):
         return self.address == BROADCAST_ADDRESS
 
-    def new_msg(self, len):
-        msg = Message(self.adapter.address, self.address)
-        msg.len = len
-        return msg
+    def new_msg(self):
+        return Message(self.adapter.address, self.address)
 
     def parse_report_physical_address_message(self, msg):
         if msg.ok():
@@ -400,15 +401,15 @@ class Device(object):
                 self.primary_device_type = DeviceType.INVALID
 
     def get_physical_address_and_primary_device_type(self):
-        msg = self.new_msg(2)
-        msg.msg[1] = Message.GIVE_PHYSICAL_ADDR
+        msg = self.new_msg()
+        msg.set_data([Message.GIVE_PHYSICAL_ADDR])
         msg.reply = Message.REPORT_PHYSICAL_ADDR
         self.adapter.transmit(msg)
         self.parse_report_physical_address_message(msg)
 
     def get_osd_name(self):
-        msg = self.new_msg(2)
-        msg.msg[1] = Message.GIVE_OSD_NAME
+        msg = self.new_msg()
+        msg.set_data([Message.GIVE_OSD_NAME])
         msg.reply = Message.SET_OSD_NAME
         self.adapter.transmit(msg)
         if msg.ok():
@@ -421,8 +422,8 @@ class Device(object):
                 self.osd_name = ''
 
     def get_vendor_id(self):
-        msg = self.new_msg(2)
-        msg.msg[1] = Message.GIVE_VENDOR_ID
+        msg = self.new_msg()
+        msg.set_data([Message.GIVE_VENDOR_ID])
         msg.reply = Message.VENDOR_ID
         self.adapter.transmit(msg)
         if msg.ok():
@@ -434,24 +435,23 @@ class Device(object):
             self.vendor_id = 0
 
     def standby(self):
-        msg = self.new_msg(2)
-        msg.msg[1] = Message.STANDBY
+        msg = self.new_msg()
+        msg.set_data([Message.STANDBY])
         self.adapter.transmit(msg)
 
     def key_press(self, key: Key):
-        msg = self.new_msg(3)
-        msg.msg[1] = Message.KEY_PRESS
-        msg.msg[2] = key
+        msg = self.new_msg()
+        msg.set_data([Message.KEY_PRESS, key])
         self.adapter.transmit(msg)
 
     def key_release(self):
-        msg = self.new_msg(2)
-        msg.msg[1] = Message.KEY_RELEASE
+        msg = self.new_msg()
+        msg.set_data([Message.KEY_RELEASE])
         self.adapter.transmit(msg)
 
     def image_view_on(self):
-        msg = self.new_msg(2)
-        msg.msg[1] = Message.IMAGE_VIEW_ON
+        msg = self.new_msg()
+        msg.set_data([Message.IMAGE_VIEW_ON])
         self.adapter.transmit(msg)
 
     def power_on(self):
@@ -465,22 +465,20 @@ class Device(object):
 
     def set_stream_path(self):
         msg = Message(self.adapter.address, BROADCAST_ADDRESS)
-        msg.len = 4
-        msg.msg[1] = Message.SET_STREAM_PATH
-        msg.msg[2] = (self.physical_address >> 8)
-        msg.msg[3] = (self.physical_address & 0xff)
+        msg.set_data([Message.SET_STREAM_PATH,
+                    self.physical_address >> 8,
+                    self.physical_address & 0xff])
         self.adapter.transmit(msg)
 
     def active_source(self):
         msg = Message(self.adapter.address, BROADCAST_ADDRESS)
-        msg.len = 4
-        msg.msg[1] = Message.ACTIVE_SOURCE
-        msg.msg[2] = (self.physical_address >> 8)
-        msg.msg[3] = (self.physical_address & 0xff)
+        msg.set_data([Message.ACTIVE_SOURCE,
+                self.physical_address >> 8,
+                self.physical_address & 0xff])
         self.adapter.transmit(msg)
 
     def transmit(self, data):
-        msg = self.new_msg(1)
+        msg = self.new_msg()
         msg.set_data(data)
         self.adapter.transmit(msg)
 
@@ -612,6 +610,13 @@ class Adapter(object):
         if msg.did_rx():
             log.info(f'RX {msg}')
         return ret
+
+    def active_source(self):
+        msg = Message(self.address, BROADCAST_ADDRESS)
+        msg.set_data([Message.ACTIVE_SOURCE,
+                      self.physical_address >> 8,
+                      self.physical_address & 0xff])
+        self.transmit(msg)
 
     def poll_device(self, i):
         msg = Message(self.address, i)
