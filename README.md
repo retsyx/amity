@@ -1,10 +1,11 @@
 # Amity
-Home theater control over HDMI-CEC with a Siri Remote
+Home theater control over HDMI-CEC
 
 * [Introduction](#introduction)
 * [Caveats](#caveats)
 * [Prerequisites](#prerequisites)
 * [Setup](#setup)
+  * [HDMI Splice](#hdmi-splice)
   * [Initial Installation](#initial-installation)
   * [Pairing a Siri Remote](#pairing-a-siri-remote)
   * [HDMI Configuration](#hdmi-configuration)
@@ -25,31 +26,42 @@ Use a Raspberry Pi, and a Siri Remote to control a home theater system over HDMI
 
 ## Caveats
 
+!!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
+
+Amity requires splicing into the HDMI-CEC connection between the TV and the receiver. Right now, this requires carefully stripping, and cutting the correct wires in an HDMI cable so they can be wired in to Raspberry Pi GPIO pins. HDMI-CEC specifies the use of a 27K ohms pullup resistors for the CEC wires. The GPIO pins used by Amity have fixed 1.8K ohms resistors and are configured, in software, to enable the internal Raspberry Pi ~60K ohms pullup resistors. This is wildly out of spec. for HDMI-CEC but has worked well so far. It is possible to build the correct circuit, and to use different GPIO pins (without the builtin 1.8K ohms pullups).
+
+!!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
+
+
 HDMI-CEC is a terrible control protocol. Different equipment manufacturers implement it in often incompatible ways. Some HDMI devices don't support HDMI-CEC at all. HDMI-CEC devices often behave unpredictably, and it can be an endless source of headaches. Using it for anything is a very bad idea.
 
-Testing of Amity has been limited to the equipment I have. It works for me. It may very well not work for you. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious.
+Testing of Amity has been limited to the equipment I have. It works for me. It may very well not work for you. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious. Amity is known to work (with my equipment, anyway) with a traditional setup centered around a receiver. In my case, I have an LG TV connected to a Denon receiver output. I have an Apple TV, a PlayStation, and a Nintendo Switch (that has minimal HDMI-CEC functionality) connected to the receiver's inputs. When I want to change what I'm watching, I change inputs on the receiver.
 
-Amity is known to work (with my equipment, anyway) with a traditional setup centered around a receiver. In my case, I have an LG TV connected to a Denon receiver output. I have an Apple TV, a PlayStation, and a Nintendo Switch (that has minimal HDMI-CEC functionality) connected to the receiver's inputs. When I want to change what I'm watching, I change inputs on the receiver.
-
-Amity does not support eArc at the moment.
-
-Amity does not work with the Raspberry Pi's HDMI connectors. Amity works by pretending to be a TV to the receiver, and all the devices connected to it, and by tricking the TV into thinking there is only one device attached to it. This is done by splicing into the HDMI-CEC bus between the receiver, and the TV. Splicing requires either stripping an existing HDMI cable, carefully pulling out the CEC, and Ground wires without disturbing the other wires in the cable, and connecting them to Raspberry Pi GPIO pins or using a HDMI-CEC breakout board that preserves, and passes through the HDMI A/V signals without noticeably degrading them.
+Amity does not support HDMI ARC/eARC at the moment.
 
 With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Amity.
 
 ## Prerequisites
 
-* A Raspberry Pi 3 Model B+, or Pi Zero W, or newer with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
-* An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work.
+* A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer with an appropriate power supply, that can run 64-bit Linux. Network connectivity is required for initial setup but not when controlling your home theater.
+* A remote control. An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work. Or an Amazon Fire, Roku remote, or common third party RF remotes that behave like keyboards. IR remotes are not supported.
 * An HDMI-CEC splice (either a stripped, spliced cable, or a dedicated board and an extra HDMI cable)
 
 ## Setup
+
+### HDMI Splice
+
+Amity does not work with the Raspberry Pi's HDMI connectors. Amity works by pretending to be a TV to the receiver, and all the devices connected to it, and by tricking the TV into thinking there is only one device attached to it. This is done by splicing into the HDMI-CEC bus between the receiver, and the TV. Splicing requires either stripping an existing HDMI cable, carefully pulling out the CEC, and ground wires without disturbing the other wires in the cable, and connecting them to Raspberry Pi GPIO pins or using a HDMI-CEC breakout board that preserves, and passes through the HDMI A/V signals without noticeably degrading them.
+
+If stripping an HDMI cable, cut the CEC wire to create two ends that connect to the Raspberry Pi. DO NOT cut the ground wire - connect a wire from the Raspberry Pi ground to the intact ground wire.
+
+Whether with a cable or a breakout board, connect the two CEC wires (one connected to the TV, and the other connected to the receiver) to GPIO pins 3 and 4 on the Raspberry Pi (order doesn't matter). Connect the HDMI splice ground to ground on the Raspberry Pi. These are pins 5, 7, and 9 on the Raspberry Pi [pinout](https://pinout.xyz).
 
 ### Initial Installation
 
 Amity setup, and configuration is done entirely in the command terminal, and requires some familiarity with the terminal.
 
-It is assumed that this will be a dedicated device for home theater control. It may be possible to run Amity with other services on the same RPi but it is strongly discouraged.
+It is assumed that this will be a dedicated device for home theater control. It may be possible to run Amity with other services on the same RPi but it is strongly discouraged, and is not supported.
 
 1. Image Raspberry Pi **without** Desktop on a MicroSD card. The best tool for this is [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Desktop **MUST NOT** be installed.
 2. Insert the MicroSD into the Rpi, power it on, and login via SSH, or hook up a keyboard and mouse, and use the console (unless configured, the default user created by Raspberry Pi Imager is `pi`. All examples will assume the user is `pi`)
@@ -65,9 +77,15 @@ It is assumed that this will be a dedicated device for home theater control. It 
     /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/retsyx/amity/main/setup_amity)"
     ```
 
+### Using a Keyboard for Control
+
+Some media remote controls (Amazon Fire, Roku remotes, or common third party RF remotes) operate as keyboards. Amity can controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire, or Roku) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, or Roku remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
+
+This document uses the Siri remote as an example, but remote operation (except pairing) is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire, and Roku activity buttons are undocumented, and are not supported.
+
 ### Pairing a Siri Remote
 
-The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Ensure the remote is charged.
+The preferred method of control is a Siri Remote (easy pairing, and great battery life!). The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Ensure the remote is charged.
 
 In the terminal, ensure you are in the Amity directory:
 
@@ -219,6 +237,32 @@ As a result, the Switch will often not show up in bus scans, and be auto-configu
 ```
 
 Then to play, you would turn on the Switch, and select the `Play Switch` activity on the Siri remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
+
+Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, if the receiver supports selecting inputs over HDMI-CEC, Amity can be configured to select the input on the receiver. The configuration:
+
+```yaml
+- name: Play Switch
+  display: TV
+  source: NintendoSwitch
+  audio: AVR-X3400H
+  switch:
+    device: AVR-X3400H
+    input: 6
+```
+
+This tells Amity that the input switching device is the AVR, and that the HDMI input to use is input 6. When selecting the `Play Switch` activity, Amity will tell the AVR to switch to input 6. This depends on the AVR supporting the feature, and on finding the correct value for the input, 6 in this case. Finding the input number is through trial, and error, at the moment. On a Denon AVR-X3400H the input values are:
+
+1. CBL/SAT
+2. DVD
+3. Blu-ray
+4. Games
+5. Media Player
+6. Aux 2
+7. ?
+8. Aux 1
+
+?. CD
+
 
 ## License
 
