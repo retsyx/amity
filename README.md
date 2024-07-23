@@ -7,6 +7,7 @@ Home theater control over HDMI-CEC
 * [Setup](#setup)
   * [HDMI Splice](#hdmi-splice)
   * [Initial Installation](#initial-installation)
+  * [Using a Keyboard for Control](#using-a-keyboard-for-control)
   * [Pairing a Siri Remote](#pairing-a-siri-remote)
   * [HDMI Configuration](#hdmi-configuration)
     * [Quick Sanity Scan](#quick-sanity-scan)
@@ -18,6 +19,7 @@ Home theater control over HDMI-CEC
   * [Standby](#standby)
   * [Active](#active)
 * [Strange Devices](#strange-devices)
+  * [Nintendo Switch](#nintendo-switch)
 * [License](#license)
 
 ## Introduction
@@ -28,7 +30,7 @@ Use a Raspberry Pi, and a Siri Remote to control a home theater system over HDMI
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
-Amity requires splicing into the HDMI-CEC connection between the TV and the receiver. Right now, this requires carefully stripping, and cutting the correct wires in an HDMI cable so they can be wired in to Raspberry Pi GPIO pins. HDMI-CEC specifies the use of a 27K ohms pullup resistors for the CEC wires. The GPIO pins used by Amity have fixed 1.8K ohms resistors and are configured, in software, to enable the internal Raspberry Pi ~60K ohms pullup resistors. This is wildly out of spec. for HDMI-CEC but has worked well so far. It is possible to build the correct circuit, and to use different GPIO pins (without the builtin 1.8K ohms pullups).
+Amity requires splicing into the HDMI-CEC connection between the TV and the receiver. Right now, this requires carefully stripping, and cutting the correct wires in an HDMI cable so they can be wired in to Raspberry Pi GPIO pins. HDMI-CEC specifies the use of a 27K ohms pullup resistors for the CEC wires. The GPIO pins used by Amity are configured, in software, to enable the internal Raspberry Pi ~60K ohms pullup resistors. This is wildly out of spec. for HDMI-CEC but has worked well for me. It is possible to build the correct circuit with external resistors, but I haven't had a need so far. Wiring the Raspberry Pi incorrectly into the HDMI cable may also damage your HDMI equipment and/or Raspberry Pi.
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
@@ -51,11 +53,11 @@ With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Am
 
 ### HDMI Splice
 
-Amity does not work with the Raspberry Pi's HDMI connectors. Amity works by pretending to be a TV to the receiver, and all the devices connected to it, and by tricking the TV into thinking there is only one device attached to it. This is done by splicing into the HDMI-CEC bus between the receiver, and the TV. Splicing requires either stripping an existing HDMI cable, carefully pulling out the CEC, and ground wires without disturbing the other wires in the cable, and connecting them to Raspberry Pi GPIO pins or using a HDMI-CEC breakout board that preserves, and passes through the HDMI A/V signals without noticeably degrading them.
+Amity does not work with the Raspberry Pi's HDMI connectors. Amity works by emulating a TV to the receiver, and all the devices connected to it, and by emulating a single playback device to the TV. This is done by splicing into the HDMI-CEC bus between the receiver, and the TV. Splicing requires either stripping an existing HDMI cable, carefully pulling out the CEC, and ground wires without disturbing the other wires in the cable, and connecting them to Raspberry Pi GPIO pins or using a HDMI-CEC breakout board that preserves, and passes through the HDMI A/V signals without noticeably degrading them.
 
 If stripping an HDMI cable, cut the CEC wire to create two ends that connect to the Raspberry Pi. DO NOT cut the ground wire - connect a wire from the Raspberry Pi ground to the intact ground wire.
 
-Whether with a cable or a breakout board, connect the two CEC wires (one connected to the TV, and the other connected to the receiver) to GPIO pins 3 and 4 on the Raspberry Pi (order doesn't matter). Connect the HDMI splice ground to ground on the Raspberry Pi. These are pins 5, 7, and 9 on the Raspberry Pi [pinout](https://pinout.xyz).
+Whether with a cable or a breakout board, with power off, connect the two CEC wires (one connected to the TV, and the other connected to the receiver) to GPIO pins 23 and 24 on the Raspberry Pi (order doesn't matter). Connect the HDMI splice ground to ground on the Raspberry Pi. These are pins 14, 16, and 18 on the Raspberry Pi [pinout](https://pinout.xyz). Be careful not to miswire the two CEC wires to ground as that could potentially damage the HDMI equipment and the Raspberry Pi!
 
 ### Initial Installation
 
@@ -63,7 +65,7 @@ Amity setup, and configuration is done entirely in the command terminal, and req
 
 It is assumed that this will be a dedicated device for home theater control. It may be possible to run Amity with other services on the same RPi but it is strongly discouraged, and is not supported.
 
-1. Image Raspberry Pi **without** Desktop on a MicroSD card. The best tool for this is [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Desktop **MUST NOT** be installed.
+1. Image Raspberry Pi a 64-bit image **without** Desktop on a MicroSD card. The best tool for this is [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Desktop **MUST NOT** be installed.
 2. Insert the MicroSD into the Rpi, power it on, and login via SSH, or hook up a keyboard and mouse, and use the console (unless configured, the default user created by Raspberry Pi Imager is `pi`. All examples will assume the user is `pi`)
 3. In the console (or SSH) ensure you are in the `pi` user home directory:
 
@@ -77,9 +79,11 @@ It is assumed that this will be a dedicated device for home theater control. It 
     /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/retsyx/amity/main/setup_amity)"
     ```
 
+Amity requires a Linux kernel compiled with `cec-gpio` support enabled. If the running kernel doesn't support `cec-gpio` (it likely doesn't), then Amity will download, and install an appropriate pre-compiled kernel, and then reboot. If the running kernel already supports `cec-gpio` Amity will not replace it.
+
 ### Using a Keyboard for Control
 
-Some media remote controls (Amazon Fire, Roku remotes, or common third party RF remotes) operate as keyboards. Amity can controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire, or Roku) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, or Roku remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
+Some media remote controls (Amazon Fire, Roku remotes, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire, or Roku) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, or Roku remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
 
 This document uses the Siri remote as an example, but remote operation (except pairing) is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire, and Roku activity buttons are undocumented, and are not supported.
 
@@ -109,8 +113,6 @@ Amity uses a concept of activities to organize the different uses of a home thea
 
 Configuring activities is fairly straightforward thanks to HDMI-CEC.
 
-Plug in Amity's HDMI input into the requires GPIO pins...
-
 #### Quick Sanity Scan
 
 Ensure that all home theater devices have HDMI-CEC enabled, and are discoverable. To list all the devices available on HDMI-CEC, in the Amity directory, run:
@@ -119,15 +121,15 @@ Ensure that all home theater devices have HDMI-CEC enabled, and are discoverable
 ./configure_hdmi scan
 ```
 
-Pay particular attention to the names of the devices. These are the HDMI On Screen Display (OSD) names of the devices, and are used to reference the devices in Amity configuration. Ensure that no two devices share the same name. Duplicate names are not supported, and will lead to confusion, failure, and disappointment.
+The names of the devices are their HDMI On Screen Display (OSD) names, and are used to reference the devices in Amity configuration. Ensure that no two devices share the same name. Duplicate names are not supported, and will lead to confusion, failure, and disappointment.
 
 Devices that don't appear in the list don't have HDMI-CEC enabled or have a very broken HDMI-CEC implementation (i.e. Nintendo Switch) that may only partially work in general.
 
-If you don't see any devices except the Amity device, ensure the HDMI-CEC splice cable is correctly attached.
+If you don't see any devices, ensure the HDMI-CEC splice cable is correctly attached.
 
 #### Automatic Activity Recommendation
 
-Now that all the devices are accounted for, Amity can guess a set of activities:
+Now that all the devices are accounted for, Amity can generate a set of recommended activities:
 
 ```commandline
 ./configure_hdmi recommend
@@ -189,7 +191,7 @@ To start Amity, type:
 ./setup_amity enable
 ```
 
-Amity is now running. Now, close the terminal, and start playing with the remote.
+After this command Amity will run. Close the terminal, and start playing with the remote.
 
 ## Stopping Amity
 
@@ -227,7 +229,7 @@ Many HDMI-CEC devices do strange things. Here are some known workarounds.
 
 The Nintendo switch has a minimal HDMI-CEC implementation that appears to be nearly always dormant and ignores practically every command except standby. The Switch only appears when it is powered on directly by the user, or placed in the cradle, and then it automatically requests to be displayed.
 
-As a result, the Switch will often not show up in bus scans, and be auto-configured. The solution is to edit `config.yaml` manually to add an activity for the switch. When active, the Switch defaults to calling itself `NintendoSwitch`, so an example activity configuration for a Switch would be:
+As a result, the Switch will often not show up in bus scans, or be auto-configured. The solution is to edit `config.yaml` manually to add an activity for the switch. When active, the Switch defaults to calling itself `NintendoSwitch`, so an example activity configuration for a Switch would be:
 
 ```yaml
 - name: Play Switch

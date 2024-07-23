@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/usr/bin/bash
 
 set -xe
 
@@ -7,20 +7,38 @@ ROOT_DIR=~
 APP_DIR=$ROOT_DIR/$NAME
 LOG_DIR=$APP_DIR/log
 LOG_PATH=$LOG_DIR/$NAME.log
+FIRMWARE_PATH=/boot/firmware
 
 ACTION=$1
 
+
 # This script is idempotent.
+
+strstr() { case $2 in *$1* ) return 0;; *) return 1;; esac ;}
+
+# Initial sanity check that the hardware is supported, and prep info in case the kernel
+# needs to be updated to support cec-gpio
+RPI_MODEL=`cat /sys/firmware/devicetree/base/model`
+if strstr "Raspberry Pi 4" "$RPI_MODEL" ||
+    strstr "Raspberry Pi 3 Model B" "$RPI_MODEL" ||
+    strstr "Raspberry Pi Zero 2 W" "$RPI_MODEL"; then
+    KERNEL_ARCHIVE_URL="https://github.com/retsyx/amity-kernels/blob/main/kernel-6.6.31/kernel-6.6.31-v8-amity.zip?raw=true"
+    KERNEL_IMG=kernel8.img
+elif strstr "Raspberry Pi 5" "$RPI_MODEL"; then
+    KERNEL_ARCHIVE_URL="https://github.com/retsyx/amity-kernels/blob/main/kernel-6.6.31/kernel-6.6.31-v8-16k-amity.zip?raw=true"
+    KERNEL_IMG=kernel_2712.img
+else
+    echo "${RPI_MODEL} is not a known model (if it is older than a Raspberry Pi 3 Model B, it is not supported)"
+    exit 1
+fi
 
 # Perform overall setup if not asked to perform a specific action
 
 if [ -z ${ACTION} ]; then
 
+# Install dependencies
 sudo apt update
-sudo apt install -y git vim
-sudo apt install -y build-essential python3-dev
-sudo apt install -y libglib2.0-dev
-sudo apt install -y libgl1 libegl1
+sudo apt install -y build-essential git libglib2.0-dev libegl1 libgl1 python3-dev unzip vim
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
 if [ ! -f /etc/systemd/logind.conf.d/disable-power-key.conf ]; then
@@ -33,6 +51,78 @@ HandlePowerKey=ignore
 EOF
     sudo cp $TEMP_CONF_PATH /etc/systemd/logind.conf.d/disable-power-key.conf
     sudo systemctl restart systemd-logind
+fi
+
+# Create, and install cec-gpio overlay
+
+DTB_NAME=cec-gpio.dtbo
+DTB_DIR="$FIRMWARE_PATH/overlays"
+
+DTB_PATH=$DTB_DIR/$DTB_NAME
+
+if [ ! -f "$DTB_PATH" ]; then
+    TEMP_PATH_DTS_1=`mktemp`
+    TEMP_PATH_DTS=`mktemp`
+    TEMP_PATH_DTB=`mktemp`
+
+    cat >> "$TEMP_PATH_DTS_1" << EOF
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+        compatible = "brcm,bcm2835";
+
+        fragment@0 {
+                target-path = "/";
+                __overlay__ {
+                        cec@23 {
+                                compatible = "cec-gpio";
+                                cec-gpios = <&gpio 23 (GPIO_ACTIVE_HIGH|GPIO_PULL_UP|GPIO_OPEN_DRAIN)>;
+                        };
+                        cec@24 {
+                                compatible = "cec-gpio";
+                                cec-gpios = <&gpio 24 (GPIO_ACTIVE_HIGH|GPIO_PULL_UP|GPIO_OPEN_DRAIN)>;
+                        };
+                };
+        };
+};
+EOF
+
+    # Use C preprocessor on DTS file
+    cpp -nostdinc -I /usr/src/linux-headers-6.6.31+rpt-common-rpi/include -undef -x assembler-with-cpp $TEMP_PATH_DTS_1 > $TEMP_PATH_DTS
+
+    # Compile to DTB
+    dtc -I dts -O dtb $TEMP_PATH_DTS -o $TEMP_PATH_DTB
+
+    # Remount firmware path
+    FIRMWARE_PATH=/boot/firmware
+    sudo fsck -y "$FIRMWARE_PATH" || true
+    sudo mount "$FIRMWARE_PATH" --options remount,rw
+
+    # Install DTB Overlay
+    sudo cp $TEMP_PATH_DTB $DTB_PATH
+
+    sudo mount "$FIRMWARE_PATH" --options remount,ro
+
+fi
+
+# Add overlay to config.txt, if necessary
+CONFIG_TXT_PATH="$FIRMWARE_PATH/config.txt"
+if ! grep -q "cec-gpio" "$CONFIG_TXT_PATH"; then
+    TEMP_CONFIG_TXT_PATH=`mktemp`
+    cp "$CONFIG_TXT_PATH" "$TEMP_CONFIG_TXT_PATH"
+    sudo cat >> "$TEMP_CONFIG_TXT_PATH" << EOF
+
+dtoverlay=cec-gpio
+
+EOF
+        sudo fsck -y "$FIRMWARE_PATH" || true
+        sudo mount "$FIRMWARE_PATH" --options remount,rw
+        sudo cp "$CONFIG_TXT_PATH" "$CONFIG_TXT_PATH".$NAME.backup
+        sudo cp "$TEMP_CONFIG_TXT_PATH" "$CONFIG_TXT_PATH"
+        sudo mount "$FIRMWARE_PATH" --options remount,ro
 fi
 
 # App setup
@@ -75,11 +165,7 @@ python ./setup.py install
 cd "$APP_DIR"
 
 # Warm up pycache
-python -c "import cec, gestures, hdmi, messaing, remote, tools, ui"
-
-fi # End overall setup
-
-cd "$APP_DIR"
+python -c "import cec, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools, ui"
 
 # Startup setup
 
@@ -114,16 +200,46 @@ EOF
 
 loginctl enable-linger
 
+# Kernel setup
+KERNEL_HAS_CEC_GPIO=`gunzip -c "$FIRMWARE_PATH/$KERNEL_IMG" | grep -c cec-gpio || true`
+
+# If necessary, download, and install cec-gpio enabled kernel, and reboot
+if [ "$KERNEL_HAS_CEC_GPIO" -eq "0" ]; then
+    TEMP_KERNEL_ARCHIVE_PATH=`mktemp --suffix .zip`
+
+    curl -L -o "$TEMP_KERNEL_ARCHIVE_PATH" "$KERNEL_ARCHIVE_URL"
+
+    sudo fsck -y "$FIRMWARE_PATH" || true
+    sudo mount "$FIRMWARE_PATH" --options remount,rw
+
+    sudo unzip -o "$TEMP_KERNEL_ARCHIVE_PATH" -d /
+    if [ $? -ne 0 ]; then
+        echo "unzip ${TEMP_KERNEL_ARCHIVE_PATH} failed"
+        exit 1
+    fi
+
+    BUILD="$(unzip -l ${TEMP_KERNEL_ARCHIVE_PATH} boot/vmlinuz-* | sed -n 's|^.*boot/vmlinuz-\(.*\)$|\1|p')"
+    sudo update-initramfs -c -v -k "${BUILD}"
+    echo "Rebooting..."
+    sleep 5
+    sudo shutdown -r now
+fi
+
+fi # End overall setup
+
+cd "$APP_DIR"
+
 if [ "$ACTION" = "enable" ]; then
 
-systemctl --user start "$NAME"
-systemctl --user enable "$NAME"
+    systemctl --user start "$NAME"
+    systemctl --user enable "$NAME"
 
 fi # "$ACTION" = "enable"
 
 if [ "$ACTION" = "disable" ]; then
 
-systemctl --user stop "$NAME"
-systemctl --user disable "$NAME"
+    systemctl --user stop "$NAME"
+    systemctl --user disable "$NAME"
 
 fi # "$ACTION" = "disable"
+
