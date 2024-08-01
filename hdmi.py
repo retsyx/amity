@@ -106,7 +106,6 @@ class Device(object):
         return Quirk(q)
 
     def be_quirky(self, op):
-        return False
         quirk = self.lookup_quirk(op)
         if not quirk:
             return False
