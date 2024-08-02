@@ -6,14 +6,12 @@ import gestures, remote
 from hdmi import Key
 
 class Adapter(remote.RemoteListener):
-    def __init__(self, pipe, pressure_threshold=None):
+    def __init__(self, pipe):
         self.pipe = pipe
         self.button_state = 0
-        self.swipe_recognizer = gestures.SwipeRecognizer((5, 5), self.swipe_callback,
-            pressure_threshold)
+        self.swipe_recognizer = gestures.SwipeRecognizer(self.swipe_callback)
         self.dpad_emulator = gestures.DPadEmulator()
-        self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback,
-            pressure_threshold)
+        self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback)
 
     def event_button(self, remote, buttons: int):
         btns = remote.profile.buttons

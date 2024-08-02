@@ -19,8 +19,9 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, pprint, subprocess, sys, traceback, yaml
+import asyncio, pprint, subprocess, sys, traceback
 
+from config import config
 import remote, remote_adapter
 import hdmi
 from hdmi import Key
@@ -28,16 +29,21 @@ import keyboard
 import messaging
 import ui
 
+config.default('ui.enable', False)
+config.default('keyboard.enable', True)
+config.default('hub.repeat_delay_sec', .2)
+config.default('hub.repeat_period_sec', .1)
+
 class Hub(remote.RemoteListener):
     REPEAT_COUNT_FLAG = 0x8000
 
-    def __init__(self, controller, pressure_threshold=None):
+    def __init__(self, controller):
         self.controller = controller
         self.key_state = set()
         self.wait_for_release = False
         self.repeat_timers = {}
-        self.repeat_delay_sec = 0.2
-        self.repeat_period_sec = 0.1
+        self.repeat_delay_sec = config['hub.repeat_delay_sec']
+        self.repeat_period_sec = config['hub.repeat_period_sec']
         self.pipes = []
         self.in_macro = False
         self.set_wait_for_release()
@@ -175,28 +181,28 @@ async def _main():
     global args
     loop = asyncio.get_running_loop()
 
-    interface = ui.Main()
-
     log.info('Loading config...')
-    with open('config.yaml', 'r') as file:
-        config = yaml.safe_load(file)
+    config.load()
     log.info('Parsed activities:')
     log.info(pprint.pformat(config['activities']))
     activities = [hdmi.Activity(ad) for ad in config['activities']]
     log.info('Runtime activities:')
     log.info(pprint.pformat(activities))
 
-    log.info(f'Initializing UI...')
-    activity_names = [activity.name for activity in activities]
-    interface.set_activity_names(['Off',] + activity_names)
-
-    adapters = config.get('adapters')
-    if adapters is not None:
-        front_dev = adapters['front']
-        back_dev = adapters['back']
+    if config['ui.enable']:
+        interface = ui.Main()
+        log.info(f'Initializing UI...')
+        activity_names = [activity.name for activity in activities]
+        interface.set_activity_names(['Off',] + activity_names)
     else:
-        front_dev = '/dev/cec1'
-        back_dev = '/dev/cec0'
+        interface = None
+
+    front_dev = config['adapters.front']
+    back_dev = config['adapters.back']
+
+    if front_dev is None or back_dev is None:
+        log.error(f'Adapter devices must be set. front: {front_dev} back: {back_dev}')
+        return
 
     log.info(f'Initializing CEC on devices front: {front_dev} back: {back_dev}...')
     controller = hdmi.Controller(front_dev,
@@ -205,37 +211,47 @@ async def _main():
                                  loop,
                                  activities)
 
-    remote_config = config['remote']
-    touchpad_config = remote_config.get('touchpad')
-    pressure_threshold = None
-    if touchpad_config:
-        pressure_threshold = touchpad_config.get('pressure_threshold')
-    hub = Hub(controller, pressure_threshold)
+    hub = Hub(controller)
 
-    # Wire hub and UI
-    if_pipe = messaging.Pipe()
-    hub.add_pipe(if_pipe)
-    interface.set_pipe(if_pipe)
+    if interface is not None:
+        # Wire hub and UI
+        if_pipe = messaging.Pipe()
+        hub.add_pipe(if_pipe)
+        interface.set_pipe(if_pipe)
 
-    # Wire hub and keyboard
-    kb_pipe = messaging.Pipe()
-    hub.add_pipe(kb_pipe)
-    kb = keyboard.Keyboard(loop, kb_pipe)
+    if config['keyboard.enable']:
+        # Wire hub and keyboard
+        kb_pipe = messaging.Pipe()
+        hub.add_pipe(kb_pipe)
+        kb = keyboard.Keyboard(loop, kb_pipe)
+    else:
+        kb = None
 
-    # Wire hub and Siri remote
-    sr_pipe = messaging.Pipe()
-    hub.add_pipe(sr_pipe)
-    ra = remote_adapter.Adapter(sr_pipe)
-    wrapper = remote.RemoteListenerAsyncWrapper(loop, ra)
-
-    mac = config['remote']['mac']
-    log.info(f'Calling bluetoothctl to disconnect MAC {mac}')
-    subprocess.run(['/usr/bin/bluetoothctl', 'disconnect', mac], capture_output=True)
-    log.info(f'Connecting to remote with MAC {mac}')
-    siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
+    mac = config['remote.mac']
+    if mac is not None:
+        # Wire hub and Siri remote
+        sr_pipe = messaging.Pipe()
+        hub.add_pipe(sr_pipe)
+        ra = remote_adapter.Adapter(sr_pipe)
+        wrapper = remote.RemoteListenerAsyncWrapper(loop, ra)
+        log.info(f'Calling bluetoothctl to disconnect MAC {mac}')
+        subprocess.run(['/usr/bin/bluetoothctl', 'disconnect', mac], capture_output=True)
+        log.info(f'Connecting to remote with MAC {mac}')
+        siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
+    else:
+        log.info(f'Siri remote not configured. Must be using a keyboard...')
+        siri = None
 
     while True:
-        await asyncio.gather(siri, interface.run(), *controller.wait_on(), *kb.wait_on())
+        futures = []
+        if siri is not None:
+            futures.append(siri)
+        if interface is not None:
+            futures.append(interface.run())
+        futures.extend(controller.wait_on())
+        if kb is not None:
+            futures.extend(kb.wait_on())
+        await asyncio.gather(*futures)
         await asyncio.sleep(1)
 
 # asyncio.run() swallows, and disappears exceptions on the main thread if there are other

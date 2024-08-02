@@ -7,7 +7,7 @@ import gestures
 class Callback(RemoteListener):
     def __init__(self):
         self.motion_enabled = False
-        self.swipe_recognizer = gestures.SwipeRecognizer((5, 5), self.swipe_callback)
+        self.swipe_recognizer = gestures.SwipeRecognizer(self.swipe_callback)
 
     def event_battery(self, remote, percent: int):
         print("Battery", percent)

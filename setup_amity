@@ -165,7 +165,7 @@ python ./setup.py install
 cd "$APP_DIR"
 
 # Warm up pycache
-python -c "import cec, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools, ui"
+python -c "import cec, config, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools, ui"
 
 # Startup setup
 

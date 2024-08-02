@@ -8,9 +8,12 @@ import tools
 
 log = tools.logger(__name__)
 
+from config import config
 import asyncio, pprint, yaml, time
 import cec
 from cec import Device, DeviceType, Key, Message, PowerStatus
+
+config.default('hdmi.quirks', {})
 
 def isiterable(o):
     try:
@@ -79,8 +82,7 @@ class Device(object):
     quirks = None
     def __init__(self, dev):
         if Device.quirks is None:
-            with open('quirks.yaml', 'r') as file:
-                Device.quirks = yaml.safe_load(file)
+            Device.quirks = config['hdmi.quirks']
         self.dev = dev
 
     @property

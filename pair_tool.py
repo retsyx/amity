@@ -10,10 +10,11 @@ import tools
 
 log = tools.logger("log/pair_tool.log")
 
-import argparse, logging, os, subprocess, shutil, sys, time, yaml
+import argparse, logging, os, subprocess, shutil, sys, time
 
 from bluepy import btle
 from bluepy.btle import AssignedNumbers
+from config import config
 from remote import PnpInfo
 
 class Scanner(object):
@@ -113,40 +114,27 @@ def main():
     log.info(f'Paired with remote {serial_number}')
 
     if not args.nowrite:
-        config_filename = 'config.yaml'
         old_addr = None
-        try:
-            with open(config_filename, 'r') as file:
-                config = yaml.safe_load(file)
-            new_file = False
-        except FileNotFoundError:
-            config = None
-            new_file = True
-        if config is None:
-            config = {}
-        if config.get('remote') is not None:
-            old_addr = config['remote'].get('mac')
+        config.load()
+        if config['remote.mac'] is not None:
+            old_addr = config['remote.mac']
             # Make a backup of the config file
             backup_time_str = time.strftime('%Y%m%d-%H%M%S')
-            backup_filename = f'{config_filename}-{backup_time_str}'
-            shutil.copy(config_filename, backup_filename)
+            backup_filename = f'{config.filename}-{backup_time_str}'
+            shutil.copy(config.filename, backup_filename)
             # This is running as root, so chown the backup to match the original config file
-            stat = os.stat(config_filename)
+            stat = os.stat(config.filename)
             shutil.chown(backup_filename, stat.st_uid, stat.st_gid)
             log.debug(f'Created backup {backup_filename}')
 
         # Update the config
-        config['remote'] = { 'mac' : public_addr }
+        config['remote.mac'] = public_addr
         log.debug(f'Writing remote config {config}')
-        with open(config_filename, 'w') as file:
-            yaml.safe_dump(config, file)
+        config.save()
 
         # Make sure the configuration file has the right ownership
-        if new_file:
-            stat = os.stat('.')
-            shutil.chown(config_filename, stat.st_uid, stat.st_gid)
-
-        log.info('Remote configuration written to config.yaml')
+        stat = os.stat('.')
+        shutil.chown(config.filename, stat.st_uid, stat.st_gid)
 
         # Unpair the previous remote, if there is one
         if not args.keep and old_addr is not None and old_addr != public_addr:

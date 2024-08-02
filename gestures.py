@@ -7,6 +7,11 @@
 import math, time
 
 from remote import HwRevisions
+from config import config
+
+config.default('remote.touchpad.pressure_threshold', 20)
+config.default('remote.touchpad.swipe.resolutions', (5, 5))
+config.default('remote.touchpad.swipe.deceleration', -100)
 
 class EventType(object):
     Inactive = 0
@@ -24,13 +29,11 @@ class TouchState(object):
         return self.start_touch.timestamp == touch.timestamp
 
 class GestureRecognizer(object):
-    def __init__(self, max_touches, callback, pressure_threshold=None):
+    def __init__(self, max_touches, callback):
         self.touch_states = {}
         self.max_touches = max_touches
         self.callback = callback
-        if pressure_threshold is None:
-            pressure_threshold = 20
-        self.pressure_threshold = pressure_threshold
+        self.pressure_threshold = config['remote.touchpad.pressure_threshold']
 
     def reset(self):
         self.touch_states = {}
@@ -67,10 +70,11 @@ class SwipeEvent(object):
         return f'0x{self.type:02X} ({self.x}, {self.y})'
 
 class OneAxisSwipeRecognizer(GestureRecognizer):
-    def __init__(self, axis, resolution, callback, pressure_threshold=None):
-        super().__init__(1, callback, pressure_threshold) # No multitouch
+    def __init__(self, axis, resolution, callback):
+        super().__init__(1, callback) # No multitouch
         self.axis = axis
         self.segments = resolution + 1
+        self.deceleration = config['remote.touchpad.swipe.deceleration']
 
     def touches_internal(self, remote, touches):
         event_type = EventType.Running
@@ -99,7 +103,7 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
                 # If this is a release event, the touch is over.
                 # Check for a swipe gesture, and remove the state.
                 v = touch.axis_velocities_from_touch(touch_state.start_touch)[self.axis]
-                a = -100 # mm/s^2
+                a = self.deceleration # mm/s^2
                 if v < 0:
                     a = -a
                 t = -v / a
@@ -120,12 +124,13 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
 
 
 class SwipeRecognizer(object):
-    def __init__(self, resolutions, callback, pressure_threshold=None):
+    def __init__(self, callback):
         self.callback = callback
         self.rs = []
         self.primary_axis = None
+        resolutions = config['remote.touchpad.swipe.resolutions']
         for i in range(2):
-            self.rs.append(OneAxisSwipeRecognizer(i, resolutions[i], None, pressure_threshold))
+            self.rs.append(OneAxisSwipeRecognizer(i, resolutions[i], None))
     def reset(self):
         for r in self.rs:
             r.reset()
@@ -161,8 +166,8 @@ class TapEvent(object):
         self.y = y
 
 class TapRecognizer(GestureRecognizer):
-    def __init__(self, num_fingers, callback, pressure_threshold=None):
-        super().__init__(num_fingers, callback, pressure_threshold)
+    def __init__(self, num_fingers, callback):
+        super().__init__(num_fingers, callback)
         self.num_fingers = num_fingers
         self.reset()
 
@@ -241,11 +246,11 @@ class TapRecognizer(GestureRecognizer):
         self.callback(self, TapEvent(event_type, remote, x, y))
 
 class MultiTapRecognizer(object):
-    def __init__(self, num_fingers, num_taps, callback, pressure_threshold=None):
+    def __init__(self, num_fingers, num_taps, callback):
         self.num_fingers = num_fingers
         self.num_taps = num_taps
         self.callback = callback
-        self.tap_recognizer = TapRecognizer(self.num_fingers, self.tap_event, pressure_threshold)
+        self.tap_recognizer = TapRecognizer(self.num_fingers, self.tap_event)
         self.reset()
 
     def reset(self):

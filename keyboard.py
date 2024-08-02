@@ -13,11 +13,38 @@ import evdev.ecodes as e
 from evdev import KeyEvent
 from watchdog.observers import Observer
 
+from config import config
 from hdmi import Key
 
+config.default('keyboard.required_keys', (e.KEY_ENTER, e.KEY_UP,
+                                          e.KEY_RIGHT, e.KEY_DOWN,
+                                          e.KEY_LEFT, e.KEY_BACK,
+                                          e.KEY_VOLUMEUP, e.KEY_VOLUMEDOWN,
+                                          e.KEY_MUTE, e.KEY_POWER))
+
+config.default('keyboard.keymap', {
+        e.KEY_ENTER : Key.SELECT.value,
+        e.KEY_KPENTER : Key.SELECT.value,
+        e.KEY_UP : Key.UP.value,
+        e.KEY_RIGHT : Key.RIGHT.value,
+        e.KEY_DOWN : Key.DOWN.value,
+        e.KEY_LEFT : Key.LEFT.value,
+        e.KEY_BACK : Key.BACK.value,
+        e.KEY_VOLUMEUP : Key.VOLUME_UP.value,
+        e.KEY_VOLUMEDOWN : Key.VOLUME_DOWN.value,
+        e.KEY_MUTE : Key.TOGGLE_MUTE.value,
+        e.KEY_POWER : Key.POWER.value,
+        e.KEY_MENU : Key.BACK.value,
+        e.KEY_SEARCH : Key.DISPLAY_INFO.value,
+        e.KEY_HOMEPAGE : Key.ROOT_MENU.value,
+        e.KEY_REWIND : Key.REWIND.value,
+        e.KEY_PLAYPAUSE : Key.SELECT.value,
+        e.KEY_FASTFORWARD : Key.FAST_FORWARD.value,
+        e.KEY_PROGRAM : Key.GUIDE.value
+    })
+
 class Keyboard(object):
-    required_keys = (e.KEY_ENTER, e.KEY_UP, e.KEY_RIGHT, e.KEY_DOWN, e.KEY_LEFT, e.KEY_BACK,
-                     e.KEY_VOLUMEUP, e.KEY_VOLUMEDOWN, e.KEY_MUTE, e.KEY_POWER)
+    required_keys = config['keyboard.required_keys']
     @classmethod
     def is_keyboard(self, dev):
         caps = dev.capabilities()
@@ -67,26 +94,7 @@ class Keyboard(object):
         devices = [device for device in devices if Keyboard.is_keyboard(device)]
         return devices
 
-    keymap = {
-        e.KEY_ENTER : Key.SELECT,
-        e.KEY_KPENTER : Key.SELECT,
-        e.KEY_UP : Key.UP,
-        e.KEY_RIGHT : Key.RIGHT,
-        e.KEY_DOWN : Key.DOWN,
-        e.KEY_LEFT : Key.LEFT,
-        e.KEY_BACK : Key.BACK,
-        e.KEY_VOLUMEUP : Key.VOLUME_UP,
-        e.KEY_VOLUMEDOWN : Key.VOLUME_DOWN,
-        e.KEY_MUTE : Key.TOGGLE_MUTE,
-        e.KEY_POWER : Key.POWER,
-        e.KEY_MENU : Key.BACK,
-        e.KEY_SEARCH : Key.DISPLAY_INFO,
-        e.KEY_HOMEPAGE : Key.ROOT_MENU,
-        e.KEY_REWIND : Key.REWIND,
-        e.KEY_PLAYPAUSE : Key.SELECT,
-        e.KEY_FASTFORWARD : Key.FAST_FORWARD,
-        e.KEY_PROGRAM : Key.GUIDE
-    }
+    keymap = config['keyboard.keymap']
 
     def taskit(self, coro):
         task = asyncio.create_task(coro)
@@ -110,11 +118,11 @@ class Keyboard(object):
                 if hkey is None:
                     continue
                 if event.value == KeyEvent.key_down:
-                    log.info(f'Key press {hkey.name}')
+                    log.info(f'Key press {hkey}')
                     if self.pipe:
                         self.pipe.key_press(hkey)
                 elif event.value == KeyEvent.key_up:
-                    log.info(f'Key release {hkey.name}')
+                    log.info(f'Key release {hkey}')
                     if self.pipe:
                         self.pipe.key_release(hkey)
         except OSError as exc:

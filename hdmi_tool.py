@@ -12,6 +12,7 @@ log = tools.logger('log/hdmi_tool')
 
 import argparse, glob, logging, shutil, sys, time, yaml
 import cec, hdmi
+from config import config
 
 def all_adapter_devices():
     return glob.iglob('/dev/cec*')
@@ -82,33 +83,25 @@ def recommend(should_write_config):
         "Some devices need to be ON to respond.")
     log.info('\n')
 
-    config_filename = 'config.yaml'
-    try:
-        with open(config_filename, 'r') as file:
-            config = yaml.safe_load(file)
-    except FileNotFoundError:
-        config = None
-    if config is None:
-        config = {}
+    config.load()
 
     if should_write_config:
-        if config.get('activities') is not None or config.get('adapters') is not None:
+        if config['activities'] is not None or config['adapters'] is not None:
             backup_time_str = time.strftime('%Y%m%d-%H%M%S')
-            backup_filename = f'{config_filename}-{backup_time_str}'
+            backup_filename = f'{config.filename}-{backup_time_str}'
             # Make a backup of the config file
-            shutil.copy(config_filename, backup_filename)
+            shutil.copy(config.filename, backup_filename)
             log.debug(f'Created backup {backup_filename}')
         # Update the config
         config['adapters'] = adapters
         config['activities'] = activities
         log.debug(f'Writing activity config {config}')
-        with open(config_filename, 'w') as file:
-            yaml.safe_dump(config, file)
-        log.info(f'{config_filename} updated.')
+        config.save()
+        log.info(f'{config.filename} updated.')
     else:
         config['adapters'] = adapters
         config['activities'] = activities
-        s = yaml.safe_dump(config)
+        s = yaml.safe_dump(config.user_cfg)
         log.info(s)
 
 def main():
