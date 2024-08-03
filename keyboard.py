@@ -103,10 +103,14 @@ class Keyboard(object):
 
     def check_task(self, task):
         self.tasks.discard(task)
-        exc = task.exception()
+        try:
+            exc = task.exception()
+        except asyncio.CancelledError as e:
+            exc = e
         if exc is not None:
-            log.info(f'Task exception {exc}')
-            sys.exit(1)
+            s = f'Task exception {exc}'
+            log.info(s)
+            tools.die(s)
 
     async def listen_device_task(self, device):
         path = device.path

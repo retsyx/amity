@@ -666,4 +666,4 @@ class Adapter(object):
                         log.info('Disconnected')
                     else:
                         log.info(f'Unexpected IOCTL error {e}')
-                    sys.exit(1)
+                    tools.die(f'CEC IOCTL error {e}')

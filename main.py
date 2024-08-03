@@ -19,7 +19,7 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, pprint, subprocess, sys, traceback
+import asyncio, pprint, signal, subprocess, traceback
 
 from config import config
 import remote, remote_adapter
@@ -261,8 +261,16 @@ async def main():
     try:
         await _main()
     except Exception as e:
-        log.info(f'Exiting because of exception {e}\n{traceback.print_exc()}')
-        sys.exit(1)
+        s = f'Exiting because of exception {e}\n{traceback.print_exc()}'
+        log.info(s)
+        tools.die(s)
+
+def handle_sigterm(signum, frame):
+    # This never actually gets called. Registering to handle the signal is enough to trigger
+    # exceptions and task cancellations elsewhere in SIGTERM. They will call die() before this
+    # code gets to execute.
+    tools.die('SIGTERM')
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, handle_sigterm)
     asyncio.run(main())

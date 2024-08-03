@@ -45,10 +45,14 @@ class Pipe(object):
 
     def check_task(self, task):
         self.tasks.discard(task)
-        e = task.exception()
-        if e is not None:
-            log.info(f'Task exception {e}')
-            sys.exit(1)
+        try:
+            exc = task.exception()
+        except asyncio.CancelledError as e:
+            exc = e
+        if exc is not None:
+            s = f'Task exception {exc}'
+            log.info(s)
+            tools.die(s)
 
     def start_server_task(self, handler):
         self.server_t = self.taskit(self.server_task(handler))

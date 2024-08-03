@@ -45,3 +45,7 @@ def set_log_level(level_s):
 all_loggers = set()
 log_filename = None
 log = None
+
+def die(reason):
+    log.info(f'DIE {reason}')
+    os._exit(1)
