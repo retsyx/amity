@@ -105,6 +105,16 @@ class Key(IntEnum):
     RIGHT = 0x04
     ROOT_MENU = 0x09
     BACK = 0x0D
+    NUMBER_0 = 0x20
+    NUMBER_1 = 0x21
+    NUMBER_2 = 0x22
+    NUMBER_3 = 0x23
+    NUMBER_4 = 0x24
+    NUMBER_5 = 0x25
+    NUMBER_6 = 0x26
+    NUMBER_7 = 0x27
+    NUMBER_8 = 0x28
+    NUMBER_9 = 0x29
     DISPLAY_INFO = 0x35
     POWER = 0x40
     VOLUME_UP = 0x41

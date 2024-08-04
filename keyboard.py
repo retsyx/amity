@@ -40,7 +40,17 @@ config.default('keyboard.keymap', {
         e.KEY_REWIND : Key.REWIND.value,
         e.KEY_PLAYPAUSE : Key.SELECT.value,
         e.KEY_FASTFORWARD : Key.FAST_FORWARD.value,
-        e.KEY_PROGRAM : Key.GUIDE.value
+        e.KEY_PROGRAM : Key.GUIDE.value,
+        e.KEY_0 : Key.NUMBER_0.value,
+        e.KEY_1 : Key.NUMBER_1.value,
+        e.KEY_2 : Key.NUMBER_2.value,
+        e.KEY_3 : Key.NUMBER_3.value,
+        e.KEY_4 : Key.NUMBER_4.value,
+        e.KEY_5 : Key.NUMBER_5.value,
+        e.KEY_6 : Key.NUMBER_6.value,
+        e.KEY_7 : Key.NUMBER_7.value,
+        e.KEY_8 : Key.NUMBER_8.value,
+        e.KEY_9 : Key.NUMBER_9.value,
     })
 
 class Keyboard(object):
