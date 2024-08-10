@@ -172,7 +172,7 @@ class TouchpadProfile(object):
             self.TIMESTAMP_HZ = 2461
         else: # gen 2 or later
             self.RESOLUTION = (21400, 80)
-            self.SIZE_MM = 31 # Diamater of the circular pad
+            self.SIZE_MM = 31 # Diameter of the circular pad
             self.TIMESTAMP_HZ = 2000
 
 class Handles(object):

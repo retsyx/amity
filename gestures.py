@@ -10,7 +10,7 @@ from remote import HwRevisions
 from config import config
 
 config.default('remote.touchpad.pressure_threshold', 20)
-config.default('remote.touchpad.swipe.resolutions', (5, 5))
+config.default('remote.touchpad.swipe.distance_thresholds_mm', (7.0, 7.0))
 config.default('remote.touchpad.swipe.deceleration', -100)
 
 class EventType(object):
@@ -70,10 +70,10 @@ class SwipeEvent(object):
         return f'0x{self.type:02X} ({self.x}, {self.y})'
 
 class OneAxisSwipeRecognizer(GestureRecognizer):
-    def __init__(self, axis, resolution, callback):
+    def __init__(self, axis, distance_threshold_mm, callback):
         super().__init__(1, callback) # No multitouch
         self.axis = axis
-        self.segments = resolution + 1
+        self.distance_threshold_mm = distance_threshold_mm
         self.deceleration = config['remote.touchpad.swipe.deceleration']
 
     def touches_internal(self, remote, touches):
@@ -90,13 +90,12 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
                     # This touch is too light to matter
                     continue
             event_type |= et
-            threshold_distance = remote.profile.touchpad.SIZE_MM // self.segments
             if touch.p > 0:
                 axis_distances = touch.axis_distances_from_touch(touch_state.last_active_touch)
                 distance = axis_distances[self.axis]
                 # Do we have an event?
-                if abs(distance) > threshold_distance:
-                    counter = int(distance / threshold_distance)
+                if abs(distance) > self.distance_threshold_mm:
+                    counter = int(distance / self.distance_threshold_mm)
                     touch_state.last_active_touch = touch
                     event_type |= EventType.Detected
             else:
@@ -108,7 +107,7 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
                     a = -a
                 t = -v / a
                 d = v*t + .5*a*t*t
-                counter = int(d / threshold_distance)
+                counter = int(d / self.distance_threshold_mm)
                 if counter != 0:
                     # Clamp the counter so it doesn't do surprising things...
                     counter = min(max(counter, -6), 6)
@@ -128,9 +127,9 @@ class SwipeRecognizer(object):
         self.callback = callback
         self.rs = []
         self.primary_axis = None
-        resolutions = config['remote.touchpad.swipe.resolutions']
+        thresholds_mm = config['remote.touchpad.swipe.distance_thresholds_mm']
         for i in range(2):
-            self.rs.append(OneAxisSwipeRecognizer(i, resolutions[i], None))
+            self.rs.append(OneAxisSwipeRecognizer(i, thresholds_mm[i], None))
     def reset(self):
         for r in self.rs:
             r.reset()
