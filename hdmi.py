@@ -168,13 +168,30 @@ class Controller(object):
         self.front_listener = asyncio.to_thread(self.front_listen)
         self.back_listener = asyncio.to_thread(self.back_listen)
 
-    def handle_give_device_power_status(self, adapter, msg):
+    def handle_front_give_device_power_status(self, adapter, msg):
         log.info('Power status requested')
         msg = Message(adapter.address, msg.src)
         if self.current_activity == no_activity:
             status = PowerStatus.STANDBY
         else:
             status = PowerStatus.ON
+        log.info(f'Responding with power status {status.name}')
+        msg.set_data((Message.REPORT_POWER_STATUS, status))
+        adapter.transmit(msg)
+
+    def handle_back_give_device_power_status(self, adapter, msg):
+        log.info('Power status requested')
+        device_address = msg.src
+        msg = Message(adapter.address, msg.src)
+        if self.current_activity == no_activity:
+            status = PowerStatus.STANDBY
+        else:
+            ca = self.current_activity
+            source_device = self.get_device(ca.source)
+            status = PowerStatus.STANDBY
+            if source_device is not None:
+                if source_device.address == device_address:
+                    status = PowerStatus.ON
         log.info(f'Responding with power status {status.name}')
         msg.set_data((Message.REPORT_POWER_STATUS, status))
         adapter.transmit(msg)
@@ -188,7 +205,7 @@ class Controller(object):
             log.info(f'Front RX {msg}')
             match msg.op:
                 case Message.GIVE_DEVICE_POWER_STATUS:
-                    self.loop.call_soon_threadsafe(self.handle_give_device_power_status,
+                    self.loop.call_soon_threadsafe(self.handle_front_give_device_power_status,
                                                    self.front_adapter, msg)
 
     def handle_device_report_physical_address(self, adapter, msg):
@@ -223,17 +240,18 @@ class Controller(object):
             match msg.op:
                 case Message.REPORT_PHYSICAL_ADDR:
                     self.loop.call_soon_threadsafe(self.handle_device_report_physical_address, self.back_adapter, msg)
+                case Message.IMAGE_VIEW_ON:
+                    self.loop.call_soon_threadsafe(self.stop_source_thief, msg)
                 case Message.ACTIVE_SOURCE:
-                    self.loop.call_soon_threadsafe(self.stop_source_thief, msg.src)
+                    self.loop.call_soon_threadsafe(self.stop_source_thief, msg)
                 case Message.GIVE_DEVICE_POWER_STATUS:
-                    self.loop.call_soon_threadsafe(self.handle_give_device_power_status, self.back_adapter, msg)
-
+                    self.loop.call_soon_threadsafe(self.handle_back_give_device_power_status, self.back_adapter, msg)
 
     def wait_on(self):
         return self.front_listener, self.back_listener
 
-    def stop_source_thief(self, device_address):
-        log.info(f'Device address {device_address} wants source')
+    def stop_source_thief(self, msg):
+        log.info(f'Device address {msg.src} wants source')
         if self.current_activity == no_activity:
             log.info('No current activity, so forcing standby')
             self.force_standby()
@@ -242,8 +260,12 @@ class Controller(object):
         ca = self.current_activity
         source_device = self.get_device(ca.source)
         if source_device is not None:
-            if source_device.address != device_address:
-                log.info(f'Taking back source!')
+            if source_device.address != msg.src:
+                log.info('Putting thief in standby')
+                msg = Message(self.back_adapter.address, msg.src)
+                msg.set_data([Message.STANDBY])
+                self.back_adapter.transmit(msg)
+                log.info('Taking back source')
                 self.set_activity_input(ca)
             else:
                 log.info(f'Device is not a thief')
