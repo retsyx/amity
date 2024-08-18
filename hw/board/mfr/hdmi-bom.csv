@@ -1,3 +1,5 @@
 "Reference","Value","Datasheet","Footprint","Qty","DNP"
-"J1,J2","HDMI_A","https://en.wikipedia.org/wiki/HDMI","Connector_Video:HDMI_A_Amphenol_10029449-x01xLF_Horizontal","2",""
-"J3","Connector","~","Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical","1",""
+"D1,D2","4148","https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345","Diode_SMD:D_0603_1608Metric","2",""
+"J1,J2","HDMI_A","https://www.digikey.com/en/products/detail/amphenol-cs-fci/10029449-001RLF/1001325","Connector_Video:HDMI_A_Amphenol_10029449-x01xLF_Horizontal","2",""
+"J3","Conn_01x04_Pin","https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345","Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical","1",""
+"R1,R2","27K","https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345","Resistor_SMD:R_0603_1608Metric","2",""

@@ -1,0 +1,70 @@
+#!/usr/bin/sh
+
+set -e
+
+# Create, and install cec-gpio overlay
+
+MODE=$1
+
+if [ "$MODE" = "internal" ]; then
+    PULLUP="GPIO_PULL_UP|"
+elif [ "$MODE" = "external" ]; then
+    PULLUP=""
+else
+    echo "Specify 'internal' or 'external' pullup"
+    exit
+fi
+
+FIRMWARE_PATH=/boot/firmware
+DTB_NAME=cec-gpio.dtbo
+DTB_DIR="$FIRMWARE_PATH/overlays"
+
+DTB_PATH=$DTB_DIR/$DTB_NAME
+
+TEMP_PATH_DTS_1=`mktemp`
+TEMP_PATH_DTS=`mktemp`
+TEMP_PATH_DTB=`mktemp`
+
+cat >> "$TEMP_PATH_DTS_1" << EOF
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+        compatible = "brcm,bcm2835";
+
+        fragment@0 {
+                target-path = "/";
+                __overlay__ {
+                        cec@23 {
+                                compatible = "cec-gpio";
+                                cec-gpios = <&gpio 23 (GPIO_ACTIVE_HIGH | $PULLUP GPIO_OPEN_DRAIN)>;
+                        };
+                        cec@24 {
+                                compatible = "cec-gpio";
+                                cec-gpios = <&gpio 24 (GPIO_ACTIVE_HIGH | $PULLUP GPIO_OPEN_DRAIN)>;
+                        };
+                };
+        };
+};
+EOF
+
+# Use C preprocessor on DTS file
+cpp -nostdinc -I /usr/src/linux-headers-6.6.31+rpt-common-rpi/include -undef -x assembler-with-cpp $TEMP_PATH_DTS_1 > $TEMP_PATH_DTS
+
+# Compile to DTB
+dtc -I dts -O dtb $TEMP_PATH_DTS -o $TEMP_PATH_DTB
+
+# Remount firmware path
+FIRMWARE_PATH=/boot/firmware
+sudo fsck -y "$FIRMWARE_PATH" || true
+sudo mount "$FIRMWARE_PATH" --options remount,rw
+
+# Install DTB Overlay
+sudo cp $TEMP_PATH_DTB $DTB_PATH
+
+sudo mount "$FIRMWARE_PATH" --options remount,ro
+
+echo
+echo "CEC GPIO configuration updated, reboot now for changes to take effect."

@@ -444,7 +444,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "test.kicad_pro",
+    "filename": "hdmi.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -505,7 +505,7 @@
       "gencad": "",
       "idf": "",
       "netlist": "../../../../../Applications/KiCad/KiCad.app/Contents/Applications/",
-      "plot": "/Users/yuval/Documents/test/mfr/",
+      "plot": "mfr/",
       "pos_files": "",
       "specctra_dsn": "",
       "step": "",
@@ -516,7 +516,7 @@
   },
   "schematic": {
     "annotate_start_num": 0,
-    "bom_export_filename": "test.csv",
+    "bom_export_filename": "mfr/hdmi-bom.csv",
     "bom_fmt_presets": [],
     "bom_fmt_settings": {
       "field_delimiter": ",",
@@ -577,6 +577,18 @@
           "group_by": false,
           "label": "Description",
           "name": "Description",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Sim.Pins",
+          "name": "Sim.Pins",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Sim.Device",
+          "name": "Sim.Device",
           "show": false
         }
       ],
