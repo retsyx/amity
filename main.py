@@ -118,7 +118,7 @@ class Hub(remote.RemoteListener):
         if hkey == Key.POWER:
             return
 
-        self.controller.press_key(hkey)
+        self.controller.press_key(hkey, True)
         loop = asyncio.get_running_loop()
         self.repeat_timers[key] = loop.call_later(self.repeat_delay_sec,
                                                   self.event_timer, key, count)
@@ -170,10 +170,14 @@ class Hub(remote.RemoteListener):
             if repeat_count == 0:
                 log.info(f'Repeating key {hkey} count done')
                 self.key_state.discard(key)
+                if self.controller.current_activity is not hdmi.no_activity:
+                    if (not self.key_state or
+                        (len(self.key_state) == 1 and Key.POWER in self.key_state)):
+                        self.controller.release_key()
                 return
 
         log.info(f'Repeating key {hkey} count {repeat_count}')
-        self.controller.press_key(hkey)
+        self.controller.press_key(hkey, True)
         loop = asyncio.get_running_loop()
         self.repeat_timers[key] = loop.call_later(self.repeat_period_sec, self.event_timer, key, repeat_count)
 
