@@ -34,12 +34,16 @@ config.default('keyboard.enable', True)
 config.default('hub.repeat_delay_sec', .2)
 config.default('hub.repeat_period_sec', .1)
 
+class KeyState(object):
+    def __init__(self, count):
+        self.repeat_count = count
+
 class Hub(remote.RemoteListener):
     REPEAT_COUNT_FLAG = 0x8000
 
     def __init__(self, controller):
         self.controller = controller
-        self.key_state = set()
+        self.key_state = {}
         self.wait_for_release = False
         self.repeat_timers = {}
         self.repeat_delay_sec = config['hub.repeat_delay_sec']
@@ -71,7 +75,14 @@ class Hub(remote.RemoteListener):
         if count > 0:
             key |= self.REPEAT_COUNT_FLAG
 
-        self.key_state.add(key)
+        state = self.key_state.get(key)
+        if state is None:
+            state = KeyState(count)
+            self.key_state[key] = state
+        elif count > 0:
+            # This key is already counting, so add to the count, and finish
+            state.repeat_count += count
+            return
 
         # Don't let key presses leak across selection/activity modes
         if self.wait_for_release:
@@ -88,7 +99,7 @@ class Hub(remote.RemoteListener):
         if self.controller.current_activity is hdmi.no_activity:
             # Ignore key sequences originating from swipes...
             if count > 0:
-                self.key_state.discard(key)
+                self.key_state.pop(key)
                 return
             index = activity_map.get(hkey)
             if index is not None:
@@ -120,12 +131,11 @@ class Hub(remote.RemoteListener):
 
         self.controller.press_key(hkey, True)
         loop = asyncio.get_running_loop()
-        self.repeat_timers[key] = loop.call_later(self.repeat_delay_sec,
-                                                  self.event_timer, key, count)
+        self.repeat_timers[key] = loop.call_later(self.repeat_delay_sec, self.event_timer, key)
 
     def client_release_key(self, key):
         log.info(f'Client release key {key:02X}')
-        self.key_state.discard(key)
+        self.key_state.pop(key)
 
         if key == Key.POWER:
             if self.in_macro:
@@ -159,27 +169,30 @@ class Hub(remote.RemoteListener):
             pipe.notify_set_activity(index)
         return True
 
-    def event_timer(self, key, repeat_count):
-        if key not in self.key_state:
+    def event_timer(self, key):
+        state = self.key_state.get(key)
+        if state is None:
+            log.info(f'key {key} not in key state')
             return
 
         hkey = key
-        if repeat_count > 0:
+        if state.repeat_count > 0:
             hkey &= ~self.REPEAT_COUNT_FLAG
-            repeat_count -= 1
-            if repeat_count == 0:
+            state.repeat_count -= 1
+            if state.repeat_count == 0:
                 log.info(f'Repeating key {hkey} count done')
-                self.key_state.discard(key)
+                self.key_state.pop(key)
                 if self.controller.current_activity is not hdmi.no_activity:
                     if (not self.key_state or
                         (len(self.key_state) == 1 and Key.POWER in self.key_state)):
                         self.controller.release_key()
                 return
 
-        log.info(f'Repeating key {hkey} count {repeat_count}')
         self.controller.press_key(hkey, True)
         loop = asyncio.get_running_loop()
-        self.repeat_timers[key] = loop.call_later(self.repeat_period_sec, self.event_timer, key, repeat_count)
+        log.info(f'Repeating key {hkey} count {state.repeat_count}')
+        self.repeat_timers[key] = loop.call_later(self.repeat_period_sec,
+                                                  self.event_timer, key)
 
 async def _main():
     global args

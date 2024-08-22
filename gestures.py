@@ -11,7 +11,7 @@ from config import config
 
 config.default('remote.touchpad.pressure_threshold', 20)
 config.default('remote.touchpad.swipe.distance_thresholds_mm', (7.0, 7.0))
-config.default('remote.touchpad.swipe.deceleration', -100)
+config.default('remote.touchpad.swipe.deceleration', -250)
 
 class EventType(object):
     Inactive = 0
@@ -90,15 +90,7 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
                     # This touch is too light to matter
                     continue
             event_type |= et
-            if touch.p > 0:
-                axis_distances = touch.axis_distances_from_touch(touch_state.last_active_touch)
-                distance = axis_distances[self.axis]
-                # Do we have an event?
-                if abs(distance) > self.distance_threshold_mm:
-                    counter = int(distance / self.distance_threshold_mm)
-                    touch_state.last_active_touch = touch
-                    event_type |= EventType.Detected
-            else:
+            if event_type & EventType.End:
                 # If this is a release event, the touch is over.
                 # Check for a swipe gesture, and remove the state.
                 v = touch.axis_velocities_from_touch(touch_state.start_touch)[self.axis]
@@ -112,6 +104,15 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
                     # Clamp the counter so it doesn't do surprising things...
                     counter = min(max(counter, -6), 6)
                     event_type |= EventType.Detected
+            else:
+                axis_distances = touch.axis_distances_from_touch(touch_state.last_active_touch)
+                distance = axis_distances[self.axis]
+                # Do we have an event?
+                if abs(distance) > self.distance_threshold_mm:
+                    counter = int(distance / self.distance_threshold_mm)
+                    touch_state.last_active_touch = touch
+                    event_type |= EventType.Detected
+
         xy = [0, 0]
         xy[self.axis] = counter
         return SwipeEvent(event_type, tuple(xy))
