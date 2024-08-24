@@ -365,7 +365,7 @@ class Main(object):
                 if btn.visible:
                     btn.hide()
 
-    def server_notify_set_activity(self, index):
+    async def server_notify_set_activity(self, index):
         selected_option = self.activity_names[index + 1]
         self.picker_activity.selected_option = selected_option
         for part in self.picker_activity.menu_states.values():

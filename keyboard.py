@@ -70,12 +70,12 @@ class Keyboard(object):
         self.devices = []
         self.loop = loop
         self.pipe = pipe
-        self.tasks = set()
+        self.taskit = tools.Tasker()
         self.listen_to_all_devices()
         self.start_input_monitor()
 
     def wait_on(self):
-        return self.tasks
+        return self.taskit.tasks
 
     def start_input_monitor(self):
         path = '/dev/input/'
@@ -105,22 +105,6 @@ class Keyboard(object):
         return devices
 
     keymap = config['keyboard.keymap']
-
-    def taskit(self, coro):
-        task = asyncio.create_task(coro)
-        self.tasks.add(task)
-        task.add_done_callback(self.check_task)
-
-    def check_task(self, task):
-        self.tasks.discard(task)
-        try:
-            exc = task.exception()
-        except asyncio.CancelledError as e:
-            exc = e
-        if exc is not None:
-            s = f'Task exception {exc}'
-            log.info(s)
-            tools.die(s)
 
     async def listen_device_task(self, device):
         path = device.path

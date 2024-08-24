@@ -42,6 +42,7 @@ class Hub(remote.RemoteListener):
     REPEAT_COUNT_FLAG = 0x8000
 
     def __init__(self, controller):
+        self.taskit = tools.Tasker()
         self.controller = controller
         self.key_state = {}
         self.wait_for_release = False
@@ -66,10 +67,10 @@ class Hub(remote.RemoteListener):
         pipe.start_server_task(self)
 
     # Duck typed methods for messaging
-    def client_set_activity(self, index):
-        self.set_activity(index)
+    async def client_set_activity(self, index):
+        await self.set_activity(index)
 
-    def client_press_key(self, key, count):
+    async def client_press_key(self, key, count):
         log.info(f'Client press key {key:02X} count {count}')
         hkey = key
         if count > 0:
@@ -103,7 +104,7 @@ class Hub(remote.RemoteListener):
                 return
             index = activity_map.get(hkey)
             if index is not None:
-                self.set_activity(index)
+                await self.set_activity(index)
             return
 
         macros = {
@@ -123,17 +124,21 @@ class Hub(remote.RemoteListener):
                 self.in_macro = True
                 index = activity_map.get(macro[1])
                 if index is not None:
-                    self.set_activity(index)
+                    await self.set_activity(index)
                 return
 
         if hkey == Key.POWER:
             return
 
-        self.controller.press_key(hkey, True)
+        await self.controller.press_key(hkey, True)
+        if count > 0:
+            delay_sec = self.repeat_period_sec
+        else:
+            delay_sec = self.repeat_delay_sec
         loop = asyncio.get_running_loop()
-        self.repeat_timers[key] = loop.call_later(self.repeat_delay_sec, self.event_timer, key)
+        self.repeat_timers[key] = loop.call_later(delay_sec, self.event_timer, key)
 
-    def client_release_key(self, key):
+    async def client_release_key(self, key):
         log.info(f'Client release key {key:02X}')
         self.key_state.pop(key)
 
@@ -141,28 +146,28 @@ class Hub(remote.RemoteListener):
             if self.in_macro:
                 self.in_macro = False
             else:
-                self.standby()
+                await self.standby()
 
         if self.controller.current_activity is not hdmi.no_activity:
             if (not self.key_state or
                 (len(self.key_state) == 1 and Key.POWER in self.key_state)):
-                self.controller.release_key()
+                await self.controller.release_key()
         if not self.key_state:
             self.wait_for_release = False
             self.in_macro = False
 
-    def standby(self):
+    async def standby(self):
         if self.controller.current_activity is hdmi.no_activity:
             log.info('Forcing standby')
-            self.controller.force_standby()
+            await self.controller.force_standby()
         else:
-            self.controller.standby()
+            await self.controller.standby()
         self.set_wait_for_release()
         for pipe in self.pipes:
             pipe.notify_set_activity(-1)
 
-    def set_activity(self, index):
-        if not self.controller.set_activity(index):
+    async def set_activity(self, index):
+        if not await self.controller.set_activity(index):
             return False
         self.set_wait_for_release()
         for pipe in self.pipes:
@@ -170,6 +175,9 @@ class Hub(remote.RemoteListener):
         return True
 
     def event_timer(self, key):
+        self.taskit(self.event_timer_async(key))
+
+    async def event_timer_async(self, key):
         state = self.key_state.get(key)
         if state is None:
             log.info(f'key {key} not in key state')
@@ -185,10 +193,10 @@ class Hub(remote.RemoteListener):
                 if self.controller.current_activity is not hdmi.no_activity:
                     if (not self.key_state or
                         (len(self.key_state) == 1 and Key.POWER in self.key_state)):
-                        self.controller.release_key()
+                        await self.controller.release_key()
                 return
 
-        self.controller.press_key(hkey, True)
+        await self.controller.press_key(hkey, True)
         loop = asyncio.get_running_loop()
         log.info(f'Repeating key {hkey} count {state.repeat_count}')
         self.repeat_timers[key] = loop.call_later(self.repeat_period_sec,
@@ -222,11 +230,12 @@ async def _main():
         return
 
     log.info(f'Initializing CEC on devices front: {front_dev} back: {back_dev}...')
-    controller = hdmi.Controller(front_dev,
-                                 back_dev,
-                                 'amity',
-                                 loop,
-                                 activities)
+    controller = await hdmi.Controller(
+        front_dev,
+        back_dev,
+        'amity',
+        loop,
+        activities)
 
     hub = Hub(controller)
 
@@ -265,7 +274,6 @@ async def _main():
             futures.append(siri)
         if interface is not None:
             futures.append(interface.run())
-        futures.extend(controller.wait_on())
         if kb is not None:
             futures.extend(kb.wait_on())
         await asyncio.gather(*futures)

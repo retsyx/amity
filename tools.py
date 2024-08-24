@@ -4,7 +4,7 @@
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 
-import logging, logging.handlers, os
+import asyncio, logging, logging.handlers, os
 
 def maybe_set_log_filename(filename):
     global log, log_filename
@@ -49,3 +49,25 @@ log = None
 def die(reason):
     log.info(f'DIE {reason}')
     os._exit(1)
+
+class Tasker(object):
+    def __init__(self):
+        self.tasks = set()
+
+    def __call__(self, coro):
+        return self.go(coro)
+
+    def go(self, coro):
+        task = asyncio.create_task(coro)
+        self.tasks.add(task)
+        task.add_done_callback(self.check_task)
+        return task
+
+    def check_task(self, task):
+        self.tasks.discard(task)
+        try:
+            exc = task.exception()
+        except asyncio.CancelledError as e:
+            exc = e
+        if exc is not None:
+            die(f'Task exception {exc}')

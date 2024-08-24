@@ -30,29 +30,12 @@ class Pipe(object):
         self.client_q = asyncio.Queue()
         self.server_t = None
         self.client_t = None
-        self.tasks = set()
-
-    def taskit(self, coro):
-        task = asyncio.create_task(coro)
-        self.tasks.add(task)
-        task.add_done_callback(self.check_task)
-        return task
+        self.taskit = tools.Tasker()
 
     # Server calls
     def notify_set_activity(self, index):
         if self.client_t:
             self.taskit(self.client_q.put(Message(Type.SetActivity, index)))
-
-    def check_task(self, task):
-        self.tasks.discard(task)
-        try:
-            exc = task.exception()
-        except asyncio.CancelledError as e:
-            exc = e
-        if exc is not None:
-            s = f'Task exception {exc}'
-            log.info(s)
-            tools.die(s)
 
     def start_server_task(self, handler):
         self.server_t = self.taskit(self.server_task(handler))
@@ -63,11 +46,11 @@ class Pipe(object):
             msg = await self.server_q.get()
             match msg.type:
                 case Type.SetActivity:
-                    handler.client_set_activity(msg.value)
+                    await handler.client_set_activity(msg.value)
                 case Type.KeyPress:
-                    handler.client_press_key(msg.value, msg.count)
+                    await handler.client_press_key(msg.value, msg.count)
                 case Type.KeyRelease:
-                    handler.client_release_key(msg.value)
+                    await handler.client_release_key(msg.value)
 
     # Client calls
     def set_activity(self, index):
@@ -91,4 +74,4 @@ class Pipe(object):
             msg = await self.client_q.get()
             match msg.type:
                 case Type.SetActivity:
-                    handler.server_notify_set_activity(msg.value)
+                    await handler.server_notify_set_activity(msg.value)

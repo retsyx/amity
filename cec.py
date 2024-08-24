@@ -9,12 +9,11 @@ import tools
 log = tools.logger(__name__)
 
 from ctypes import Structure, Union, c_char, c_uint8, c_uint16, c_uint32, c_uint64, sizeof
-from concurrent.futures import ThreadPoolExecutor
 from enum import IntEnum
+import asyncio
 import errno
 import fcntl
-import select
-import sys
+import os
 
 _IOC_NRBITS   =  8
 _IOC_TYPEBITS =  8
@@ -376,7 +375,7 @@ class DeviceType(object):
         PROCESSOR : 'Processor',
         INVALID : 'Invalid'}
 
-class Device(object):
+class DeviceImpl(object):
     def __init__(self, adapter, address):
         self.adapter = adapter
         self.address = address
@@ -387,9 +386,6 @@ class Device(object):
         if self.address == BROADCAST_ADDRESS:
             self.osd_name = '<BROADCAST>'
             return
-        self.get_physical_address_and_primary_device_type()
-        self.get_osd_name()
-        self.get_vendor_id()
 
     def is_broadcast(self):
         return self.address == BROADCAST_ADDRESS
@@ -410,18 +406,18 @@ class Device(object):
                 self.physical_address = INVALID_PHYSICAL_ADDRESS
                 self.primary_device_type = DeviceType.INVALID
 
-    def get_physical_address_and_primary_device_type(self):
+    async def get_physical_address_and_primary_device_type(self):
         msg = self.new_msg()
         msg.set_data([Message.GIVE_PHYSICAL_ADDR])
         msg.reply = Message.REPORT_PHYSICAL_ADDR
-        self.adapter.transmit(msg)
+        msg = await self.adapter.transmit(msg)
         self.parse_report_physical_address_message(msg)
 
-    def get_osd_name(self):
+    async def get_osd_name(self):
         msg = self.new_msg()
         msg.set_data([Message.GIVE_OSD_NAME])
         msg.reply = Message.SET_OSD_NAME
-        self.adapter.transmit(msg)
+        msg = await self.adapter.transmit(msg)
         if msg.ok():
             self.osd_name = ''.join([chr(c) for c in msg.msg[2:msg.len] if c != 0])
         else:
@@ -431,18 +427,16 @@ class Device(object):
             else:
                 self.osd_name = ''
 
-    def send_osd_name(self, osd_name):
-        msg = self.new_msg()
+    async def send_osd_name(self, osd_name):
         data = [Message.SET_OSD_NAME]
         data.extend([ord(x) for x in osd_name[:Message.MAX_MSG_SIZE - 2]])
-        msg.set_data(data)
-        self.transmit(msg)
+        await self.transmit(data)
 
-    def get_vendor_id(self):
+    async def get_vendor_id(self):
         msg = self.new_msg()
         msg.set_data([Message.GIVE_VENDOR_ID])
         msg.reply = Message.VENDOR_ID
-        self.adapter.transmit(msg)
+        msg = await self.adapter.transmit(msg)
         if msg.ok():
             vendor_id = 0
             for i in range(2, msg.len):
@@ -451,56 +445,55 @@ class Device(object):
         else:
             self.vendor_id = 0
 
-    def standby(self):
-        msg = self.new_msg()
-        msg.set_data([Message.STANDBY])
-        self.adapter.transmit(msg)
+    async def standby(self):
+        await self.transmit([Message.STANDBY])
 
-    def key_press(self, key: Key):
-        msg = self.new_msg()
-        msg.set_data([Message.KEY_PRESS, key])
-        self.adapter.transmit(msg)
+    async def key_press(self, key: Key):
+        await self.transmit([Message.KEY_PRESS, key])
 
-    def key_release(self):
-        msg = self.new_msg()
-        msg.set_data([Message.KEY_RELEASE])
-        self.adapter.transmit(msg)
+    async def key_release(self):
+        await self.transmit([Message.KEY_RELEASE])
 
-    def image_view_on(self):
-        msg = self.new_msg()
-        msg.set_data([Message.IMAGE_VIEW_ON])
-        self.adapter.transmit(msg)
+    async def image_view_on(self):
+        await self.transmit([Message.IMAGE_VIEW_ON])
 
-    def power_on(self):
+    async def power_on(self):
         if self.primary_device_type == DeviceType.TV:
-            self.image_view_on()
+            await self.image_view_on()
         else:
-            #self.key_press(Key.POWER)
-            #self.key_release()
-            self.key_press(Key.POWER_ON)
-            self.key_release()
+            #await self.key_press(Key.POWER)
+            await self.key_press(Key.POWER_ON)
+            await self.key_release()
 
-    def set_stream_path(self):
+    async def set_stream_path(self):
         msg = Message(self.adapter.address, BROADCAST_ADDRESS)
         msg.set_data([Message.SET_STREAM_PATH,
                     self.physical_address >> 8,
                     self.physical_address & 0xff])
-        self.adapter.transmit(msg)
+        await self.adapter.transmit(msg)
 
-    def active_source(self):
+    async def active_source(self):
         msg = Message(self.adapter.address, BROADCAST_ADDRESS)
         msg.set_data([Message.ACTIVE_SOURCE,
                 self.physical_address >> 8,
                 self.physical_address & 0xff])
-        self.adapter.transmit(msg)
+        await self.adapter.transmit(msg)
 
-    def transmit(self, data):
+    async def transmit(self, data):
         msg = self.new_msg()
         msg.set_data(data)
-        self.adapter.transmit(msg)
+        await self.adapter.transmit(msg)
 
     def __str__(self):
         return f'Device({self.address}) "{self.osd_name}"'
+
+async def Device(adapter, address):
+    device = DeviceImpl(adapter, address)
+    if address != BROADCAST_ADDRESS:
+        await device.get_physical_address_and_primary_device_type()
+        await device.get_osd_name()
+        await device.get_vendor_id()
+    return device
 
 def isiterable(o):
     try:
@@ -512,25 +505,43 @@ def isiterable(o):
 class AdapterInitException(Exception):
     pass
 
+class AsyncState(object):
+    def __init__(self, msg, event):
+        self.msg = msg
+        self.event = event
+
 class Adapter(object):
     MODE_INITIATOR = (1 << 0)
     MODE_FOLLOWER = (1 << 4)
 
-    def __init__(self, devname, device_types=(), osd_name='default', vendor_id=0):
+    def __init__(self, devname, loop=None, listen_callback_coro=None,
+                 device_types=(), osd_name='default', vendor_id=0):
+        self.taskit = tools.Tasker()
+        self.states = {}
         self.devname = devname
-        self.dev = open(devname, 'wb', buffering=0)
-        self.osd_name = osd_name
-        self.vendor_id = vendor_id
+        if loop is None:
+            loop = asyncio.get_running_loop()
+        self.loop = loop
+        self.listen_callback_coro = listen_callback_coro
         if not isiterable(device_types):
             device_types = (device_types, )
         self.device_types = device_types
+        self.osd_name = osd_name
+        self.vendor_id = vendor_id
+        self.dev = open(devname, 'wb', buffering=0)
         self.caps = self.capabilities()
         self.laddrs = LogAddrs()
         mode = c_uint32(self.MODE_INITIATOR | self.MODE_FOLLOWER)
         self.ioctl(Ioctl.S_MODE, mode)
         self.setup()
+        # Setup (called above) is simpler to perform on a blocking device. After setup, set the
+        # device to non-blocking for efficiency - CEC is very very slow (~400 bits/sec), so we
+        # don't want to block on TX.
+        os.set_blocking(self.dev.fileno(), False)
+        self.loop.add_reader(self.dev.fileno(), self.reader)
 
     def close(self):
+        self.loop.remove_reader(self.dev.fileno())
         self.dev.close()
         self.dev = None
 
@@ -611,7 +622,6 @@ class Adapter(object):
             laddrs.all_device_types[i] = all_device_types
 
         self.ioctl(Ioctl.ADAP_S_LOG_ADDRS, laddrs)
-
         self.ioctl(Ioctl.ADAP_G_LOG_ADDRS, self.laddrs)
 
         if self.laddrs.log_addr[0] >= INVALID_ADDRESS:
@@ -620,60 +630,83 @@ class Adapter(object):
 
         return self.laddrs
 
-    def transmit(self, msg: Message):
-        log.info(f'TX {msg}')
+    async def transmit(self, msg: Message):
+        state = AsyncState(msg, asyncio.Event())
         ret = self.ioctl(Ioctl.TRANSMIT, msg)
-        log.info(f'Status {msg.status_text()}')
-        if msg.did_rx():
-            log.info(f'RX {msg}')
-        return ret
+        if ret != 0:
+            log.info(f'TX {msg} failed')
+            return None
+        log.info(f'TX {msg.sequence} {msg}')
+        self.states[msg.sequence] = state
+        await state.event.wait()
+        msg = state.msg
+        return msg
 
-    def active_source(self):
+    async def active_source(self):
         msg = Message(self.address, BROADCAST_ADDRESS)
         msg.set_data([Message.ACTIVE_SOURCE,
                       self.physical_address >> 8,
                       self.physical_address & 0xff])
-        self.transmit(msg)
+        await self.transmit(msg)
 
-    def poll_device(self, i):
+    async def poll_device(self, i):
         msg = Message(self.address, i)
-        self.transmit(msg)
+        msg = await self.transmit(msg)
         if msg.ok():
-            return Device(self, i)
+            return await Device(self, i)
         if msg.tx_status & Message.TX_STATUS_MAX_RETRIES:
             log.info(f'{msg.status_text()} for addr {i}')
         return None
 
-    def list_devices(self):
-        exec = ThreadPoolExecutor(max_workers=2)
-        # Poll all possible device addresses
-        futures = [exec.submit(self.poll_device, i) for i in range(0xf) if i != self.address]
+    async def list_devices(self):
         devices = []
-        for future in futures:
-            device = future.result()
-            if device is None: continue
+        for i in range(0xf):
+            if i == self.address:
+                continue
+            device = await self.poll_device(i)
+            if device is None:
+                continue
             devices.append(device)
         return devices
 
     def broadcast(self):
-        return Device(self, BROADCAST_ADDRESS)
+        return DeviceImpl(self, BROADCAST_ADDRESS)
 
-    def listen(self, timeout=None):
+    def reader(self):
+        msg = Message(0, 0)
+
+        # Events should be dequed in response to file handle exceptions. Not clear how to do that
+        # in asyncio so using file handle read events, unreliably.
+        try:
+            event = Event()
+            self.ioctl(Ioctl.DQEVENT, event)
+            if event.event & event.LOST_MSGS:
+                log.error(f'Lost {event.union.lost_msgs} messages, slow down')
+        except OSError as e:
+            pass
+
         while True:
-            rs, _, xs = select.select((self.dev, ), (), (self.dev, ), timeout)
-            if xs:
-                event = Event()
-                self.ioctl(Ioctl.DQEVENT, event)
-                if event.event & event.LOST_MSGS:
-                    log.info(f'Lost {event.union.lost_msgs} messages, slow down')
-            if rs:
-                msg = Message(0, 0)
-                try:
-                    self.ioctl(Ioctl.RECEIVE, msg)
-                    return msg
-                except OSError as e:
-                    if e.errno == errno.ENODEV:
-                        log.info('Disconnected')
-                    else:
-                        log.info(f'Unexpected IOCTL error {e}')
-                    tools.die(f'CEC IOCTL error {e}')
+            try:
+                self.ioctl(Ioctl.RECEIVE, msg)
+            except OSError as e:
+                if e.errno == errno.EAGAIN:
+                    break
+                if e.errno == errno.ENODEV:
+                    log.info('Disconnected')
+                else:
+                    log.info(f'Unexpected IOCTL error {e}')
+                tools.die(f'CEC IOCTL error {e}')
+            state = self.states.get(msg.sequence)
+            if state is not None:
+                state.msg = msg
+                if msg.did_rx():
+                    log.info(f'RX {msg.sequence} {msg}')
+                log.info(f'TX status {msg.sequence} {msg.status_text()}')
+                state.event.set()
+            else:
+                # LG TVs love spamming this message every 10 seconds.
+                if msg.op != Message.VENDOR_ID or msg.dst != BROADCAST_ADDRESS:
+                    log.info(f'RX {msg.sequence} {msg}')
+                # This is a new message RXd from a device
+                if self.listen_callback_coro is not None:
+                    self.taskit(self.listen_callback_coro(msg))

@@ -89,8 +89,8 @@ class Device(object):
     def osd_name(self):
         return self.dev.osd_name
 
-    def get_osd_name(self):
-        self.dev.get_osd_name()
+    async def get_osd_name(self):
+        await self.dev.get_osd_name()
 
     @property
     def address(self):
@@ -107,68 +107,69 @@ class Device(object):
         if q is None: return None
         return Quirk(q)
 
-    def be_quirky(self, op):
+    async def be_quirky(self, op):
         quirk = self.lookup_quirk(op)
         if not quirk:
             return False
         log.info(f'Using quirk {quirk} for {op}')
-        self.dev.transmit(quirk.data)
+        await self.dev.transmit(quirk.data)
         if quirk.data[0] == Message.KEY_PRESS:
-            self.dev.key_release()
+            await self.dev.key_release()
         return True
 
-    def power_on(self):
-        if self.be_quirky('power_on'):
+    async def power_on(self):
+        if await self.be_quirky('power_on'):
             return
-        self.dev.power_on()
+        await self.dev.power_on()
 
-    def power_off(self):
-        if self.be_quirky('power_off'):
+    async def power_off(self):
+        if await self.be_quirky('power_off'):
             return
-        self.standby()
+        await self.standby()
 
-    def standby(self):
-        self.dev.standby()
+    async def standby(self):
+        await self.dev.standby()
 
-    def press_key(self, key, repeat=None):
+    async def press_key(self, key, repeat=None):
         if repeat is None: repeat = False
-        self.dev.key_press(key)
+        await self.dev.key_press(key)
         if not repeat:
-            self.release_key()
+            await self.release_key()
 
-    def release_key(self):
-        self.dev.key_release()
+    async def release_key(self):
+        await self.dev.key_release()
 
-    def set_stream_path(self):
-        self.dev.set_stream_path()
+    async def set_stream_path(self):
+        await self.dev.set_stream_path()
 
     def handle_report_physical_address(self, msg):
         self.dev.parse_report_physical_address_message(msg)
 
-    def set_input(self, index):
+    async def set_input(self, index):
         # Press the SET INPUT key with the input index
-        self.dev.transmit(bytes([Message.KEY_PRESS, Key.SET_INPUT, index]))
+        await self.dev.transmit(bytes([Message.KEY_PRESS, Key.SET_INPUT, index]))
         # And then release the key
-        self.dev.key_release()
+        await self.dev.key_release()
 
-class Controller(object):
+class ControllerImpl(object):
     def __init__(self, front_dev, back_dev, osd_name, loop, activities):
         self.front_adapter = cec.Adapter(devname=front_dev,
+                                         loop=loop,
+                                         listen_callback_coro=self.front_listen,
                                          device_types=DeviceType.PLAYBACK,
                                          osd_name = osd_name)
         self.back_adapter = cec.Adapter(devname=back_dev,
-                                         device_types=DeviceType.TV,
-                                         osd_name = osd_name)
+                                        loop=loop,
+                                        listen_callback_coro=self.back_listen,
+                                        device_types=DeviceType.TV,
+                                        osd_name = osd_name)
         self.loop = loop
         self.last_device_rescan_time = 0
         self.rescan_wait_time_sec = 2 * 60
-        self.rescan_devices() # sets self.devices dict()
         self.activities = activities
         self.current_activity = no_activity
-        self.front_listener = asyncio.to_thread(self.front_listen)
-        self.back_listener = asyncio.to_thread(self.back_listen)
 
-    def handle_front_give_device_power_status(self, adapter, msg):
+    async def handle_front_give_device_power_status(self, adapter, msg):
         log.info('Power status requested')
         msg = Message(adapter.address, msg.src)
         if self.current_activity == no_activity:
@@ -177,9 +178,9 @@ class Controller(object):
             status = PowerStatus.ON
         log.info(f'Responding with power status {status.name}')
         msg.set_data((Message.REPORT_POWER_STATUS, status))
-        adapter.transmit(msg)
+        await adapter.transmit(msg)
 
-    def handle_back_give_device_power_status(self, adapter, msg):
+    async def handle_back_give_device_power_status(self, adapter, msg):
         log.info('Power status requested')
         device_address = msg.src
         msg = Message(adapter.address, msg.src)
@@ -187,28 +188,25 @@ class Controller(object):
             status = PowerStatus.STANDBY
         else:
             ca = self.current_activity
-            source_device = self.get_device(ca.source)
+            source_device = await self.get_device(ca.source)
             status = PowerStatus.STANDBY
             if source_device is not None:
                 if source_device.address == device_address:
                     status = PowerStatus.ON
         log.info(f'Responding with power status {status.name}')
         msg.set_data((Message.REPORT_POWER_STATUS, status))
-        adapter.transmit(msg)
+        await adapter.transmit(msg)
 
-    def front_listen(self):
-        while True:
-            msg = self.front_adapter.listen()
-            # LG TVs love spamming this message every 10 seconds.
-            if msg.op == Message.VENDOR_ID and msg.dst == cec.BROADCAST_ADDRESS:
-                continue
-            log.info(f'Front RX {msg}')
-            match msg.op:
-                case Message.GIVE_DEVICE_POWER_STATUS:
-                    self.loop.call_soon_threadsafe(self.handle_front_give_device_power_status,
-                                                   self.front_adapter, msg)
+    async def front_listen(self, msg):
+        # LG TVs love spamming this message every 10 seconds.
+        if msg.op == Message.VENDOR_ID and msg.dst == cec.BROADCAST_ADDRESS:
+            return
+        log.info(f'Front RX {msg}')
+        match msg.op:
+            case Message.GIVE_DEVICE_POWER_STATUS:
+                await self.handle_front_give_device_power_status(self.front_adapter, msg)
 
-    def handle_device_report_physical_address(self, adapter, msg):
+    async def handle_device_report_physical_address(self, adapter, msg):
         new_device = True
 
         # Update an existing device if any...
@@ -220,7 +218,7 @@ class Controller(object):
 
         if new_device:
             # This is a new device!
-            dev = cec.Device(adapter, msg.src)
+            dev = await cec.Device(adapter, msg.src)
             device = Device(dev)
             self.devices[dev.osd_name] = device
             log.info(f'Adding new found device {dev.osd_name}')
@@ -228,55 +226,50 @@ class Controller(object):
         pa = pretty_physical_address(device.physical_address)
         log.info(f'{device.osd_name} updated physical address to {pa}')
         if not device.osd_name:
-            device.get_osd_name()
+            await device.get_osd_name()
         if device.osd_name == self.current_activity.source:
             log.info(f'Setting stream path to updated address {pa}')
-            device.set_stream_path()
+            await device.set_stream_path()
 
-    def back_listen(self):
-        while True:
-            msg = self.back_adapter.listen()
-            log.info(f'Back RX {msg}')
-            match msg.op:
-                case Message.REPORT_PHYSICAL_ADDR:
-                    self.loop.call_soon_threadsafe(self.handle_device_report_physical_address, self.back_adapter, msg)
-                case Message.IMAGE_VIEW_ON:
-                    self.loop.call_soon_threadsafe(self.stop_source_thief, msg)
-                case Message.ACTIVE_SOURCE:
-                    self.loop.call_soon_threadsafe(self.stop_source_thief, msg)
-                case Message.GIVE_DEVICE_POWER_STATUS:
-                    self.loop.call_soon_threadsafe(self.handle_back_give_device_power_status, self.back_adapter, msg)
+    async def back_listen(self, msg):
+        log.info(f'Back RX {msg}')
+        match msg.op:
+            case Message.REPORT_PHYSICAL_ADDR:
+                await self.handle_device_report_physical_address(self.back_adapter, msg)
+            case Message.IMAGE_VIEW_ON:
+                await self.stop_source_thief(msg)
+            case Message.ACTIVE_SOURCE:
+                await self.stop_source_thief(msg)
+            case Message.GIVE_DEVICE_POWER_STATUS:
+                await self.handle_back_give_device_power_status(self.back_adapter, msg)
 
-    def wait_on(self):
-        return self.front_listener, self.back_listener
-
-    def stop_source_thief(self, msg):
+    async def stop_source_thief(self, msg):
         log.info(f'Device address {msg.src} wants source')
         if self.current_activity == no_activity:
             log.info('No current activity, so forcing standby')
-            self.force_standby()
+            await self.force_standby()
             return
 
         ca = self.current_activity
-        source_device = self.get_device(ca.source)
+        source_device = await self.get_device(ca.source)
         if source_device is not None:
             if source_device.address != msg.src:
                 log.info('Putting thief in standby')
                 msg = Message(self.back_adapter.address, msg.src)
                 msg.set_data([Message.STANDBY])
-                self.back_adapter.transmit(msg)
+                await self.back_adapter.transmit(msg)
                 log.info('Taking back source')
-                self.set_activity_input(ca)
+                await self.set_activity_input(ca)
             else:
                 log.info(f'Device is not a thief')
         else:
             log.info(f"Can't find source device for current activity so will let source thief win")
 
-    def scan_devices(self):
+    async def scan_devices(self):
         log.info('Scanning devices...')
         devices = {}
         for adapter in (self.back_adapter, self.front_adapter):
-            cec_devices = adapter.list_devices()
+            cec_devices = await adapter.list_devices()
             for dev in cec_devices:
                 devices[dev.osd_name] = Device(dev)
         log.info('Scanned devices:')
@@ -285,7 +278,7 @@ class Controller(object):
             log.info(f'{name:15s} {device.address:6X}   {pretty_physical_address(device.physical_address):10}')
         return devices
 
-    def rescan_devices(self):
+    async def rescan_devices(self):
         now = time.time()
         delta = now - self.last_device_rescan_time
         if delta < self.rescan_wait_time_sec:
@@ -293,15 +286,15 @@ class Controller(object):
             log.info(f'Device rescan is too frequent, {time_left:0.2f}s until allowed')
             return
         self.last_device_rescan_time = now
-        self.devices = self.scan_devices()
+        self.devices = await self.scan_devices()
 
-    def get_device(self, name, op=None):
+    async def get_device(self, name, op=None):
         if name is None:
             return None
         device = self.devices.get(name)
         if device is None:
             log.info(f'Failed to find device {name}')
-            self.rescan_devices()
+            await self.rescan_devices()
             device = self.devices.get(name)
             if device is None:
                 if op is not None:
@@ -310,7 +303,7 @@ class Controller(object):
                     log.info(f'Device {name} not found')
         return device
 
-    def set_activity(self, index):
+    async def set_activity(self, index):
         if index < -1 or index >= len(self.activities):
             log.info(f'Activity index {index} is out of bounds')
             return False
@@ -323,83 +316,88 @@ class Controller(object):
             is_power_off = True
         log.info(f'Setting activity {na.name} from activity {ca.name}')
         if na is ca:
-            self.fix_current_activity()
+            await self.fix_current_activity()
             return True
         current_devices = ca.devices()
         new_devices = na.devices()
         for current_device in current_devices:
             if current_device not in new_devices:
-                device = self.get_device(current_device, 'STANDBY')
+                device = await self.get_device(current_device, 'STANDBY')
                 if device is None:
                     continue
                 log.info(f'Device {current_device} STANDBY')
                 if is_power_off:
-                    device.power_off()
+                    await device.power_off()
                 else:
-                    device.standby()
+                    await device.standby()
         for new_device in new_devices:
             if new_device not in current_devices:
-                device = self.get_device(new_device, 'POWER ON')
+                device = await self.get_device(new_device, 'POWER ON')
                 if device is None:
                     continue
                 log.info(f'Device {new_device} POWER ON')
-                device.power_on()
-        self.set_activity_input(na)
+                await device.power_on()
+        await self.set_activity_input(na)
         self.current_activity = na
         return True
 
-    def fix_current_activity(self):
+    async def fix_current_activity(self):
         ca = self.current_activity
         log.info(f'Fixing activity {ca.name}')
         current_devices = ca.devices()
         for current_device in current_devices:
-            device = self.get_device(current_device, 'POWER ON')
+            device = await self.get_device(current_device, 'POWER ON')
             if device is None:
                 continue
             log.info(f'Device {current_device} POWER ON')
-            device.power_on()
-        self.set_activity_input(ca)
+            await device.power_on()
+        await self.set_activity_input(ca)
 
-    def set_activity_input(self, activity):
+    async def set_activity_input(self, activity):
         # Setting the stream path is the better way...
-        device = self.get_device(activity.source, 'SET STREAM PATH')
+        device = await self.get_device(activity.source, 'SET STREAM PATH')
         if device is not None:
             log.info(f'Setting stream path to {pretty_physical_address(device.physical_address)}')
-            device.set_stream_path()
+            await device.set_stream_path()
             return
         # However, some devices aren't particularly HDMI-CEC compliant, so, as a fallback, the user
         # can optionally configure the switch device on which we should et the input try changing
         # the receiver input instead (assuming the receiver supports it...)
         if activity.switch:
-            device = self.get_device(activity.switch.device, 'SET INPUT')
+            device = await self.get_device(activity.switch.device, 'SET INPUT')
             if device is None:
                 return
-            device.set_input(activity.switch.input)
+            await device.set_input(activity.switch.input)
         # Also, remind the TV that we are the source
-        self.front_adapter.active_source()
+        await self.front_adapter.active_source()
 
-    def standby(self):
-        self.set_activity(-1)
+    async def standby(self):
+        await self.set_activity(-1)
 
-    def force_standby(self):
-        self.front_adapter.broadcast().standby()
-        self.back_adapter.broadcast().standby()
+    async def force_standby(self):
+        await self.front_adapter.broadcast().standby()
+        await self.back_adapter.broadcast().standby()
 
-    def press_key(self, key, repeat=None):
+    async def press_key(self, key, repeat=None):
         if key in (Key.VOLUME_UP, Key.VOLUME_DOWN, Key.TOGGLE_MUTE):
             device_name = self.current_activity.audio
         else:
             device_name = self.current_activity.source
-        device = self.get_device(device_name, 'PRESS KEY')
+        device = await self.get_device(device_name, 'PRESS KEY')
         if device is None:
             return
         log.info(f'Device {device_name} PRESS KEY 0x{key:02X}')
-        device.press_key(key, repeat)
+        await device.press_key(key, repeat)
 
-    def release_key(self):
+    async def release_key(self):
         cs = self.current_activity.source
-        device = self.get_device(cs, 'RELEASE KEY')
+        device = await self.get_device(cs, 'RELEASE KEY')
         if device is None:
             return
         log.info(f'Device {cs} RELEASE KEY')
-        device.release_key()
+        await device.release_key()
+
+async def Controller(front_dev, back_dev, osd_name, loop, activities):
+    ctrl = ControllerImpl(front_dev, back_dev, osd_name, loop, activities)
+    await ctrl.rescan_devices() # sets self.devices dict()
+    return ctrl

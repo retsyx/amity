@@ -10,14 +10,14 @@ import tools
 
 log = tools.logger('log/hdmi_tool')
 
-import argparse, glob, logging, shutil, sys, time, yaml
+import argparse, asyncio, glob, logging, shutil, sys, time, yaml
 import cec, hdmi
 from config import config
 
 def all_adapter_devices():
     return glob.iglob('/dev/cec*')
 
-def scan():
+async def scan():
     devices = []
     for devname in all_adapter_devices():
         adapter = cec.Adapter(devname=devname)
@@ -25,7 +25,7 @@ def scan():
             continue
         log.info(f'Scanning for devices on cec-gpio device {devname}')
         try:
-            devices.extend(adapter.list_devices())
+            devices.extend(await adapter.list_devices())
         except OSError as e:
             log.info(f'{devname} is not connected')
 
@@ -39,8 +39,8 @@ tv_address = 0
 source_device_addresses = (4, 8, 9, 11)
 audio_system_address = 5
 
-def recommend(should_write_config):
-    devices = scan()
+async def recommend(should_write_config):
+    devices = await scan()
 
     tv_device = None
     audio_system_device = None
@@ -104,7 +104,7 @@ def recommend(should_write_config):
         s = yaml.safe_dump(config.user_cfg)
         log.info(s)
 
-def main():
+async def main():
     actions = ('scan', 'recommend')
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('action', default='', choices=actions, help='action to perform')
@@ -119,9 +119,9 @@ def main():
     log.addHandler(logging.StreamHandler(sys.stdout))
 
     if args.action == 'scan':
-        scan()
+        await scan()
     elif args.action == 'recommend':
-        recommend(not args.nowrite)
+        await recommend(not args.nowrite)
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
