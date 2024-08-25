@@ -31,8 +31,6 @@ import ui
 
 config.default('ui.enable', False)
 config.default('keyboard.enable', True)
-config.default('hub.repeat_delay_sec', .2)
-config.default('hub.repeat_period_sec', .1)
 
 class KeyState(object):
     def __init__(self, count):
@@ -46,15 +44,11 @@ class Hub(remote.RemoteListener):
         self.controller = controller
         self.key_state = {}
         self.wait_for_release = False
-        self.repeat_timers = {}
-        self.repeat_delay_sec = config['hub.repeat_delay_sec']
-        self.repeat_period_sec = config['hub.repeat_period_sec']
         self.pipes = []
         self.in_macro = False
         self.set_wait_for_release()
 
     def set_wait_for_release(self):
-        self.repeat_timers.clear()
         self.wait_for_release = True
         loop = asyncio.get_running_loop()
         loop.call_later(1, self.auto_clear_wait_for_release)
@@ -98,8 +92,8 @@ class Hub(remote.RemoteListener):
         }
 
         if self.controller.current_activity is hdmi.no_activity:
-            # Ignore key sequences originating from swipes...
             if count > 0:
+                # Ignore key sequences originating from swipes...
                 self.key_state.pop(key)
                 return
             index = activity_map.get(hkey)
@@ -130,13 +124,7 @@ class Hub(remote.RemoteListener):
         if hkey == Key.POWER:
             return
 
-        await self.controller.press_key(hkey, True)
-        if count > 0:
-            delay_sec = self.repeat_period_sec
-        else:
-            delay_sec = self.repeat_delay_sec
-        loop = asyncio.get_running_loop()
-        self.repeat_timers[key] = loop.call_later(delay_sec, self.event_timer, key)
+        self.taskit(self.press_key(key))
 
     async def client_release_key(self, key):
         log.info(f'Client release key {key:02X}')
@@ -148,10 +136,6 @@ class Hub(remote.RemoteListener):
             else:
                 await self.standby()
 
-        if self.controller.current_activity is not hdmi.no_activity:
-            if (not self.key_state or
-                (len(self.key_state) == 1 and Key.POWER in self.key_state)):
-                await self.controller.release_key()
         if not self.key_state:
             self.wait_for_release = False
             self.in_macro = False
@@ -174,33 +158,29 @@ class Hub(remote.RemoteListener):
             pipe.notify_set_activity(index)
         return True
 
-    def event_timer(self, key):
-        self.taskit(self.event_timer_async(key))
+    async def check_release_all_keys(self):
+        if self.controller.current_activity is not hdmi.no_activity:
+            if (not self.key_state or
+                (len(self.key_state) == 1 and Key.POWER in self.key_state)):
+                await self.controller.release_key()
 
-    async def event_timer_async(self, key):
-        state = self.key_state.get(key)
-        if state is None:
-            log.info(f'key {key} not in key state')
-            return
-
-        hkey = key
-        if state.repeat_count > 0:
-            hkey &= ~self.REPEAT_COUNT_FLAG
-            state.repeat_count -= 1
-            if state.repeat_count == 0:
-                log.info(f'Repeating key {hkey} count done')
-                self.key_state.pop(key)
-                if self.controller.current_activity is not hdmi.no_activity:
-                    if (not self.key_state or
-                        (len(self.key_state) == 1 and Key.POWER in self.key_state)):
-                        await self.controller.release_key()
-                return
-
-        await self.controller.press_key(hkey, True)
-        loop = asyncio.get_running_loop()
-        log.info(f'Repeating key {hkey} count {state.repeat_count}')
-        self.repeat_timers[key] = loop.call_later(self.repeat_period_sec,
-                                                  self.event_timer, key)
+    async def press_key(self, key):
+        hkey = key & ~self.REPEAT_COUNT_FLAG
+        log.info(f'Pressing key {hkey}')
+        while True:
+            await self.controller.press_key(hkey, True)
+            state = self.key_state.get(key)
+            if state is None:
+                await self.check_release_all_keys()
+                break
+            if state.repeat_count > 0:
+                log.info(f'Repeating key {hkey} count {state.repeat_count}')
+                state.repeat_count -= 1
+                if state.repeat_count == 0:
+                    self.key_state.pop(key)
+                    await self.check_release_all_keys()
+                    break
+        log.info(f'Pressing key {hkey} done')
 
 async def _main():
     global args
