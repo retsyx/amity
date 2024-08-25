@@ -516,7 +516,7 @@ class Adapter(object):
 
     def __init__(self, devname, loop=None, listen_callback_coro=None,
                  device_types=(), osd_name='default', vendor_id=0):
-        self.taskit = tools.Tasker()
+        self.taskit = tools.Tasker('Adapter')
         self.states = {}
         self.devname = devname
         if loop is None:

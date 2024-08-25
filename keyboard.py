@@ -70,7 +70,7 @@ class Keyboard(object):
         self.devices = []
         self.loop = loop
         self.pipe = pipe
-        self.taskit = tools.Tasker()
+        self.taskit = tools.Tasker('Keyboard')
         self.listen_to_all_devices()
         self.start_input_monitor()
 

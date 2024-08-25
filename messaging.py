@@ -30,7 +30,7 @@ class Pipe(object):
         self.client_q = asyncio.Queue()
         self.server_t = None
         self.client_t = None
-        self.taskit = tools.Tasker()
+        self.taskit = tools.Tasker('Messaging')
 
     # Server calls
     def notify_set_activity(self, index):

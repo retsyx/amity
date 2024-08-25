@@ -51,7 +51,8 @@ def die(reason):
     os._exit(1)
 
 class Tasker(object):
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         self.tasks = set()
 
     def __call__(self, coro):
@@ -70,4 +71,4 @@ class Tasker(object):
         except asyncio.CancelledError as e:
             exc = e
         if exc is not None:
-            die(f'Task exception {exc}')
+            die(f'Task {self.name} exception {type(exc)} {exc.args} {exc}')

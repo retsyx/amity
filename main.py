@@ -42,7 +42,7 @@ class Hub(remote.RemoteListener):
     REPEAT_COUNT_FLAG = 0x8000
 
     def __init__(self, controller):
-        self.taskit = tools.Tasker()
+        self.taskit = tools.Tasker('Hub')
         self.controller = controller
         self.key_state = {}
         self.wait_for_release = False
@@ -291,9 +291,6 @@ async def main():
         tools.die(s)
 
 def handle_sigterm(signum, frame):
-    # This never actually gets called. Registering to handle the signal is enough to trigger
-    # exceptions and task cancellations elsewhere in SIGTERM. They will call die() before this
-    # code gets to execute.
     tools.die('SIGTERM')
 
 if __name__ == '__main__':
