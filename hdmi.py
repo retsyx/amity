@@ -231,6 +231,15 @@ class ControllerImpl(object):
             log.info(f'Setting stream path to updated address {pa}')
             await device.set_stream_path()
 
+        # The protocol is flaky, and there may be an old device that once claimed this physical
+        # address, and is now likely dormant. If there is, remove it from our list of devices.
+        for other_osd_name, other_device in list(self.devices.items()):
+            if other_device is device:
+                continue
+            if other_device.physical_address == device.physical_address:
+                log.info(f'Removing {other_osd_name} that previously had address {pa}')
+                self.devices.pop(other_osd_name)
+
     async def back_listen(self, msg):
         log.info(f'Back RX {msg}')
         match msg.op:
@@ -361,8 +370,8 @@ class ControllerImpl(object):
             await device.set_stream_path()
             return
         # However, some devices aren't particularly HDMI-CEC compliant, so, as a fallback, the user
-        # can optionally configure the switch device on which we should et the input try changing
-        # the receiver input instead (assuming the receiver supports it...)
+        # can optionally configure the switch device (receiver) on which we should set the input
+        # instead (assuming the receiver supports it...)
         if activity.switch:
             device = await self.get_device(activity.switch.device, 'SET INPUT')
             if device is None:
