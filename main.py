@@ -168,19 +168,20 @@ class Hub(remote.RemoteListener):
         hkey = key & ~self.REPEAT_COUNT_FLAG
         log.info(f'Pressing key {hkey}')
         while True:
-            await self.controller.press_key(hkey, True)
+            if not await self.controller.press_key(hkey, True):
+                log.info(f'Pressing key {hkey} failed')
+                break
             state = self.key_state.get(key)
             if state is None:
-                await self.check_release_all_keys()
                 break
             if state.repeat_count > 0:
                 log.info(f'Repeating key {hkey} count {state.repeat_count}')
                 state.repeat_count -= 1
                 if state.repeat_count == 0:
-                    self.key_state.pop(key)
-                    await self.check_release_all_keys()
                     break
         log.info(f'Pressing key {hkey} done')
+        self.key_state.pop(key, None)
+        await self.check_release_all_keys()
 
 async def _main():
     global args

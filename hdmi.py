@@ -385,9 +385,10 @@ class ControllerImpl(object):
             device_name = self.current_activity.source
         device = await self.get_device(device_name, 'PRESS KEY')
         if device is None:
-            return
+            return False
         log.info(f'Device {device_name} PRESS KEY 0x{key:02X}')
         await device.press_key(key, repeat)
+        return True
 
     async def release_key(self):
         cs = self.current_activity.source
