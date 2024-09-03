@@ -10,7 +10,7 @@ import tools
 
 log = tools.logger('log/hdmi_tool')
 
-import argparse, asyncio, glob, logging, shutil, sys, time, yaml
+import argparse, asyncio, glob, logging, sys, yaml
 import cec, hdmi
 from config import config
 
@@ -86,17 +86,11 @@ async def recommend(should_write_config):
     config.load()
 
     if should_write_config:
-        if config['activities'] is not None or config['adapters'] is not None:
-            backup_time_str = time.strftime('%Y%m%d-%H%M%S')
-            backup_filename = f'{config.filename}-{backup_time_str}'
-            # Make a backup of the config file
-            shutil.copy(config.filename, backup_filename)
-            log.debug(f'Created backup {backup_filename}')
         # Update the config
+        backup = config['activities'] is not None or config['adapters']
         config['adapters'] = adapters
         config['activities'] = activities
-        log.debug(f'Writing activity config {config}')
-        config.save()
+        config.save(backup)
         log.info(f'{config.filename} updated.')
     else:
         config['adapters'] = adapters

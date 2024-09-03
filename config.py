@@ -7,7 +7,7 @@
 import tools
 log = tools.logger(__name__)
 
-import re, yaml
+import os, re, shutil, stat, tempfile, time, yaml
 
 class Config(object):
     def __init__(self, filename):
@@ -32,10 +32,29 @@ class Config(object):
         self.__overlay(self.cfg, self.user_cfg)
         self.loaded = True
 
-    def save(self):
+    def save(self, backup=False):
         log.info(f'Save {self.filename}')
-        with open(self.filename, 'w') as file:
+        if backup:
+            # Make a backup of the config file
+            backup_time_str = time.strftime('%Y%m%d-%H%M%S')
+            backup_filename = f'{self.filename}-{backup_time_str}'
+            try:
+                shutil.copy(self.filename, backup_filename)
+                log.info(f'Created backup {backup_filename}')
+                # If running as root, make backup ownership the same as the original
+                if os.getuid() == 0:
+                    stat = os.stat(self.filename)
+                    shutil.chown(backup_filename, stat.st_uid, stat.st_gid)
+            except FileNotFoundError:
+                pass
+        tmp_fd, tmp_path = tempfile.mkstemp()
+        with os.fdopen(tmp_fd, 'w') as file:
             yaml.safe_dump(self.user_cfg, file)
+        shutil.move(tmp_path, self.filename)
+        # Fixup ownership, if running as root
+        if os.getuid() == 0:
+            stat = os.stat('.')
+            shutil.chown(self.filename, stat.st_uid, stat.st_gid)
 
     def save_complete(self, filename):
         with open(filename, 'w') as file:
@@ -159,7 +178,7 @@ def main():
     previous = c['remote.mac']
     c['remote.mac'] = previous + 1
     print(f'2 {c.user_cfg}')
-    c.save()
+    c.save(True)
 
 if __name__ == '__main__':
     main()

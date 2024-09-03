@@ -10,7 +10,7 @@ import tools
 
 log = tools.logger("log/pair_tool.log")
 
-import argparse, logging, os, subprocess, shutil, sys, time
+import argparse, logging, subprocess, sys
 
 from bluepy import btle
 from bluepy.btle import AssignedNumbers
@@ -115,26 +115,15 @@ def main():
 
     if not args.nowrite:
         old_addr = None
+        backup = False
         config.load()
         if config['remote.mac'] is not None:
+            backup = True
             old_addr = config['remote.mac']
-            # Make a backup of the config file
-            backup_time_str = time.strftime('%Y%m%d-%H%M%S')
-            backup_filename = f'{config.filename}-{backup_time_str}'
-            shutil.copy(config.filename, backup_filename)
-            # This is running as root, so chown the backup to match the original config file
-            stat = os.stat(config.filename)
-            shutil.chown(backup_filename, stat.st_uid, stat.st_gid)
-            log.debug(f'Created backup {backup_filename}')
 
         # Update the config
         config['remote.mac'] = public_addr
-        log.debug(f'Writing remote config {config}')
-        config.save()
-
-        # Make sure the configuration file has the right ownership
-        stat = os.stat('.')
-        shutil.chown(config.filename, stat.st_uid, stat.st_gid)
+        config.save(backup)
 
         # Unpair the previous remote, if there is one
         if not args.keep and old_addr is not None and old_addr != public_addr:
