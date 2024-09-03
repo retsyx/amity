@@ -243,3 +243,8 @@ if [ "$ACTION" = "disable" ]; then
 
 fi # "$ACTION" = "disable"
 
+if [ "$ACTION" = "restart" ]; then
+
+    systemctl --user restart "$NAME"
+
+fi # "$ACTION" = "restart"
