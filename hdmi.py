@@ -9,7 +9,7 @@ import tools
 log = tools.logger(__name__)
 
 from config import config
-import asyncio, pprint, yaml, time
+import pprint, time
 import cec
 from cec import Device, DeviceType, Key, Message, PowerStatus
 

@@ -1,5 +1,7 @@
 evdev
+HAP-python[QRCode]
 pygame-ce
 pygame_gui
 pyyaml
+qrcode
 watchdog

@@ -25,11 +25,13 @@ from config import config
 import remote, remote_adapter
 import hdmi
 from hdmi import Key
+import homekit
 import keyboard
 import messaging
 import ui
 
 config.default('ui.enable', False)
+config.default('homekit.enable', False)
 config.default('keyboard.enable', True)
 
 class KeyState(object):
@@ -195,11 +197,12 @@ async def _main():
     log.info('Runtime activities:')
     log.info(pprint.pformat(activities))
 
+    activity_names = [activity.name for activity in activities]
+
     if config['ui.enable']:
         interface = ui.Main()
         log.info(f'Initializing UI...')
-        activity_names = [activity.name for activity in activities]
-        interface.set_activity_names(['Off',] + activity_names)
+        interface.set_activity_names(['Off', ] + activity_names)
     else:
         interface = None
 
@@ -248,6 +251,13 @@ async def _main():
     else:
         log.info(f'Siri remote not configured. Must be using a keyboard...')
         siri = None
+
+    if config['homekit.enable']:
+        # Wire hub and HomeKit
+        hk_pipe = messaging.Pipe()
+        hub.add_pipe(hk_pipe)
+        hk = homekit.HomeKit(activity_names, loop, hk_pipe)
+        await hk.start()
 
     while True:
         futures = []

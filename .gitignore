@@ -13,3 +13,5 @@ hdmi-backups
 fp-info-cache
 *_pcb.lck
 *_sch.lck
+homekit.state
+homekit.code

@@ -145,7 +145,7 @@ async def main():
     loop = asyncio.get_event_loop()
     kb = Keyboard(loop, None)
     while True:
-        await asyncio.gather(*list(kb.tasks))
+        await asyncio.gather(*list(kb.wait_on()))
         await asyncio.sleep(1)
 
 if __name__ == '__main__':

@@ -39,6 +39,7 @@ if [ -z ${ACTION} ]; then
 # Install dependencies
 sudo apt update
 sudo apt install -y build-essential git libglib2.0-dev libegl1 libgl1 python3-dev unzip vim
+sudo apt install -y libavahi-compat-libdnssd-dev
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
 if [ ! -f /etc/systemd/logind.conf.d/disable-power-key.conf ]; then

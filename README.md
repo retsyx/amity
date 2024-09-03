@@ -20,6 +20,10 @@ Home theater control over HDMI-CEC
   * [Active](#active)
 * [Strange Devices](#strange-devices)
   * [Nintendo Switch](#nintendo-switch)
+* [HomeKit](#homekit)
+  * [Enabling HomeKit](#enabling-homekit)
+  * [Disabling HomeKit](#disabling-homekit)
+  * [Resetting HomeKit Configuration](#resetting-homekit-configuration)
 * [License](#license)
 
 ## Introduction
@@ -79,13 +83,13 @@ It is assumed that this will be a dedicated device for home theater control. It 
     /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/retsyx/amity/main/setup_amity)"
     ```
 
-Amity requires a Linux kernel compiled with `cec-gpio` support enabled. If the running kernel doesn't support `cec-gpio` (it likely doesn't), then Amity will download, and install an appropriate pre-compiled kernel, and then reboot. If the running kernel already supports `cec-gpio` Amity will not replace it.
+Amity requires a Linux kernel compiled with `cec-gpio` support enabled. If the running kernel doesn't support `cec-gpio` (it likely doesn't), then Amity will download, and install an appropriate pre-compiled kernel, and then reboot. If the running kernel already supports `cec-gpio`, Amity will not replace it.
 
 ### Using a Keyboard for Control
 
-Some media remote controls (Amazon Fire, Roku remotes, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire, or Roku) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, or Roku remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
+Some media remote controls (Amazon Fire, Roku remotes, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire, or Roku) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
 
-This document uses the Siri remote as an example, but remote operation (except pairing) is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire, and Roku activity buttons are undocumented, and are not supported.
+This document uses the Siri remote as an example, but remote operation (except pairing) is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire activity buttons are undocumented, and are not supported.
 
 ### Pairing a Siri Remote
 
@@ -174,12 +178,12 @@ Let's look at one activity in detail:
 
 The fields are:
 
-* `name` - this can be anything.
+* `name` - this can be anything you want.
 * `display` - the HDMI OSD name of the display device. Typically a TV.
 * `source` - the HDMI OSD name of the AV source device.
 * `audio` - the HDMI OSD name of the audio output device, typically a receiver.
 
-Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output. 'Living Room' is the OSD name of the Apple TV in the living. We can optionally change the name of the activity to 'Watch Apple TV' for our own reference but it is not necessary.
+Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output. 'Living Room' is the OSD name of the Apple TV in the living room. The name of the activity can be changed to 'Watch TV' for convenience. The activity name is used with [HomeKit](#homekit).
 
 And that's it... Amity is now fully configured with a paired remote, and two activities for watching Apple TV, and playing with a PlayStation 5. Let's start it!
 
@@ -265,6 +269,69 @@ This tells Amity that the input switching device is the AVR, and that the HDMI i
 
 ?. CD
 
+## HomeKit
+
+Amity can be integrated with HomeKit as a TV accessory. This allows controlling Amity with Siri, and integrating Amity into HomeKit automations.
+
+It is highly recommended to complete all HDMI configuration, and setup before adding Amity into HomeKit.
+
+### Enabling HomeKit
+
+Enabling HomeKit (if not already enabled) will restart Amity.
+
+In the terminal, ensure you are in the Amity directory:
+
+```commandline
+cd ~/amity
+```
+
+Then, to enable HomeKit support, enter:
+
+```commandline
+./configure_homekit enable
+```
+
+If Amity is not already paired to your Home, then the QR code and setup code required to add Amity into your Home will be displayed. In the iOS Home app, tap to add an accessory and either scan the QR code, or enter the setup code manually.
+
+If, for some reason, you need to re-display the most recent pairing code, use the command:
+
+```commandline
+./configure_homekit code
+```
+
+### Disabling HomeKit
+
+Disabling HomeKit (if not already disabled) will restart Amity.
+
+In the terminal, ensure you are in the Amity directory:
+
+```commandline
+cd ~/amity
+```
+
+Then, to disable HomeKit support, enter:
+
+```commandline
+./configure_homekit disable
+```
+
+### Resetting HomeKit Configuration
+
+This will reset Amity's HomeKit state, and restart Amity, if necessary. To re-add Amity, you will need to remove Amity in the iOS Home app, and add Amity as a new accessory.
+
+In the terminal, ensure you are in the Amity directory:
+
+```commandline
+cd ~/amity
+```
+
+Then, to reset HomeKit configuration, enter:
+
+```commandline
+./configure_homekit reset
+```
+
+If HomeKit support is still enabled, then the new QR code and setup code required to add Amity into your home will be displayed.
 
 ## License
 
