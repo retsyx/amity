@@ -153,6 +153,13 @@ class Device(object):
 
 class ControllerImpl(object):
     def __init__(self, front_dev, back_dev, osd_name, loop, activities):
+        self.inited = False
+        self.devices = {}
+        self.loop = loop
+        self.last_device_rescan_time = 0
+        self.rescan_wait_time_sec = 2 * 60
+        self.activities = activities
+        self.current_activity = no_activity
         self.front_adapter = cec.Adapter(devname=front_dev,
                                          loop=loop,
                                          listen_callback_coro=self.front_listen,
@@ -163,11 +170,9 @@ class ControllerImpl(object):
                                         listen_callback_coro=self.back_listen,
                                         device_types=DeviceType.TV,
                                         osd_name = osd_name)
-        self.loop = loop
-        self.last_device_rescan_time = 0
-        self.rescan_wait_time_sec = 2 * 60
-        self.activities = activities
-        self.current_activity = no_activity
+
+    def set_inited(self):
+        self.inited = True
 
     async def handle_front_give_device_power_status(self, adapter, msg):
         log.info('Power status requested')
@@ -202,6 +207,8 @@ class ControllerImpl(object):
         if msg.op == Message.VENDOR_ID and msg.dst == cec.BROADCAST_ADDRESS:
             return
         log.info(f'Front RX {msg}')
+        if not self.inited:
+            return
         match msg.op:
             case Message.GIVE_DEVICE_POWER_STATUS:
                 await self.handle_front_give_device_power_status(self.front_adapter, msg)
@@ -242,6 +249,8 @@ class ControllerImpl(object):
 
     async def back_listen(self, msg):
         log.info(f'Back RX {msg}')
+        if not self.inited:
+            return
         match msg.op:
             case Message.REPORT_PHYSICAL_ADDR:
                 await self.handle_device_report_physical_address(self.back_adapter, msg)
@@ -410,4 +419,5 @@ class ControllerImpl(object):
 async def Controller(front_dev, back_dev, osd_name, loop, activities):
     ctrl = ControllerImpl(front_dev, back_dev, osd_name, loop, activities)
     await ctrl.rescan_devices() # sets self.devices dict()
+    ctrl.set_inited()
     return ctrl
