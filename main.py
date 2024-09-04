@@ -130,7 +130,8 @@ class Hub(remote.RemoteListener):
 
     async def client_release_key(self, key):
         log.info(f'Client release key {key:02X}')
-        self.key_state.pop(key)
+        if self.key_state.pop(key, None) is None:
+            return
 
         if key == Key.POWER:
             if self.in_macro:
