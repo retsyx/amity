@@ -3,7 +3,9 @@ import tools
 log = tools.logger(__name__)
 
 import gestures, remote
+from remote import HwRevisions
 from hdmi import Key
+
 
 class Adapter(remote.RemoteListener):
     def __init__(self, pipe):
@@ -87,7 +89,8 @@ class Adapter(remote.RemoteListener):
     def event_touches(self, remote, touches):
         self.swipe_recognizer.touches(remote, touches)
         self.dpad_emulator.touches(remote, touches)
-        self.multitap_recognizer.touches(remote, touches)
+        if remote.profile.hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
+            self.multitap_recognizer.touches(remote, touches)
 
     def event_battery(self, remote, percent: int):
         log.info(f'Battery charge at {percent}%')
