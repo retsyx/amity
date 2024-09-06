@@ -112,7 +112,7 @@ class Keyboard(object):
             async for event in device.async_read_loop():
                 if event.type != e.EV_KEY:
                     continue
-                hkey = self.keymap.get(event.code)
+                hkey = self.keymap.get(event.code, None)
                 if hkey is None:
                     continue
                 if event.value == KeyEvent.key_down:
