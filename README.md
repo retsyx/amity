@@ -38,12 +38,20 @@ Amity requires splicing into the HDMI-CEC connection between the TV and the rece
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
+HDMI-CEC is a terrible control protocol. Different equipment manufacturers implement it in often incompatible ways. Some HDMI devices don't support HDMI-CEC at all. HDMI-CEC devices often behave unpredictably, and it can be an endless source of headaches. Using HDMI-CEC for anything is a very bad idea.
 
-HDMI-CEC is a terrible control protocol. Different equipment manufacturers implement it in often incompatible ways. Some HDMI devices don't support HDMI-CEC at all. HDMI-CEC devices often behave unpredictably, and it can be an endless source of headaches. Using it for anything is a very bad idea.
+Amity is designed to work with a traditional setup centered around a receiver. For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray devices, and game consoles) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. HDMI-CEC only allows the designated TV to select arbitrary sources. TVs will not heed source selection commands from any other device. As a result, Amity will not be able to control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
 
-Testing of Amity has been limited to the equipment I have. It works for me. It may very well not work for you. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious. Amity is known to work (with my equipment, anyway) with a traditional setup centered around a receiver. In my case, I have an LG TV connected to a Denon receiver output. I have an Apple TV, a PlayStation, and a Nintendo Switch (that has minimal HDMI-CEC functionality) connected to the receiver's inputs. When I want to change what I'm watching, I change inputs on the receiver.
+Testing of Amity has been limited to the equipment I have. It works for me. It may very well not work with your equipment. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious.
 
-Amity does not support HDMI ARC/eARC at the moment.
+Equipment that is known to be compatible with Amity:
+
+- LG OLED TV
+- Denon AVR-X3400H
+- Apple TV 4K
+- Sony Playstation 5
+- Amazon Fire TV (media player)
+- Nintendo Switch (see [Strange Devices](#strange-devices))
 
 With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Amity.
 
