@@ -58,7 +58,7 @@ With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Am
 ## Prerequisites
 
 * A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer with an appropriate power supply, that can run 64-bit Linux. Network connectivity is required for initial setup but not when controlling your home theater.
-* A remote control. An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work. Or an Amazon Fire, Roku remote, or common third party RF remotes that behave like keyboards. IR remotes are not supported.
+* A remote control. An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work. Or an Amazon Fire TV remote, or common third party RF remotes that behave like keyboards. IR remotes are not supported.
 * An HDMI-CEC splice (either a stripped, spliced cable, or a dedicated board and an extra HDMI cable)
 
 ## Setup
@@ -95,7 +95,7 @@ Amity requires a Linux kernel compiled with `cec-gpio` support enabled. If the r
 
 ### Using a Keyboard for Control
 
-Some media remote controls (Amazon Fire, Roku remotes, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire, or Roku) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
+Some media remote controls (Amazon Fire, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire, remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are not supported.
 
 This document uses the Siri remote as an example, but remote operation (except pairing) is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire activity buttons are undocumented, and are not supported.
 
