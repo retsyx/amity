@@ -12,8 +12,8 @@ log = tools.logger("log/pair_tool.log")
 
 import argparse, logging, subprocess, sys
 
-from bluepy import btle
-from bluepy.btle import AssignedNumbers
+from bluepy3 import btle
+from bluepy3.btle import AssignedNumbers
 from config import config
 from remote import PnpInfo
 
@@ -90,7 +90,7 @@ class Scanner(object):
                     remote = self.check_pair(entry)
                     if remote is not None:
                         return remote
-            except (btle.BTLEDisconnectError, BrokenPipeError) as e:
+            except (btle.BTLEConnectError, BrokenPipeError) as e:
                 if self.pairing:
                     log.info('Pairing failed. Try resetting the remote.')
                     log.info('Trying again!\n')

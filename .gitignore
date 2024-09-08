@@ -1,12 +1,13 @@
 .DS_Store
 .vscode
 bin/
+share/
 lib/
 lib64
 log/
 __pycache__/
 sdl2/
-config.yaml
+config.yaml*
 pyvenv.cfg
 hdmi-backups
 \#auto_saved_files\#

@@ -11,7 +11,7 @@ import tools
 log = tools.logger(__name__)
 
 import time
-from bluepy.btle import AssignedNumbers, BTLEDisconnectError, BTLEException, DefaultDelegate, Peripheral
+from bluepy3.btle import AssignedNumbers, BTLEConnectError, BTLEException, DefaultDelegate, Peripheral
 
 class PnpInfo(object):
     def __init__(self, data):
@@ -327,7 +327,7 @@ class SiriRemote(DefaultDelegate):
                 while True:
                     self.__device.waitForNotifications(5)
 
-            except (BTLEDisconnectError, BTLEException, BrokenPipeError) as e:
+            except (BTLEConnectError, BTLEException, BrokenPipeError) as e:
                 log.info(f'Ignoring remote exception {e}. Will restart.')
                 self.__listener.event_button(self, 0)  # release all keys
                 time.sleep(0.5)

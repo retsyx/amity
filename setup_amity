@@ -38,7 +38,7 @@ if [ -z ${ACTION} ]; then
 
 # Install dependencies
 sudo apt update
-sudo apt install -y build-essential git libglib2.0-dev python3-dev unzip vim
+sudo apt install -y build-essential git libglib2.0-dev libbluetooth-dev python3-dev unzip vim
 sudo apt install -y libavahi-compat-libdnssd-dev
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
@@ -136,7 +136,7 @@ if [ ! -d "$APP_DIR" ]; then
     python -m venv "$APP_DIR"
 else
     cd $APP_DIR
-    git pull
+    git fetch && git rebase
     cd ..
 fi
 
@@ -150,23 +150,24 @@ cd "$APP_DIR"
 . ./bin/activate
 pip install --upgrade -r requirements.txt
 
-# Clone, build, and install our custom version of bluepy
+# Clone, build, and install our custom version of bluepy3
 cd "$ROOT_DIR"
-if [ ! -d "$ROOT_DIR/bluepy" ]; then
-    git clone https://github.com/retsyx/bluepy
+if [ ! -d "$ROOT_DIR/bluepy3" ]; then
+    git clone https://github.com/retsyx/bluepy3
 else
-    cd bluepy
-    git pull
+    cd bluepy3
+    git stash # cleanup bluepy3 build droppings
+    git fetch && git rebase
     cd ..
 fi
 
-cd bluepy
-python ./setup.py install
+cd bluepy3
+pip install .
 
 cd "$APP_DIR"
 
 # Warm up pycache
-python -c "import cec, config, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools"
+python -c "import bluepy3.btle, cec, config, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools"
 
 # Startup setup
 
