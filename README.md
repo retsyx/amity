@@ -1,31 +1,6 @@
 # Amity
 Home theater control over HDMI-CEC
 
-* [Introduction](#introduction)
-* [Caveats](#caveats)
-* [Prerequisites](#prerequisites)
-* [Setup](#setup)
-  * [HDMI Splice](#hdmi-splice)
-  * [Initial Installation](#initial-installation)
-  * [Using a Keyboard for Control](#using-a-keyboard-for-control)
-  * [Pairing a Siri Remote](#pairing-a-siri-remote)
-  * [HDMI Configuration](#hdmi-configuration)
-    * [Quick Sanity Scan](#quick-sanity-scan)
-    * [Automatic Activity Recommendation](#automatic-activity-recommendation)
-    * [Editing config.yaml](#editing-configyaml)
-* [Starting Amity](#starting-amity)
-* [Stopping Amity](#stopping-amity)
-* [Usage](#usage)
-  * [Standby](#standby)
-  * [Active](#active)
-* [Strange Devices](#strange-devices)
-  * [Nintendo Switch](#nintendo-switch)
-* [HomeKit](#homekit)
-  * [Enabling HomeKit](#enabling-homekit)
-  * [Disabling HomeKit](#disabling-homekit)
-  * [Resetting HomeKit Configuration](#resetting-homekit-configuration)
-* [License](#license)
-
 ## Introduction
 
 Use a Raspberry Pi, and a Siri Remote to control a home theater system over HDMI-CEC.
@@ -42,7 +17,7 @@ HDMI-CEC is a terrible control protocol. Different equipment manufacturers imple
 
 Amity is designed to work with a traditional setup centered around a receiver. For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray devices, and game consoles) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. HDMI-CEC only allows the designated TV to select arbitrary sources. TVs will not heed source selection commands from any other device. As a result, Amity will not be able to control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
 
-Testing of Amity has been limited to the equipment I have. It works for me. It may very well not work with your equipment. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious.
+At present, Amity can be considered a proof of concept because of the limited set of equipment it has been tested with. It may work flawlessly with your equipment, or it may very well not. There may be ways to fix issues you encounter, and there may not. HDMI-CEC is arbitrary, and capricious. As Amity is tested with more equipment, its utility will become clearer.
 
 Equipment that is known to be compatible with Amity:
 
@@ -52,8 +27,6 @@ Equipment that is known to be compatible with Amity:
 - Sony Playstation 5
 - Amazon Fire TV (media player)
 - Nintendo Switch (see [Strange Devices](#strange-devices))
-
-With this in mind, if you are ready to take on HDMI-CEC, you are ready to try Amity.
 
 ## Prerequisites
 
@@ -75,17 +48,11 @@ Whether with a cable or a breakout board, with power off, connect the two CEC wi
 
 Amity setup, and configuration is done entirely in the command terminal, and requires some familiarity with the terminal.
 
-It is assumed that this will be a dedicated device for home theater control. It may be possible to run Amity with other services on the same RPi but it is strongly discouraged, and is not supported.
+It is assumed that this will be a dedicated device for home theater control. It may be possible to run Amity with other services on the same RPi but it is not supported, and is strongly discouraged.
 
-1. Image Raspberry Pi a 64-bit image **without** Desktop on a MicroSD card. The best tool for this is [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Desktop **MUST NOT** be installed.
-2. Insert the MicroSD into the Rpi, power it on, and login via SSH, or hook up a keyboard and mouse, and use the console (unless configured, the default user created by Raspberry Pi Imager is `pi`. All examples will assume the user is `pi`)
-3. In the console (or SSH) ensure you are in the `pi` user home directory:
-
-    ```commandline
-    cd ~
-    ```
-
-4. Copy the line below, paste it into the terminal, and press enter. This will download Amity, install all of Amity's dependencies, create a venv, and do some initial configuration of the system. It may take a while. Once complete, there will be a new sub directory `amity`, i.e. `/home/pi/amity`
+1. Image Raspberry Pi a 64-bit image **without** Desktop (the Lite image) on a MicroSD card. The best tool for this is [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Desktop **MUST NOT** be installed.
+2. Insert the MicroSD into the Rpi, power it on, and login via SSH, and use the console (unless configured differently, the default user created by Raspberry Pi Imager is `pi`. All examples will assume the user is `pi`)
+3. Copy the line below, paste it into the terminal, and press enter. This will perform some initial configuration of the system, and install Amity. It may take a while. Once complete, there will be a new sub directory `amity`, i.e. `/home/pi/amity`
 
     ```commandline
     /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/retsyx/amity/main/setup_amity)"
