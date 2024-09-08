@@ -38,7 +38,7 @@ if [ -z ${ACTION} ]; then
 
 # Install dependencies
 sudo apt update
-sudo apt install -y build-essential git libglib2.0-dev libegl1 libgl1 python3-dev unzip vim
+sudo apt install -y build-essential git libglib2.0-dev python3-dev unzip vim
 sudo apt install -y libavahi-compat-libdnssd-dev
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
@@ -166,7 +166,7 @@ python ./setup.py install
 cd "$APP_DIR"
 
 # Warm up pycache
-python -c "import cec, config, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools, ui"
+python -c "import cec, config, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools"
 
 # Startup setup
 

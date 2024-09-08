@@ -28,9 +28,7 @@ from hdmi import Key
 import homekit
 import keyboard
 import messaging
-import ui
 
-config.default('ui.enable', False)
 config.default('homekit.enable', False)
 config.default('keyboard.enable', True)
 
@@ -200,13 +198,6 @@ async def _main():
 
     activity_names = [activity.name for activity in activities]
 
-    if config['ui.enable']:
-        interface = ui.Main()
-        log.info(f'Initializing UI...')
-        interface.set_activity_names(['Off', ] + activity_names)
-    else:
-        interface = None
-
     front_dev = config['adapters.front']
     back_dev = config['adapters.back']
 
@@ -223,12 +214,6 @@ async def _main():
         activities)
 
     hub = Hub(controller)
-
-    if interface is not None:
-        # Wire hub and UI
-        if_pipe = messaging.Pipe()
-        hub.add_pipe(if_pipe)
-        interface.set_pipe(if_pipe)
 
     if config['keyboard.enable']:
         # Wire hub and keyboard
@@ -264,8 +249,6 @@ async def _main():
         futures = []
         if siri is not None:
             futures.append(siri)
-        if interface is not None:
-            futures.append(interface.run())
         if kb is not None:
             futures.extend(kb.wait_on())
         await asyncio.gather(*futures)
