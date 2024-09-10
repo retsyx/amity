@@ -65,6 +65,9 @@ class Hub(remote.RemoteListener):
         await self.set_activity(index)
 
     async def client_press_key(self, key, count):
+        # unwrap enums, and use ints consistently
+        if type(key) is Key:
+            key = key.value
         log.info(f'Client press key {key:02X} count {count}')
         hkey = key
         if count > 0:
@@ -127,6 +130,9 @@ class Hub(remote.RemoteListener):
         self.taskit(self.press_key(key))
 
     async def client_release_key(self, key):
+        # unwrap enums, and use ints consistently
+        if type(key) is Key:
+            key = key.value
         log.info(f'Client release key {key:02X}')
         if self.key_state.pop(key, None) is None:
             return
