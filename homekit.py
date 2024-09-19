@@ -17,6 +17,30 @@ from pyhap.const import CATEGORY_TELEVISION
 
 from hdmi import Key
 
+from config import config
+
+config.default('homekit.keymap',
+                {
+                    0 : Key.REWIND.value,
+                    1 : Key.FAST_FORWARD.value,
+                    2 : Key.FORWARD.value,
+                    3 : Key.BACKWARD.value,
+                    4 : Key.UP.value,
+                    5 : Key.DOWN.value,
+                    6 : Key.LEFT.value,
+                    7 : Key.RIGHT.value,
+                    8 : Key.SELECT.value,
+                    9 : Key.BACK.value,
+                    10 : Key.ROOT_MENU.value,
+                    # 11 is officialy play/pause but play/pause doesn't seem to be as universal
+                    # as select which will play/pause in more cases?
+                    11 : Key.SELECT.value, # Key.PAUSE_PLAY.value,
+                    # 15 is officially display info. However, info doesn't seem to be as useful as
+                    # the root menu button which Apple uses for ATV instead of info.
+                    15 : Key.ROOT_MENU.value, # Key.DISPLAY_INFO.value,
+                })
+
+
 class TV(Accessory):
     category = CATEGORY_TELEVISION
 
@@ -26,6 +50,8 @@ class TV(Accessory):
         self.activity_names = kwargs.pop('activity_names', None)
         self.pipe = kwargs.pop('pipe', None)
         super(TV, self).__init__(*args, **kwargs)
+
+        self.keymap = config['homekit.keymap']
 
         self.set_info_service(
             manufacturer='Amity',
@@ -73,6 +99,7 @@ class TV(Accessory):
 
         tv_speaker_service = self.add_preload_service(
             'TelevisionSpeaker', ['Active',
+                                  'Mute',
                                   'VolumeControlType',
                                   'VolumeSelector']
         )
@@ -80,11 +107,11 @@ class TV(Accessory):
         # Set relative volume control
         tv_speaker_service.configure_char('VolumeControlType', value=1)
         tv_speaker_service.configure_char(
-            'Mute', setter_callback=self._on_mute,
-        )
+            'Mute', setter_callback=self._on_mute)
         tv_speaker_service.configure_char(
-            'VolumeSelector', setter_callback=self._on_volume_selector,
-        )
+            'VolumeSelector', setter_callback=self._on_volume_selector)
+
+        tv_service.add_linked_service(tv_speaker_service)
 
         if self.pipe is not None:
             self.pipe.start_client_task(self)
@@ -121,7 +148,12 @@ class TV(Accessory):
         self.pipe.set_activity(i)
 
     def _on_remote_key(self, value):
-        log.info(f'Press remote key {value}')
+        key = self.keymap.get(value, None)
+        if key is None:
+            log.info(f'Unknown remote key {value}')
+            return
+        log.info(f'Remote key {value} {key}')
+        self.key_press(key)
 
     def _on_mute(self, value):
         log.info(f'Mute {value}')
@@ -130,9 +162,9 @@ class TV(Accessory):
     def _on_volume_selector(self, value):
         log.info(f'Volume {value}')
         if value == 0:
-            self.key_press(Key.VOLUME_UP, 1)
+            self.key_press(Key.VOLUME_UP)
         else:
-            self.key_press(Key.VOLUME_DOWN, 1)
+            self.key_press(Key.VOLUME_DOWN)
 
     def key_press(self, key):
         log.info(f'Press key {key}')

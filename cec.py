@@ -123,6 +123,8 @@ class Key(IntEnum):
     PAUSE = 0x46
     REWIND = 0x48
     FAST_FORWARD = 0x49
+    FORWARD = 0x4B
+    BACKWARD = 0x4C
     GUIDE = 0x53
     PLAY_FUNCTION = 0x60
     PAUSE_PLAY = 0x61
