@@ -1050,23 +1050,23 @@
 				)
 			)
 		)
-		(symbol "Mechanical:MountingHole"
+		(symbol "Mechanical:MountingHole_Pad"
+			(pin_numbers hide)
 			(pin_names
-				(offset 1.016)
-			)
+				(offset 1.016) hide)
 			(exclude_from_sim yes)
 			(in_bom no)
 			(on_board yes)
 			(property "Reference" "H"
-				(at 0 5.08 0)
+				(at 0 6.35 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "MountingHole"
-				(at 0 3.175 0)
+			(property "Value" "MountingHole_Pad"
+				(at 0 4.445 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -1091,7 +1091,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Mounting Hole without connection"
+			(property "Description" "Mounting Hole with connection"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1109,7 +1109,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_fp_filters" "MountingHole*"
+			(property "ki_fp_filters" "MountingHole*Pad*"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1118,9 +1118,9 @@
 					(hide yes)
 				)
 			)
-			(symbol "MountingHole_0_1"
+			(symbol "MountingHole_Pad_0_1"
 				(circle
-					(center 0 0)
+					(center 0 1.27)
 					(radius 1.27)
 					(stroke
 						(width 1.27)
@@ -1128,6 +1128,26 @@
 					)
 					(fill
 						(type none)
+					)
+				)
+			)
+			(symbol "MountingHole_Pad_1_1"
+				(pin input line
+					(at 0 -2.54 90)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
 					)
 				)
 			)
@@ -1350,6 +1370,12 @@
 		)
 	)
 	(junction
+		(at 88.9 60.96)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "04f2bf4c-1921-4195-a560-fe3ffa2c4586")
+	)
+	(junction
 		(at 125.73 104.14)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1380,10 +1406,22 @@
 		(uuid "362382ae-5b94-4a35-bf1c-acc83ea25add")
 	)
 	(junction
+		(at 88.9 53.34)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "75bcb561-e62b-4191-a89d-d48aeab30200")
+	)
+	(junction
 		(at 176.53 104.14)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "7d5a2258-fa93-4b1e-88bc-b51c7cbbbb5c")
+	)
+	(junction
+		(at 88.9 68.58)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "860603cb-4382-4822-8bd8-d35eaef47f16")
 	)
 	(junction
 		(at 173.99 104.14)
@@ -1483,6 +1521,16 @@
 	)
 	(wire
 		(pts
+			(xy 88.9 45.72) (xy 88.9 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2025597c-5be6-4dad-9f24-e760c07429d0")
+	)
+	(wire
+		(pts
 			(xy 176.53 101.6) (xy 176.53 104.14)
 		)
 		(stroke
@@ -1510,6 +1558,16 @@
 			(type default)
 		)
 		(uuid "2b4f2825-bebd-45e9-aaf4-b5a64def3e9a")
+	)
+	(wire
+		(pts
+			(xy 95.25 60.96) (xy 88.9 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2b664ecf-d135-40d5-b1ed-4ca920c2e0d1")
 	)
 	(wire
 		(pts
@@ -1603,6 +1661,16 @@
 	)
 	(wire
 		(pts
+			(xy 88.9 60.96) (xy 88.9 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "64d290e4-67b9-4cae-9f05-b0dfae6e5af8")
+	)
+	(wire
+		(pts
 			(xy 135.89 68.58) (xy 163.83 68.58)
 		)
 		(stroke
@@ -1650,6 +1718,16 @@
 			(type default)
 		)
 		(uuid "78fe9de8-c65d-4228-a749-a1c98abbc4a9")
+	)
+	(wire
+		(pts
+			(xy 95.25 45.72) (xy 88.9 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7cb24387-288c-4190-9d68-26124a883c68")
 	)
 	(wire
 		(pts
@@ -1743,6 +1821,16 @@
 	)
 	(wire
 		(pts
+			(xy 88.9 53.34) (xy 88.9 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a38b0cba-21ac-42ad-87c0-5a88e48e4b12")
+	)
+	(wire
+		(pts
 			(xy 179.07 104.14) (xy 181.61 104.14)
 		)
 		(stroke
@@ -1760,6 +1848,16 @@
 			(type default)
 		)
 		(uuid "af83b001-0af1-429f-a1d7-88b8d4a00a41")
+	)
+	(wire
+		(pts
+			(xy 95.25 53.34) (xy 88.9 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b030a0ea-3922-4b89-9edb-088752019e5f")
 	)
 	(wire
 		(pts
@@ -1800,6 +1898,16 @@
 			(type default)
 		)
 		(uuid "c750aed8-eb6d-4cc7-bf12-ab1eff9f4e56")
+	)
+	(wire
+		(pts
+			(xy 88.9 68.58) (xy 95.25 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c981e078-7cc8-435a-a1e9-9b22111314fa")
 	)
 	(wire
 		(pts
@@ -2158,7 +2266,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345"
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/würth-elektronik/61300411121/4846827"
 			(at 148.59 137.16 0)
 			(effects
 				(font
@@ -2234,7 +2342,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345"
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/taiwan-semiconductor-corporation/TS4148-RCG/7359811"
 			(at 157.48 114.3 0)
 			(effects
 				(font
@@ -2488,7 +2596,73 @@
 		)
 	)
 	(symbol
-		(lib_id "Mechanical:MountingHole")
+		(lib_id "power:GND")
+		(at 88.9 68.58 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "410c6324-fb67-492f-8727-29579f51f61c")
+		(property "Reference" "#PWR07"
+			(at 88.9 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 88.9 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 88.9 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 88.9 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 88.9 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "3939aa37-9c13-4f27-842e-13f68dc8941f")
+		)
+		(instances
+			(project ""
+				(path "/d9471c7f-fc59-4490-a852-252dc0a6feaf"
+					(reference "#PWR07")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole_Pad")
 		(at 95.25 58.42 0)
 		(unit 1)
 		(exclude_from_sim yes)
@@ -2498,7 +2672,7 @@
 		(fields_autoplaced yes)
 		(uuid "480823b5-4553-4bf4-bf01-448ca9d6ed5d")
 		(property "Reference" "H3"
-			(at 97.79 57.1499 0)
+			(at 97.79 55.8799 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2506,8 +2680,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "MountingHole"
-			(at 97.79 59.6899 0)
+		(property "Value" "~"
+			(at 97.79 58.4199 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2515,7 +2689,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_2.5mm"
+		(property "Footprint" "MountingHole:MountingHole_2.5mm_Pad"
 			(at 95.25 58.42 0)
 			(effects
 				(font
@@ -2533,7 +2707,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Mounting Hole without connection"
+		(property "Description" "Mounting Hole with connection"
 			(at 95.25 58.42 0)
 			(effects
 				(font
@@ -2541,6 +2715,9 @@
 				)
 				(hide yes)
 			)
+		)
+		(pin "1"
+			(uuid "8f03cd94-eba8-4fdc-a513-59928ebb92d3")
 		)
 		(instances
 			(project "hdmi"
@@ -2552,7 +2729,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Mechanical:MountingHole")
+		(lib_id "Mechanical:MountingHole_Pad")
 		(at 95.25 43.18 0)
 		(unit 1)
 		(exclude_from_sim yes)
@@ -2562,7 +2739,7 @@
 		(fields_autoplaced yes)
 		(uuid "65875207-37d9-47d1-ad1f-de9473b391d3")
 		(property "Reference" "H1"
-			(at 97.79 41.9099 0)
+			(at 97.79 40.6399 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2570,8 +2747,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "MountingHole"
-			(at 97.79 44.4499 0)
+		(property "Value" "~"
+			(at 97.79 43.1799 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2579,7 +2756,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_2.5mm"
+		(property "Footprint" "MountingHole:MountingHole_2.5mm_Pad"
 			(at 95.25 43.18 0)
 			(effects
 				(font
@@ -2597,7 +2774,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Mounting Hole without connection"
+		(property "Description" "Mounting Hole with connection"
 			(at 95.25 43.18 0)
 			(effects
 				(font
@@ -2605,6 +2782,9 @@
 				)
 				(hide yes)
 			)
+		)
+		(pin "1"
+			(uuid "08e10719-6774-4cb8-b6f1-1c66c9edf7d6")
 		)
 		(instances
 			(project ""
@@ -2748,7 +2928,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Mechanical:MountingHole")
+		(lib_id "Mechanical:MountingHole_Pad")
 		(at 95.25 66.04 0)
 		(unit 1)
 		(exclude_from_sim yes)
@@ -2758,7 +2938,7 @@
 		(fields_autoplaced yes)
 		(uuid "a11972b9-ebb9-4c57-aa66-49dea9a2ea43")
 		(property "Reference" "H4"
-			(at 97.79 64.7699 0)
+			(at 97.79 63.4999 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2766,8 +2946,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "MountingHole"
-			(at 97.79 67.3099 0)
+		(property "Value" "~"
+			(at 97.79 66.0399 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2775,7 +2955,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_2.5mm"
+		(property "Footprint" "MountingHole:MountingHole_2.5mm_Pad"
 			(at 95.25 66.04 0)
 			(effects
 				(font
@@ -2793,7 +2973,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Mounting Hole without connection"
+		(property "Description" "Mounting Hole with connection"
 			(at 95.25 66.04 0)
 			(effects
 				(font
@@ -2801,6 +2981,9 @@
 				)
 				(hide yes)
 			)
+		)
+		(pin "1"
+			(uuid "fd2196e0-a5f3-47d4-ace4-1395dad789ea")
 		)
 		(instances
 			(project "hdmi"
@@ -3038,7 +3221,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345"
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/taiwan-semiconductor-corporation/TS4148-RCG/7359811"
 			(at 140.97 114.3 0)
 			(effects
 				(font
@@ -3090,7 +3273,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Mechanical:MountingHole")
+		(lib_id "Mechanical:MountingHole_Pad")
 		(at 95.25 50.8 0)
 		(unit 1)
 		(exclude_from_sim yes)
@@ -3100,7 +3283,7 @@
 		(fields_autoplaced yes)
 		(uuid "de1cef15-8a63-4378-8cc4-46541fccaf68")
 		(property "Reference" "H2"
-			(at 97.79 49.5299 0)
+			(at 97.79 48.2599 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3108,8 +3291,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "MountingHole"
-			(at 97.79 52.0699 0)
+		(property "Value" "~"
+			(at 97.79 50.7999 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3117,7 +3300,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "MountingHole:MountingHole_2.5mm"
+		(property "Footprint" "MountingHole:MountingHole_2.5mm_Pad"
 			(at 95.25 50.8 0)
 			(effects
 				(font
@@ -3135,7 +3318,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Mounting Hole without connection"
+		(property "Description" "Mounting Hole with connection"
 			(at 95.25 50.8 0)
 			(effects
 				(font
@@ -3143,6 +3326,9 @@
 				)
 				(hide yes)
 			)
+		)
+		(pin "1"
+			(uuid "28715488-a778-427d-b926-4c72060a25c2")
 		)
 		(instances
 			(project "hdmi"
