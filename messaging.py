@@ -8,7 +8,7 @@ import tools
 
 log = tools.logger(__name__)
 
-import asyncio, sys
+import asyncio
 
 from enum import Enum, auto
 

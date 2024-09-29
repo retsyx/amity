@@ -8,7 +8,7 @@ import tools
 
 log = tools.logger(__name__)
 
-import asyncio, evdev, sys, time
+import asyncio, evdev, time
 import evdev.ecodes as e
 from evdev import KeyEvent
 from watchdog.observers import Observer

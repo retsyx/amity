@@ -9,7 +9,7 @@ import tools
 
 log = tools.logger(__name__)
 
-import asyncio, io, os, qrcode, signal
+import asyncio, io, qrcode, signal
 
 from pyhap.accessory import Accessory
 from pyhap.accessory_driver import AccessoryDriver

@@ -7,7 +7,7 @@
 import tools
 log = tools.logger(__name__)
 
-import os, re, shutil, stat, tempfile, time, yaml
+import os, re, shutil, tempfile, time, yaml
 
 class Config(object):
     def __init__(self, filename):
