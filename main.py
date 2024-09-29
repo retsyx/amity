@@ -27,10 +27,13 @@ import hdmi
 from hdmi import Key
 import homekit
 import keyboard
+import memory
 import messaging
 
 config.default('homekit.enable', False)
 config.default('keyboard.enable', True)
+config.default('memory.monitor.enable', False)
+config.default('memory.monitor.period_sec', 5*60)
 
 class KeyState(object):
     def __init__(self, count):
@@ -202,6 +205,12 @@ async def _main():
     log.info('Runtime activities:')
     log.info(pprint.pformat(activities))
 
+    if config['memory.monitor.enable']:
+        mem = memory.Monitor(config['memory.monitor.period_sec'])
+        mem.start()
+    else:
+        mem = None
+
     activity_names = [activity.name for activity in activities]
 
     front_dev = config['adapters.front']
@@ -257,6 +266,8 @@ async def _main():
             futures.append(siri)
         if kb is not None:
             futures.extend(kb.wait_on())
+        if mem is not None:
+            futures.extend(mem.wait_on())
         await asyncio.gather(*futures)
         await asyncio.sleep(1)
 
