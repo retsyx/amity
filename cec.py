@@ -698,7 +698,7 @@ class Adapter(object):
                 else:
                     log.info(f'Unexpected IOCTL error {e}')
                 tools.die(f'CEC IOCTL error {e}')
-            state = self.states.get(msg.sequence)
+            state = self.states.pop(msg.sequence, None)
             if state is not None:
                 state.msg = msg
                 if msg.did_rx():
