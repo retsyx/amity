@@ -87,6 +87,9 @@ class Hub(remote.RemoteListener):
 
         # Don't let key presses leak across selection/activity modes
         if self.wait_for_release:
+            log.info('Waiting for release')
+            if state.repeat_count > 0:
+                self.key_state.pop(key, None)
             return
 
         activity_map = {
