@@ -14,6 +14,8 @@ class Adapter(remote.RemoteListener):
         self.swipe_recognizer = gestures.SwipeRecognizer(self.swipe_callback)
         self.dpad_emulator = gestures.DPadEmulator()
         self.multitap_recognizer = gestures.MultiTapRecognizer(1, 3, self.multitap_callback)
+        self.battery_level = 100
+        self.is_charging = False
 
     def event_button(self, remote, buttons: int):
         btns = remote.profile.buttons
@@ -94,10 +96,15 @@ class Adapter(remote.RemoteListener):
 
     def event_battery(self, remote, percent: int):
         log.info(f'Battery charge at {percent}%')
-        pass
+        self.battery_level = percent
+        if self.pipe:
+            self.pipe.battery_state(self.battery_level, self.is_charging)
 
     def event_power(self, remote, charging: bool):
         if charging:
             log.info('Charging')
         else:
             log.info('Not charging')
+        self.is_charging = charging
+        if self.pipe:
+            self.pipe.battery_state(self.battery_level, self.is_charging)

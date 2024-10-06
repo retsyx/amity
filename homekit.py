@@ -66,7 +66,7 @@ class TV(Accessory):
                            'Active',
                            'ActiveIdentifier',
                            'RemoteKey',
-                           'SleepDiscoveryMode'],
+                           'SleepDiscoveryMode']
         )
         self._active = tv_service.configure_char(
             'Active', value=0,
@@ -113,6 +113,20 @@ class TV(Accessory):
 
         tv_service.add_linked_service(tv_speaker_service)
 
+        battery_service = self.add_preload_service(
+            'BatteryService',
+            [
+                'BatteryLevel',
+                'ChargingState',
+                'StatusLowBattery',
+            ])
+        self._battery_level = battery_service.configure_char(
+            'BatteryLevel', value=100)
+        self._charging_state = battery_service.configure_char(
+            'ChargingState', value=0)
+        self._status_low_battery = battery_service.configure_char(
+            'StatusLowBattery', value=0)
+
         if self.pipe is not None:
             self.pipe.start_client_task(self)
 
@@ -124,6 +138,12 @@ class TV(Accessory):
             log.info(f'Notified of activity {self.activity_names[index]}')
             self._active.set_value(1)
             self._active_identifier.set_value(index)
+
+    async def server_notify_battery_state(self, level, is_charging, is_low):
+        log.info(f'Notified of battery state {level} {is_charging} {is_low}')
+        self._battery_level.set_value(level)
+        self._charging_state.set_value(1 if is_charging else 0)
+        self._status_low_battery.set_value(1 if is_low else 0)
 
     def _on_active_changed(self, value):
         log.info(f'Active {value}')

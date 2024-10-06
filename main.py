@@ -34,6 +34,7 @@ config.default('homekit.enable', False)
 config.default('keyboard.enable', True)
 config.default('memory.monitor.enable', False)
 config.default('memory.monitor.period_sec', 5*60)
+config.default('remote.battery.low_threshold', 10)
 
 class KeyState(object):
     def __init__(self, count):
@@ -152,6 +153,12 @@ class Hub(remote.RemoteListener):
         if not self.key_state:
             self.wait_for_release = False
             self.in_macro = False
+
+    async def client_battery_state(self, level, is_charging):
+        is_low = level <= config['remote.battery.low_threshold'] and not is_charging
+        log.info(f'Notifying battery state {level} {is_charging} {is_low}')
+        for pipe in self.pipes:
+            pipe.notify_battery_state(level, is_charging, is_low)
 
     async def standby(self):
         if self.controller.current_activity is hdmi.no_activity:

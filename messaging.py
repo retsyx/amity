@@ -16,12 +16,12 @@ class Type(Enum):
     SetActivity = auto()
     KeyPress = auto()
     KeyRelease = auto()
+    BatteryState = auto()
 
 class Message(object):
-    def __init__(self, type, value, count=0):
+    def __init__(self, type, *values):
         self.type = type
-        self.value = value
-        self.count = count
+        self.values = values
 
 # A trivial object for connecting the Hub and UI indirectly with duck typing.
 class Pipe(object):
@@ -37,20 +37,29 @@ class Pipe(object):
         if self.client_t:
             self.taskit(self.client_q.put(Message(Type.SetActivity, index)))
 
+    def notify_battery_state(self, level, is_charging, is_low):
+        if self.client_t:
+            self.taskit(self.client_q.put(Message(Type.BatteryState, level, is_charging, is_low)))
+
     def start_server_task(self, handler):
         self.server_t = self.taskit(self.server_task(handler))
 
     # Server handler
     async def server_task(self, handler):
         while True:
-            msg = await self.server_q.get()
-            match msg.type:
-                case Type.SetActivity:
-                    await handler.client_set_activity(msg.value)
-                case Type.KeyPress:
-                    await handler.client_press_key(msg.value, msg.count)
-                case Type.KeyRelease:
-                    await handler.client_release_key(msg.value)
+            try:
+                msg = await self.server_q.get()
+                match msg.type:
+                    case Type.SetActivity:
+                        await handler.client_set_activity(*msg.values)
+                    case Type.KeyPress:
+                        await handler.client_press_key(*msg.values)
+                    case Type.KeyRelease:
+                        await handler.client_release_key(*msg.values)
+                    case Type.BatteryState:
+                        await handler.client_battery_state(*msg.values)
+            except AttributeError as e:
+                log.debug(e)
 
     # Client calls
     def set_activity(self, index):
@@ -65,13 +74,22 @@ class Pipe(object):
         if self.server_t:
             self.taskit(self.server_q.put(Message(Type.KeyRelease, key)))
 
+    def battery_state(self, level, is_charging):
+        if self.server_t:
+            self.taskit(self.server_q.put(Message(Type.BatteryState, level, is_charging)))
+
     # Client handler
     def start_client_task(self, handler):
         self.client_t = self.taskit(self.client_task(handler))
 
     async def client_task(self, handler):
         while True:
-            msg = await self.client_q.get()
-            match msg.type:
-                case Type.SetActivity:
-                    await handler.server_notify_set_activity(msg.value)
+            try:
+                msg = await self.client_q.get()
+                match msg.type:
+                    case Type.SetActivity:
+                        await handler.server_notify_set_activity(*msg.values)
+                    case Type.BatteryState:
+                        await handler.server_notify_battery_state(*msg.values)
+            except AttributeError as e:
+                log.debug(e)
