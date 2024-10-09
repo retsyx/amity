@@ -178,22 +178,20 @@ class TouchpadProfile(object):
 class Handles(object):
     def __init__(self, hw_revision, fw_revision):
         self.INVALID = 0xffff
+        self.BATTERY = self.INVALID
+        self.BATTERY_CONFIG = self.INVALID
+        self.POWER = self.INVALID
+        self.POWER_CONFIG = self.INVALID
         if hw_revision >= HwRevisions.GEN_2:
             if fw_revision >= FwRevisions.GEN_2_0x0083:
-                self.BATTERY = 0x002f
-                self.POWER = 0x0032
                 self.AUDIO = 0x0036
                 self.INPUT = 0x003a
                 self.TOUCH = 0x003e
             else:
-                self.BATTERY = 0x002e
-                self.POWER = 0x0031
                 self.AUDIO = 0x0035
                 self.INPUT = 0x0039
                 self.TOUCH = 0x003d
         else: # Gen 1
-            self.BATTERY = 0x0028
-            self.POWER = 0x002b
             self.INPUT = 0x0023
             self.TOUCH = 0x0032
             self.AUDIO = self.INVALID
@@ -248,15 +246,15 @@ class SiriRemote(DefaultDelegate):
                 device_info_svc = self.__device.getServiceByUUID(AssignedNumbers.device_information)
                 for ch in device_info_svc.getCharacteristics():
                     if ch.uuid == AssignedNumbers.device_name:
-                        self.__device_name = self.__device.readCharacteristic(ch.getHandle()).decode()
+                        self.__device_name = self.read_characteristic(ch.getHandle()).decode()
                     elif ch.uuid == AssignedNumbers.serial_number_string:
-                        self.__serial_number = self.__device.readCharacteristic(ch.getHandle()).decode()
+                        self.__serial_number = self.read_characteristic(ch.getHandle()).decode()
                     elif ch.uuid == AssignedNumbers.hardware_revision_string:
-                        hwr = self.__device.readCharacteristic(ch.getHandle()).decode()
+                        hwr = self.read_characteristic(ch.getHandle()).decode()
                     elif ch.uuid == AssignedNumbers.firmware_revision_string:
-                        fwr = self.__device.readCharacteristic(ch.getHandle()).decode()
+                        fwr = self.read_characteristic(ch.getHandle()).decode()
                     elif ch.uuid == AssignedNumbers.pnp_id:
-                        pnp_data = self.__device.readCharacteristic(ch.getHandle())
+                        pnp_data = self.read_characteristic(ch.getHandle())
 
                 pnp_info = PnpInfo(pnp_data)
                 self.__pnp_info = pnp_info
@@ -294,7 +292,25 @@ class SiriRemote(DefaultDelegate):
                 self.__handles = Handles(self.__hw_revision, self.__fw_revision)
                 self.__power_states = PowerStates(self.__hw_revision, self.__fw_revision)
 
+                # Find handles for battery, and power state
+                battery_service = self.__device.getServiceByUUID(AssignedNumbers.battery_service)
+                for ch in battery_service.getCharacteristics():
+                    config_handle = self.__handles.INVALID
+                    for desc in ch.getDescriptors():
+                        if desc.uuid == AssignedNumbers.client_characteristic_configuration:
+                            config_handle = desc.handle
+                    log.info(f'Battery service characteristic {ch.uuid} {ch.uuid.getCommonName()} {ch.getHandle():02X} config {config_handle:02X}')
+                    if ch.uuid == AssignedNumbers.battery_level:
+                        self.__handles.BATTERY = ch.getHandle()
+                        self.__handles.BATTERY_CONFIG = config_handle
+                    elif ch.uuid == AssignedNumbers.battery_level_status:
+                        self.__handles.POWER = ch.getHandle()
+                        self.__handles.POWER_CONFIG = config_handle
+
                 # Start remote notifications
+                self.enable_notifications(self.__handles.BATTERY_CONFIG)
+                self.enable_notifications(self.__handles.POWER_CONFIG)
+
                 if self.__hw_revision >= HwRevisions.GEN_2:
                     if self.__fw_revision >= FwRevisions.GEN_2_0x0083:
                         self.enable_notifications(0x0037)
@@ -304,21 +320,15 @@ class SiriRemote(DefaultDelegate):
                         self.enable_notifications(0x0047)
                         self.enable_notifications(0x004b)
                         self.enable_notifications(0x003a)
-                        self.enable_notifications(0x0030)
-                        self.enable_notifications(0x0033)
                         self.write_characteristic(0x004e, b'\xF0\xBC')  # magic 1
                         self.write_characteristic(0x004e, b'\xF0\xBB')  # magic 2
                     else: # Known to work for firmware version 0x0021
-                        self.enable_notifications(0x002f)  # battery service
-                        self.enable_notifications(0x0032)  # power service
                         self.enable_notifications(0x003a)  # hid service | buttons
                         self.enable_notifications(0x003e)  # hid service | touch
                         self.enable_notifications(0x0036)  # hid service | audio
                         self.write_characteristic(0x004d, b'\xF0\x00')  # magic
                 elif self.__hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
                     self.enable_notifications(0x0024) # HID
-                    self.enable_notifications(0x0029) # Battery
-                    self.enable_notifications(0x002c) # Battery Power State
                     self.write_characteristic(0x001d, b'\xAF') # magic 1
                 else:
                     raise UnknownRemoteException(self.__hwr, self.__fw_revision, self.__pnp_info)
@@ -344,6 +354,8 @@ class SiriRemote(DefaultDelegate):
         self.__last_keepalive = time.time()
         return self.write_characteristic(0x001d, b'\xA0\x01' if enable else b'\xA0\x00') is not None
 
+    def read_characteristic(self, handle):
+        return self.__device.readCharacteristic(handle)
 
     def write_characteristic(self, handle, data):
         return self.__device.writeCharacteristic(handle, data, withResponse=True)
