@@ -248,6 +248,13 @@ async def _main():
     else:
         kb = None
 
+    if config['homekit.enable']:
+        # Wire hub and HomeKit
+        hk_pipe = messaging.Pipe()
+        hub.add_pipe(hk_pipe)
+        hk = homekit.HomeKit(activity_names, loop, hk_pipe)
+        await hk.start()
+
     mac = config['remote.mac']
     if mac is not None:
         # Wire hub and Siri remote
@@ -262,13 +269,6 @@ async def _main():
     else:
         log.info(f'Siri remote not configured. Must be using a keyboard...')
         siri = None
-
-    if config['homekit.enable']:
-        # Wire hub and HomeKit
-        hk_pipe = messaging.Pipe()
-        hub.add_pipe(hk_pipe)
-        hk = homekit.HomeKit(activity_names, loop, hk_pipe)
-        await hk.start()
 
     while True:
         futures = []

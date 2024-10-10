@@ -333,6 +333,9 @@ class SiriRemote(DefaultDelegate):
                 else:
                     raise UnknownRemoteException(self.__hwr, self.__fw_revision, self.__pnp_info)
 
+                self.__handle_battery(self.read_characteristic(self.__handles.BATTERY))
+                self.__handle_power(self.read_characteristic(self.__handles.POWER))
+
                 self.__ready = True
                 while True:
                     self.__device.waitForNotifications(5)
