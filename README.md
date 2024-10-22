@@ -3,7 +3,9 @@ Home theater control over HDMI-CEC
 
 ## Introduction
 
-Use a Raspberry Pi, and a Siri Remote to control a home theater system over HDMI-CEC.
+Use a Raspberry Pi, and a Siri Remote, or an Amazon Fire TV remote to control a home theater system over HDMI-CEC.
+
+Streamer remotes like the Siri Remote or the Amazon Fire TV remote are high quality, and readily available. They are simple, robust, last a long time on a charge, and are very easy to use by anyone in the family. So why not use one to control your home theater?
 
 ## Caveats
 
@@ -15,9 +17,7 @@ Amity requires splicing into the HDMI-CEC connection between the TV and the rece
 
 Amity is designed to work with a traditional setup centered around a receiver. For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray devices, and game consoles) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. HDMI-CEC only allows the designated TV to select arbitrary sources. TVs will not heed source selection commands from any other device. As a result, Amity will not be able to control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
 
-HDMI-CEC is a terrible control protocol. Different equipment manufacturers implement it in often incompatible ways. Some HDMI devices don't support HDMI-CEC at all. HDMI-CEC devices often behave unpredictably, and it can be an endless source of headaches. HDMI-CEC is arbitrary, and capricious. Using HDMI-CEC for anything is a very bad idea.
-
-At present, Amity can be considered a proof of concept because of the limited set of equipment it has been tested with. It works for me. It may work flawlessly with your equipment, or it may very well not. There may be ways to fix issues you encounter, and there may not. As Amity is tested with more equipment, its utility will become clearer.
+HDMI-CEC is a fickle protocol. Different equipment manufacturers implement it in often incompatible ways. Some HDMI devices don't support HDMI-CEC at all. As a result, at present, Amity can be considered a proof of concept because of the limited set of equipment it has been tested with. It works for me. It may work flawlessly with your equipment, or it may very well not. There may be ways to fix issues you encounter, and there may not. As Amity is tested with more equipment, its utility will become clearer.
 
 Equipment that is known to be compatible with Amity:
 
@@ -34,13 +34,23 @@ Equipment that is known to be compatible with Amity:
 * A remote control. An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also work. Or an Amazon Fire TV remote, or common third party RF remotes that behave like keyboards. IR remotes are not supported.
 * An HDMI-CEC splice (either a stripped, spliced cable, or a dedicated board and an extra HDMI cable)
 
+Amity can be extremely cheap to put together. A breakdown of costs:
+
+- Raspberry Pi Zero 2 W with headers - $18
+- Raspberry Pi power adapter - $10
+- Amazon Fire TV remote or Siri Remote - Free if you already have an Apple TV or Amazon Fire TV and don't mind losing the voice feature of the remote. Unpair the remote from the streamer, and pair it with Amity instead. Otherwise, ~$25 - $60.
+- HDMI cable - $6
+- Amity board - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board can decrease substantially.
+
+The total cost can be as low as $39, if using a stripped HDMI cable, or ~$55 with an Amity board.
+
 ## Setup
 
 ### HDMI Splice Hardware
 
 Amity splices into the HDMI-CEC bus between the TV, and the receiver using Raspberry Pi GPIO. There are two methods to splice into the HDMI-CEC bus. One method is to strip an existing HDMI cable. The second method is to use a [custom HDMI breakout board](hw/README.md#amity-board) that passes through the HDMI A/V signals without noticeably degrading them. All of the HDMI breakout boards commonly available for sale are not designed to pass through high-speed A/V signals, and do not work. Amity is installed, by default, for use with a spliced HDMI cable.
 
-[Prepare a cable or a board before proceeding](hw/README.md).
+[Prepare a board or a cable before proceeding](hw/README.md).
 
 ### Initial Installation
 
@@ -266,7 +276,7 @@ This tells Amity that the input switching device is the AVR, and that the HDMI i
 
 ## HomeKit
 
-Amity can be integrated with HomeKit as a TV accessory. This allows controlling Amity with Siri, and integrating Amity into HomeKit automations.
+Amity can be integrated with HomeKit as a TV accessory. This allows controlling Amity with Siri, and integrating Amity into HomeKit automations. In addition, if using a Siri Remote, remote battery level, and low battery warning are reported to HomeKit.
 
 It is highly recommended to complete all HDMI configuration, and setup before adding Amity into HomeKit.
 
