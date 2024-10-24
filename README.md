@@ -24,13 +24,14 @@ Most modern home theater components support HDMI-CEC. HDMI-CEC promises easy hom
 Amity can be extremely cheap to put together. An example breakdown of costs:
 
 - Raspberry Pi Zero 2 W with headers - $18
+- MicroSD card - $10
 - Raspberry Pi power adapter - $10
 - Amazon Fire TV remote or Siri Remote - Free if you already have an Apple TV or Amazon Fire TV and don't mind losing the voice feature of the remote. Unpair the remote from the streamer, and pair it with Amity instead. Otherwise, ~$25 - $60.
 - HDMI cable - $6
-- Amity board - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board can decrease substantially.
+- Amity board - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board decreases substantially.
 - Some Dupont (2.54mm) connector wires - $6
 
-The total cost can be less than $45, if using a stripped HDMI cable, or up to ~$61 with a low volume manufactured Amity board.
+The total cost can be less than $55, if using a stripped HDMI cable, or up to ~$71 with a low volume manufactured Amity board.
 
 ## Caveats
 
@@ -66,6 +67,7 @@ Equipment that is known to be compatible with Amity:
 ## Prerequisites
 
 * A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer, that can run 64-bit Linux; with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
+* A MicroSD card.
 * A remote control
   * An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also be used.
   * An Amazon Fire TV remote.
