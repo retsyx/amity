@@ -56,7 +56,7 @@ And reboot:
 sudo reboot now
 ```
 
-### Amity Board with a 1x4 2.54mm connector
+### An Older Prototype Amity Board with a 1x4 2.54mm connector
 
 ![Amity board](IMG_5440.jpeg "Amity board")
 
