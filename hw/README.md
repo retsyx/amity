@@ -8,11 +8,11 @@ The Amity board is a 4 layer PCB that includes onboard 27K ohms pullup resistors
 
 ### Caveats
 
-Amity Board is experimental. It has been very lightly tested to work for video up to 4K@60Hz Dolby Vision. EMI is unknown, and it may have other unknown bugs. If you are an experienced HW engineer interested in improving the board design, please submit improvements.
+Amity Board is experimental. It has been very lightly tested to work for video up to 4K@60Hz Dolby Vision. EMI is unknown, and it may have other unknown bugs. If you are an experienced HW engineer interested in improving the board design, you are invited to submit improvements.
 
 ### Preparation
 
-Amity board KiCAD files are [here](board). In the [mfr](board/mfr) folder are the manufacturing files, and an example BOM for submission to a PCB manufacturer/assembler.
+Amity board KiCAD files are [here](board). In the [mfr](board/mfr) folder are the manufacturing files, and an example BOM for submission to a PCB manufacturer/assembler (the BOM will likely need to be tailored to the manufacturer's requirements).
 
 #### BOM
 
@@ -28,10 +28,10 @@ Amity board requires 4 wires to the Raspberry Pi - GND, 3.3v, and two CEC GPIO p
 
 | Name  | Amity Board Pin # | RPi Pin # | RPi GPIO # |
 | ----- | ----------------- | --------- | ---------- |
-|  GND  | 0                 | 14        | -          |
-| CEC 0 | 1                 | 16        | 23         |
-| CEC 1 | 2                 | 18        | 24         |
-| 3.3V  | 3                 | 17        | -          |
+|  GND  | 1                 | 14        | -          |
+| CEC 0 | 2                 | 16        | 23         |
+| CEC 1 | 3                 | 18        | 24         |
+| 3.3V  | 4                 | 17        | -          |
 
 
 ### Configuring Amity
