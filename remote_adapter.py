@@ -27,7 +27,7 @@ class Adapter(remote.RemoteListener):
             btns.MUTE : Key.TOGGLE_MUTE,
             btns.SELECT : Key.SELECT,
             btns.BACK : Key.BACK,
-            btns.PLAY_PAUSE : Key.SELECT,
+            btns.PLAY_PAUSE : Key.PAUSE_PLAY,
             btns.UP : Key.UP,
             btns.RIGHT : Key.RIGHT,
             btns.DOWN : Key.DOWN,
