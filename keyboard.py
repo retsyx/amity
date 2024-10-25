@@ -38,7 +38,7 @@ config.default('keyboard.keymap', {
         e.KEY_SEARCH : Key.DISPLAY_INFO.value,
         e.KEY_HOMEPAGE : Key.ROOT_MENU.value,
         e.KEY_REWIND : Key.REWIND.value,
-        e.KEY_PLAYPAUSE : Key.PAUSE_PLAY.value,
+        e.KEY_PLAYPAUSE : Key.SELECT.value,
         e.KEY_FASTFORWARD : Key.FAST_FORWARD.value,
         e.KEY_PROGRAM : Key.GUIDE.value,
         e.KEY_0 : Key.NUMBER_0.value,
