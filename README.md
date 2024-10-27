@@ -45,15 +45,15 @@ Amity may also have terrible bugs.
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
-### Amity is not a Universal Remote Control
+### Amity is Not a Universal Remote Control
 
-Amity is designed to for a traditional setup centered around an audio/video receiver (AVR). For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray devices, and game consoles) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. The HDMI-CEC protocol only allows the designated TV to select sources. TVs will not heed arbitrary source selection commands from other devices. As a result, Amity cannot select inputs on a TV, and cannot control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
+Amity is designed for a traditional setup centered around an audio/video receiver (AVR). For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray devices, and game consoles) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. The HDMI-CEC protocol only allows the designated TV to select sources. TVs will not heed arbitrary source selection commands from other devices. As a result, Amity cannot select inputs on a TV, and cannot control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
 
 For a device to be controlled by Amity, it must support HDMI-CEC.
 
-### Amity is a Proof Concept
+### Amity is a Proof of Concept
 
-HDMI-CEC is a unevenly implemented by different manufacturers, so it doesn't always work as expected. At present, Amity can be considered a proof of concept because of the limited set of equipment it has been tested with. It works for me. It may work flawlessly with your equipment, or it may very well not. There may be ways to fix issues you encounter, and there may not. As more equipment is test with Amity, its utility will become clearer.
+HDMI-CEC is a unevenly implemented by different manufacturers, so it doesn't always work as expected. At present, Amity can be considered a proof of concept because of the limited set of equipment it has been tested with. It works for me. It may work flawlessly with your equipment, or it may very well not. There may be ways to fix issues you encounter, and there may not. As more equipment is tested with Amity, its utility will become clearer.
 
 Equipment that is known to be compatible with Amity:
 
@@ -80,7 +80,7 @@ Equipment that is known to be compatible with Amity:
 
 ### HDMI Splice Hardware
 
-Amity splices into the HDMI-CEC bus between the TV, and the receiver using Raspberry Pi GPIO. There are two methods to splice into the HDMI-CEC bus. One method is to strip an existing HDMI cable. The second method is to use a [custom HDMI breakout board](hw/README.md#amity-board) that passes through the HDMI A/V signals without degrading them. Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and do not work. Amity is installed, by default, for use with a spliced HDMI cable.
+Amity splices into the HDMI-CEC bus between the TV, and the receiver using Raspberry Pi GPIO. There are two methods to splice into the HDMI-CEC bus. One method is to strip an existing HDMI cable. The second method is to use [Amity Board](hw/README.md#amity-board), that passes through the HDMI A/V signals without degrading them. Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and do not work. Amity installs, by default, for use with a spliced HDMI cable.
 
 [Acquire a board or prepare a cable before proceeding](hw/README.md).
 
@@ -104,7 +104,7 @@ Amity requires a Linux kernel compiled with `cec-gpio` support enabled. If the r
 
 If using a spliced HDMI cable, skip this step.
 
-If using an Amity board, then in the terminal, ensure you are in the Amity directory:
+If using Amity Board, then in the terminal, ensure you are in the Amity directory:
 
 ```commandline
 cd ~/amity

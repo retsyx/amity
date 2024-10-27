@@ -4,7 +4,7 @@
 
 ## Amity Board
 
-The Amity board is a 4 layer PCB that includes onboard 27K ohms pullup resistors to conform to the HDMI-CEC specification. When used with the board, Amity must be configured to disable the Raspberry Pi internal GPIO pullup resistors.
+Amity Board is a 4 layer PCB that includes onboard 27K ohms pullup resistors to conform to the HDMI-CEC specification. When used with the board, Amity must be configured to disable the Raspberry Pi internal GPIO pullup resistors.
 
 ### Caveats
 
@@ -20,7 +20,7 @@ Amity board KiCAD files are [here](board). In the [mfr](board/mfr) folder are th
 * 2x [0603 SMD 27K ohms resistors](https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345)
 * 2x [0603 SMD diodes](https://www.digikey.com/en/products/detail/taiwan-semiconductor-corporation/TS4148-RCG/7359811)
 * 1x [2.54mm 4x connector header](https://www.digikey.com/en/products/detail/würth-elektronik/61300411121/4846827)
-* A 4 wire bundle terminated with a 4x1 2.54mm connector, and a 3x2 2.54mm connector, for connecting the Amity board to the Raspberry Pi.
+* A 4 wire bundle terminated with a 4x1 2.54mm connector, and a 3x2 2.54mm connector, for connecting Amity board to the Raspberry Pi.
 
 #### Wiring and Pinout
 
@@ -58,17 +58,17 @@ sudo reboot now
 
 ### Wired Up Amity Board
 
-![Amity board](IMG_5440.jpeg "Amity board")
+![Amity Board](IMG_5440.jpeg "Amity Board")
 
 ### Wired Up Amity Board in a Case
 
 A STEP file for a 3D printable case is available [here](case/).
 
-![Amity board](IMG_5472.jpeg "Amity board in case")
+![Amity Board](IMG_5472.jpeg "Amity Board in case")
 
 ### Amity Board Attached to Raspberry Pi 5 with a 3x2 2.54mm connector
 
-![Amity board attached to a Raspberry Pi 5](IMG_5442.jpeg "Amity board attached to a Raspberry Pi 5")
+![Amity Board attached to a Raspberry Pi 5](IMG_5442.jpeg "Amity Board attached to a Raspberry Pi 5")
 
 ## Splicing an HDMI cable
 
