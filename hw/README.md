@@ -56,9 +56,15 @@ And reboot:
 sudo reboot now
 ```
 
-### An Older Prototype Amity Board with a 1x4 2.54mm connector
+### Wired Up Amity Board
 
 ![Amity board](IMG_5440.jpeg "Amity board")
+
+### Wired Up Amity Board in a Case
+
+A STEP file for a 3D printable case is available [here](case/).
+
+![Amity board](IMG_5472.jpeg "Amity board in case")
 
 ### Amity Board Attached to Raspberry Pi 5 with a 3x2 2.54mm connector
 
