@@ -15,7 +15,6 @@ import argparse, logging, subprocess, sys
 from bluepy3 import btle
 from bluepy3.btle import AssignedNumbers
 from config import config
-from remote import PnpInfo
 
 class Scanner(object):
     def __init__(self):
@@ -27,11 +26,7 @@ class Scanner(object):
         pass
 
     def check_pair(self, entry):
-        manufacturer = entry.getValueText(255)
         log.debug(f'Device RSSI {entry.rssi} addr {entry.addr} data {entry.getScanData()}')
-
-        if manufacturer is None:
-            return
 
         # First 2 bytes are manufacturer ID 004C which is Apple
         # Last 2 bytes are the PNP product ID:
@@ -39,20 +34,49 @@ class Scanner(object):
         # Gen 1.5 - 026D
         # Gen 2 - 0314
         # Gen 3 - 0315
-        if (not manufacturer.startswith('4c008a076602') # gen 1
-            and not manufacturer.startswith('4c008a076d02') # gen 1.5
-            and not manufacturer.startswith('4c00070d021403') # gen 2
-            and not manufacturer.startswith('4c00070d021503') # gen 3
-            ):
+        supported_manufacturer_strings = {
+            '4c008a076602' : 'Siri Remote, Gen 1',
+            '4c008a076d02' : 'Siri Remote, Gen 1.5',
+            '4c00070d021403' : 'Siri Remote, Gen 2',
+            '4c00070d021503' : 'Siri Remote, Gen 3',
+        }
+        mfr = entry.getValueText(entry.MANUFACTURER)
+        name = None
+        is_siri_remote = False
+        for prefix, kind in supported_manufacturer_strings.items():
+            if mfr.startswith(prefix):
+                name = kind
+                is_siri_remote = True
+                break
+        log.debug(f'is_siri_remote {is_siri_remote}')
+        if name is None:
+            service_uuids = entry.getValue(entry.COMPLETE_16B_SERVICES)
+            if service_uuids is None:
+                service_uuids = entry.getValue(entry.INCOMPLETE_16B_SERVICES)
+            if service_uuids is None:
+                service_uuids = []
+            log.debug(f'service_uuids {service_uuids}')
+            if AssignedNumbers.human_interface_device in service_uuids:
+                name = entry.getValueText(entry.COMPLETE_LOCAL_NAME)
+                if name is None:
+                    name = entry.getValueText(entry.SHORT_LOCAL_NAME)
+                if name is None:
+                    name = 'Input Device'
+
+        log.debug(f'name is {name}')
+
+        # This is neither an internally supported Siri Remote, nor a generic keyboard device
+        if name is None:
             return
 
         if entry.rssi < -50:
-            log.info('Bring the remote closer to me!\n')
+            log.info(f'Bring {name} closer to me!\n')
             return
 
         try:
             device = btle.Peripheral(entry)
         except btle.BTLEException as e:
+            log.debug(f'Failed to create peripheral {e}')
             return
 
         log.info('Pairing...')
@@ -62,22 +86,9 @@ class Scanner(object):
             device.setSecurityLevel(btle.SEC_LEVEL_MEDIUM)
             public_addr, _ = device.pair()
             self.pairing = False
-            log.info('Paired!')
+            log.info(f'Paired with {name}')
 
-            device.getServices()
-            device_info_svc = device.getServiceByUUID(AssignedNumbers.device_information)
-            pnp_data = None
-            serial_number = None
-            for ch in device_info_svc.getCharacteristics():
-                if ch.uuid == AssignedNumbers.pnp_id:
-                    pnp_data = device.readCharacteristic(ch.getHandle())
-                elif ch.uuid == AssignedNumbers.serial_number_string:
-                    serial_number = device.readCharacteristic(ch.getHandle()).decode()
-
-            pnp_info = PnpInfo(pnp_data)
-            log.debug(f'PNP {pnp_info}')
-
-            return serial_number, public_addr
+            return is_siri_remote, name, public_addr
         except btle.BTLEManagementError:
             log.info('Pairing failed. Try resetting the remote.')
             log.info('Trying again!\n')
@@ -109,20 +120,27 @@ def main():
     log.info('Bring the remote close to me, and start the pairing process on the remote.\n')
 
     scanner = Scanner()
-    serial_number, public_addr = scanner.scan()
+    is_siri_remote, name, public_addr = scanner.scan()
 
-    log.info(f'Paired with remote {serial_number}')
+    if is_siri_remote:
+        config_path = 'remote.mac'
+    else:
+        # Amity intercepts keyboard events and so doesn't use the keyboard MAC address directly.
+        # The MAC is tracked to allow managing keyboards here, and ensuring that only one is
+        # paired at any given time.
+        # Note that at the moment both a Siri remote, and a keybord can be paired at once.
+        config_path = 'keyboard.mac'
 
     if not args.nowrite:
         old_addr = None
         backup = False
         config.load()
-        if config['remote.mac'] is not None:
+        if config[config_path] is not None:
             backup = True
-            old_addr = config['remote.mac']
+            old_addr = config[config_path]
 
         # Update the config
-        config['remote.mac'] = public_addr
+        config[config_path] = public_addr
         config.save(backup)
 
         # Unpair the previous remote, if there is one
@@ -130,8 +148,9 @@ def main():
             log.debug(f'Unpairing previous remote {old_addr}')
             subprocess.run(['/usr/bin/bluetoothctl', 'remove', old_addr], capture_output=True)
     else:
-        log.info(f'Remote configuration is:\n')
-        log.info(f'remote:\n    mac: {public_addr}\n\n')
+        if is_siri_remote:
+            log.info(f'Remote configuration is:\n')
+            log.info(f'remote:\n    mac: {public_addr}\n\n')
 
 if __name__ == '__main__':
     main()

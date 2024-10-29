@@ -1,5 +1,15 @@
-#!/usr/bin/sh
+#!/usr/bin/bash
 
 . ./bin/activate
 
+sudo /usr/bin/btmgmt le on | sudo tee -a log/pair_tool.log > /dev/null
+sudo /usr/bin/btmgmt pairable on | sudo tee -a log/pair_tool.log > /dev/null
+
+/usr/bin/bt-agent --capability=NoInputNoOutput 2>&1 | sudo tee -a log/pair_tool.log > /dev/null &
+AGENT_PID=`jobs -p`
+
+trap "kill -HUP $AGENT_PID" 2
+
 sudo `which python` ./pair_tool.py $1 $2 $3
+
+kill -HUP $AGENT_PID 2>&1 > /dev/null

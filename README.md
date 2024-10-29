@@ -122,15 +122,9 @@ And reboot:
 sudo reboot now
 ```
 
-### Using a Keyboard for Control
+### Pairing a Siri Remote or a BLE Keyboard Remote
 
-Some media remote controls (Amazon Fire, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. For Bluetooth remotes (like Amazon Fire) use `bluetoothctl` for pairing. For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press. IR remotes are *not* supported.
-
-This document uses the Siri remote as an example, but remote operation (except pairing) is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire activity buttons are undocumented, and are not supported.
-
-### Pairing a Siri Remote
-
-The preferred method of control is a Siri Remote (easier pairing, and great battery life!). The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Ensure the remote is charged.
+The preferred method of control is a Siri Remote or a keyboard BLE streamer remote (easier pairing, and great battery life!). The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Ensure the remote is charged.
 
 In the terminal, ensure you are in the Amity directory:
 
@@ -144,9 +138,23 @@ Then, to pair the remote, enter:
 ./pair_remote
 ```
 
-Hold the remote near the Raspberry Pi and simultaneously press the Menu/Back and the Volume Up (+) buttons for a couple seconds. Follow the prompts.
+Hold the remote near the Raspberry Pi.
 
-If successful, then the remote has been paired, and is ready for use. In addition, Amity's `config.yaml` file was updated. More about `config.yaml` in the next section.
+On a Siri Remote, simultaneously press the Menu/Back and the Volume Up (+) buttons for a couple seconds.
+
+On an Amazon Fire remote, press and hold the home button until an orange LED flashes. This may require a couple attempts.
+
+Follow the prompts.
+
+If successful, then the remote has been paired, and is ready for use. In addition, Amity's `config.yaml` file was updated. More about `config.yaml` in the [HDMI Configuration](#hdmi-configuration) section.
+
+### Using a Keyboard for Control
+
+Some media remotes (Amazon Fire, or common third party RF remotes) operate as keyboards. Amity can be controlled with these remotes after they have been installed or paired to the Raspberry Pi. Bluetooth remotes, like Amazon Fire, are [paired just like Siri Remotes](#pairing-a-siri-remote-or-a-ble-keyboard-remote). For generic RF remotes, that typically come with a USB dongle, plug in the dongle. Amazon Fire remotes are recommended as they are typically cheaper, and operate in well defined ways. Generic remotes can be peculiar, and may not work for arbitrary reasons. For example, some remotes have a power button that doesn't generate a key press.
+
+IR remotes are *not* supported.
+
+This document uses the Siri remote as an example, but remote operation is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire activity buttons are undocumented, and are not supported.
 
 ### HDMI Configuration
 

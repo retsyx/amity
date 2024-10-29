@@ -14,13 +14,29 @@ import time
 from bluepy3.btle import AssignedNumbers, BTLEConnectError, BTLEException, DefaultDelegate, Peripheral
 
 class PnpInfo(object):
-    def __init__(self, data):
-        self.vendor_id_type = data[0]
-        self.vendor_id = int.from_bytes(data[1:3], byteorder='little')
-        self.product_id = int.from_bytes(data[3:5], byteorder='little')
-        self.product_version = int.from_bytes(data[5:7], byteorder='little')
+    @classmethod
+    def WithData(self, data):
+        vendor_id_type = data[0]
+        vendor_id = int.from_bytes(data[1:3], byteorder='little')
+        product_id = int.from_bytes(data[3:5], byteorder='little')
+        product_version = int.from_bytes(data[5:7], byteorder='little')
+        return PnpInfo(vendor_id_type, vendor_id, product_id, product_version)
+
+    def __init__(self, vendor_id_type, vendor_id, product_id, product_version):
+        self.vendor_id_type = vendor_id_type
+        self.vendor_id = vendor_id
+        self.product_id = product_id
+        self.product_version = product_version
+    def __eq__(self, other):
+        return (self.vendor_id_type == other.vendor_id_type and
+                self.vendor_id == other.vendor_id and
+                self.product_id == other.product_id and
+                self.product_version == other.product_version)
+    def __hash__(self):
+        return self.vendor_id_type + self.vendor_id + (self.product_id + self.product_version) * 65536
     def __str__(self):
         return f'Type {self.vendor_id_type:02X} Vendor {self.vendor_id:04X} Product ID {self.product_id:04X} Product version {self.product_version:04X}'
+
 
 class UnknownRemoteException(Exception):
     def __init__(self, hw, fw, pnp_info):
@@ -256,7 +272,7 @@ class SiriRemote(DefaultDelegate):
                     elif ch.uuid == AssignedNumbers.pnp_id:
                         pnp_data = self.read_characteristic(ch.getHandle())
 
-                pnp_info = PnpInfo(pnp_data)
+                pnp_info = PnpInfo.WithData(pnp_data)
                 self.__pnp_info = pnp_info
                 product_id = pnp_info.product_id
 
