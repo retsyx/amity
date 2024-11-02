@@ -22,10 +22,10 @@ RPI_MODEL=`cat /sys/firmware/devicetree/base/model`
 if strstr "Raspberry Pi 4" "$RPI_MODEL" ||
     strstr "Raspberry Pi 3 Model B" "$RPI_MODEL" ||
     strstr "Raspberry Pi Zero 2 W" "$RPI_MODEL"; then
-    KERNEL_ARCHIVE_URL="https://github.com/retsyx/amity-kernels/blob/main/kernel-6.6.31/kernel-6.6.31-v8-amity.zip?raw=true"
+    KERNEL_ARCHIVE_URL="https://github.com/retsyx/amity-kernels/blob/main/kernel-6.6.51/kernel-6.6.51-v8-amity.zip?raw=true"
     KERNEL_IMG=kernel8.img
 elif strstr "Raspberry Pi 5" "$RPI_MODEL"; then
-    KERNEL_ARCHIVE_URL="https://github.com/retsyx/amity-kernels/blob/main/kernel-6.6.31/kernel-6.6.31-v8-16k-amity.zip?raw=true"
+    KERNEL_ARCHIVE_URL="https://github.com/retsyx/amity-kernels/blob/main/kernel-6.6.51/kernel-6.6.51-v8-16k-amity.zip?raw=true"
     KERNEL_IMG=kernel_2712.img
 else
     echo "${RPI_MODEL} is not a known model (if it is older than a Raspberry Pi 3 Model B, it is not supported)"
