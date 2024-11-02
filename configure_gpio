@@ -51,7 +51,8 @@ cat >> "$TEMP_PATH_DTS_1" << EOF
 EOF
 
 # Use C preprocessor on DTS file
-cpp -nostdinc -I /usr/src/linux-headers-6.6.31+rpt-common-rpi/include -I /usr/src/linux-headers-6.6.51+rpt-common-rpi/include -undef -x assembler-with-cpp $TEMP_PATH_DTS_1 > $TEMP_PATH_DTS
+LINUX_HEADERS_DIR=`find /usr/src -name 'linux-headers-*+rpt-common-rpi' | head -1`
+cpp -nostdinc -I $LINUX_HEADERS_DIR/include -undef -x assembler-with-cpp $TEMP_PATH_DTS_1 > $TEMP_PATH_DTS
 
 # Compile to DTB
 dtc -I dts -O dtb $TEMP_PATH_DTS -o $TEMP_PATH_DTB
