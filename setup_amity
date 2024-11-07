@@ -120,7 +120,8 @@ pip install .
 cd "$APP_DIR"
 
 # Warm up pycache
-python -c "import bluepy3.btle, cec, config, gestures, hdmi, hdmi_tool, keyboard, messaging, pair_tool, remote, remote_adapter, tools"
+python -c "import bluepy3.btle, cec, config, gestures, hdmi, hdmi_tool, homekit, homekit_tool, keyboard, memory, messaging, pair_tool, remote, remote_adapter, tools"
+
 rm cec.log || true
 
 # Startup setup

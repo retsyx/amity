@@ -1,4 +1,4 @@
-import sys
+import subprocess, sys
 
 from remote import SiriRemote, RemoteListener
 
@@ -48,6 +48,7 @@ class Callback(RemoteListener):
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         mac = sys.argv[1]
+        subprocess.run(['/usr/bin/bluetoothctl', 'disconnect', mac], capture_output=True)
         SiriRemote(mac, Callback())
     else:
         print("error: no mac address")
