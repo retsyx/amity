@@ -262,7 +262,7 @@ In standby, 1 of 5 activities can be started. On a Gen 2 remote, the 5 activitie
 
 On a Gen 2 remote, pressing the power button will send a standby signal to all devices. This is useful, if a device is on when it shouldn't be. Gen 1 remotes don't have a power button. Instead, use a triple tap (not press) on the touchpad to signal a power button press.
 
-After an activity has been selected, the Amity transitions into the active mode.
+After an activity has been selected, Amity transitions into the active mode.
 
 ### Active
 
