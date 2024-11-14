@@ -14,6 +14,8 @@ import cec
 from cec import Device, DeviceType, Key, Message, PowerStatus
 
 config.default('hdmi.quirks', {})
+# This address is a guess. We don't want to read EDID data from the TV, or provide EDID downstream.
+config.default('hdmi.front.physical_address', 0x1000)
 
 def isiterable(o):
     try:
@@ -164,7 +166,8 @@ class ControllerImpl(object):
                                          loop=loop,
                                          listen_callback_coro=self.front_listen,
                                          device_types=DeviceType.PLAYBACK,
-                                         osd_name = osd_name)
+                                         osd_name = osd_name,
+                                         physical_address_override=config['hdmi.front.physical_address'])
         self.back_adapter = cec.Adapter(devname=back_dev,
                                         loop=loop,
                                         listen_callback_coro=self.back_listen,

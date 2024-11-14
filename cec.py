@@ -517,7 +517,7 @@ class Adapter(object):
     MODE_FOLLOWER = (1 << 4)
 
     def __init__(self, devname, loop=None, listen_callback_coro=None,
-                 device_types=(), osd_name='default', vendor_id=0):
+                 device_types=(), osd_name='default', vendor_id=0, physical_address_override=None):
         self.taskit = tools.Tasker('Adapter')
         self.states = {}
         self.devname = devname
@@ -535,7 +535,7 @@ class Adapter(object):
         self.laddrs = LogAddrs()
         mode = c_uint32(self.MODE_INITIATOR | self.MODE_FOLLOWER)
         self.ioctl(Ioctl.S_MODE, mode)
-        self.setup()
+        self.setup(physical_address_override)
         # Setup (called above) is simpler to perform on a blocking device. After setup, set the
         # device to non-blocking for efficiency - CEC is very very slow (~400 bits/sec), so we
         # don't want to block on TX.
@@ -570,7 +570,7 @@ class Adapter(object):
     def physical_address(self, address):
         self.ioctl(Ioctl.ADAP_S_PHYS_ADDR, address.to_bytes(2, byteorder='little'))
 
-    def setup(self):
+    def setup(self, physical_address_override):
         # Clear the current logical address configuration
         laddrs = LogAddrs()
         self.ioctl(Ioctl.ADAP_S_LOG_ADDRS, laddrs)
@@ -596,8 +596,11 @@ class Adapter(object):
             if self.device_types[0] == DeviceType.TV:
                 self.physical_address = 0x0000
             else:
-                # Hopefully, this guessed address works universally.
-                self.physical_address = 0x1000
+                if physical_address_override is not None:
+                    self.physical_address = physical_address_override
+                else:
+                    # Hopefully, this guessed address works universally.
+                    self.physical_address = 0x1000
 
         # And configure...
         laddrs = LogAddrs()
