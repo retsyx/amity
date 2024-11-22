@@ -16,6 +16,7 @@ class Config(object):
         self.cfg = {}
         self.loaded = False
         self.filename = filename
+        self.default('config.max_backups', 10)
         log.info(f'filename {self.filename}')
 
     def load(self):
@@ -47,6 +48,8 @@ class Config(object):
                     shutil.chown(backup_filename, stat.st_uid, stat.st_gid)
             except FileNotFoundError:
                 pass
+            self.clean_backups()
+
         tmp_fd, tmp_path = tempfile.mkstemp()
         with os.fdopen(tmp_fd, 'w') as file:
             yaml.safe_dump(self.user_cfg, file)
@@ -55,6 +58,21 @@ class Config(object):
         if os.getuid() == 0:
             stat = os.stat('.')
             shutil.chown(self.filename, stat.st_uid, stat.st_gid)
+
+    def clean_backups(self):
+        path = os.path.dirname(self.filename)
+        if path == '':
+            path = '.'
+        entries = []
+        m = re.compile(self.filename + r'-(\d{8}-\d{6})')
+        for entry in os.scandir(path):
+            if m.match(entry.name):
+                entries.append(entry)
+        entries.sort(reverse=True, key=lambda entry: entry.stat().st_ctime)
+        max_backups = self['config.max_backups']
+        for entry in entries[max_backups:]:
+            log.info(f'Deleting backup {entry.name}')
+            os.unlink(entry.name)
 
     def save_complete(self, filename):
         with open(filename, 'w') as file:
