@@ -200,8 +200,6 @@ class Config(object):
         self.__overlay(self.cfg, self.user_cfg)
 
 
-config = Config('config.yaml')
-
 def main():
     c = Config('test.yaml')
     c.default('remote.mac', 0)

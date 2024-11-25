@@ -8,13 +8,13 @@
 
 import tools
 
-log = tools.logger("log/pair_tool.log")
+log = tools.logger('var/log/pair_tool.log')
 
 import argparse, logging, subprocess, sys
 
 from bluepy3 import btle
 from bluepy3.btle import AssignedNumbers
-from config import config
+from aconfig import config
 
 class Scanner(object):
     def __init__(self):
@@ -91,7 +91,6 @@ class Scanner(object):
             return is_siri_remote, name, public_addr
         except btle.BTLEManagementError:
             log.info('Pairing failed. Try resetting the remote.')
-            log.info('Trying again!\n')
 
     def scan(self):
         while True:
@@ -104,7 +103,6 @@ class Scanner(object):
             except (btle.BTLEConnectError, BrokenPipeError) as e:
                 if self.pairing:
                     log.info('Pairing failed. Try resetting the remote.')
-                    log.info('Trying again!\n')
 
 def main():
     arg_parser = argparse.ArgumentParser()

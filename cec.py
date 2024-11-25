@@ -363,8 +363,8 @@ class DeviceType(object):
         TUNER : 2,
         PLAYBACK : 3,
         AUDIO_SYSTEM: 4,
-        SWITCH: 6,
-        PROCESSOR: 5
+        PROCESSOR: 5,
+        SWITCH: 6
     }
 
     name = {

@@ -1,0 +1,30 @@
+adapters:
+  - /dev/cec0
+  - /dev/cec1
+
+devices:
+  - osd_name: TV
+    address: 0
+    physical_address: 0
+    vendor_id: 57489
+    adapter: /dev/cec0
+  - osd_name: AVR-X3400H
+    address: 5
+    physical_address: 0x1000
+    vendor_id: 1485
+    adapter: /dev/cec1
+  - osd_name: Living Room
+    address: 4
+    physical_address: 0x1500
+    vendor_id: 4346
+    adapter: /dev/cec1
+  - osd_name: PlayStation5
+    address: 11
+    physical_address: 0x1400
+    vendor_id: 524358
+    adapter: /dev/cec1
+  - osd_name: NintendoSwitch
+    address: 6
+    vendor_id: 2495
+    physical_address: 0x1600
+    adapter: /dev/cec1

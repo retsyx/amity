@@ -13,7 +13,7 @@ import evdev.ecodes as e
 from evdev import KeyEvent
 from watchdog.observers import Observer
 
-from config import config
+from aconfig import config
 from hdmi import Key
 
 config.default('keyboard.required_keys', (e.KEY_ENTER, e.KEY_UP,

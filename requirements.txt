@@ -1,5 +1,8 @@
 evdev
 HAP-python[QRCode]
+nicegui
+pillow
 pyyaml
 qrcode
+scrypt
 watchdog

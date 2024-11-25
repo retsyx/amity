@@ -4,9 +4,10 @@ bin/
 share/
 lib/
 lib64
-log/
+var/
 __pycache__/
 sdl2/
+auth_db.yaml
 config.yaml*
 pyvenv.cfg
 hdmi-backups
@@ -14,5 +15,3 @@ hdmi-backups
 fp-info-cache
 *_pcb.lck
 *_sch.lck
-homekit.state
-homekit.code

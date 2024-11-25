@@ -7,7 +7,7 @@
 import math, time
 
 from remote import HwRevisions
-from config import config
+from aconfig import config
 
 config.default('remote.touchpad.pressure_threshold', 20)
 config.default('remote.touchpad.swipe.distance_thresholds_mm', (7.0, 7.0))

@@ -1,4 +1,3 @@
-
 # Copyright 2024.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the

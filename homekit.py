@@ -1,4 +1,3 @@
-
 # Copyright 2024.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
@@ -11,13 +10,14 @@ log = tools.logger(__name__)
 
 import asyncio, io, qrcode, signal
 
+from PIL import Image
 from pyhap.accessory import Accessory
 from pyhap.accessory_driver import AccessoryDriver
 from pyhap.const import CATEGORY_TELEVISION
 
 from hdmi import Key
 
-from config import config
+from aconfig import config
 
 config.default('homekit.keymap',
                 {
@@ -197,7 +197,7 @@ class TV(Accessory):
 class HomeKit(object):
     def __init__(self, activity_names, loop, pipe):
         self.driver = AccessoryDriver(port=51826,
-                    persist_file='homekit.state',
+                    persist_file='var/homekit/state',
                     loop=loop)
         self.accessory = TV(self.driver, 'Amity', activity_names=activity_names, pipe=pipe)
         self.driver.add_accessory(accessory=self.accessory)
@@ -207,13 +207,18 @@ class HomeKit(object):
         await self.driver.async_start()
         if self.driver.state.paired:
             s = 'Paired'
+            img = Image.new('RGB', (100, 100), color='black')
         else:
-            s = self.setup_message()
+            s, img = self.setup_info()
+        # var/homekit/code is used as a latch to monitor changes to homekit status in
+        # homekit_tool.py which, in turn, is used by management.py. So ensure that var/homekit/code
+        # is always the last thing to be modified as a signal that all changes have been made.
+        img.save('var/homekit/code.png')
         log.info(s)
-        with open('homekit.code', 'wb') as file:
+        with open('var/homekit/code', 'wb') as file:
             file.write(s.encode('utf-8'))
 
-    def setup_message(self):
+    def setup_info(self):
         """Generate setup message string
         """
         pincode = self.driver.state.pincode.decode()
@@ -221,13 +226,14 @@ class HomeKit(object):
         qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_Q)
         qr.add_data(xhm_uri)
         qr.make(fit=True)
-        message = f'Scan this code with the Home app on your iOS device:\n\n'
+        message = 'Scan this code with the Home app on your iOS device:\n\n'
         with io.StringIO() as f:
             qr.print_ascii(out=f, invert=True)
             f.seek(0)
             message += f.read() + '\n'
         message += f'Or enter this code in the Home app on your iOS device: {pincode}'
-        return message
+        img = qr.make_image()
+        return message, img
 
 async def main():
     activity_names = ('Watch TV', 'Play PS5', 'Play Switch', 'Play Music')

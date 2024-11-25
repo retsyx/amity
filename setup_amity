@@ -5,12 +5,10 @@ set -xe
 NAME=amity
 ROOT_DIR=~
 APP_DIR=$ROOT_DIR/$NAME
-LOG_DIR=$APP_DIR/log
-LOG_PATH=$LOG_DIR/$NAME.log
+
 FIRMWARE_PATH=/boot/firmware
 
 ACTION=$1
-
 
 # This script is idempotent.
 
@@ -86,7 +84,24 @@ else
     cd ..
 fi
 
+VAR_DIR=$APP_DIR/var
+LOG_DIR=$VAR_DIR/log
+CONFIG_DIR=$VAR_DIR/config
+GUI_DIR=$VAR_DIR/gui
+NICEGUI_DIR=$GUI_DIR/nicegui
+HOMEKIT_DIR=$VAR_DIR/homekit
+
 mkdir -p "$LOG_DIR"
+mkdir -p "$CONFIG_DIR"
+touch "$CONFIG_DIR/config.yaml"
+mkdir -p "$GUI_DIR"
+# Create a self signed certificate that is valid for 100 years
+if [ ! -f "$GUI_DIR/key.pem" ]; then
+    /usr/bin/openssl req -x509 -newkey rsa:4096 -keyout "$GUI_DIR/key.pem" -out "$GUI_DIR/cert.pem" -sha256 -days 36500 -nodes -subj "/CN=Amity"
+fi
+mkdir -p "$NICEGUI_DIR"
+
+mkdir -p "$HOMEKIT_DIR"
 
 cd "$APP_DIR"
 
@@ -99,8 +114,12 @@ if [ ! -f "$DTB_PATH" ]; then
     ./configure_gpio internal
 fi
 
-# Activate venv, and pip install requirements
+# Activate venv
 . ./bin/activate
+
+# Allow python to bind to privileged network ports
+sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which python))
+
 pip install --upgrade -r requirements.txt
 
 # Clone, build, and install our custom version of bluepy3
@@ -119,32 +138,56 @@ pip install .
 
 cd "$APP_DIR"
 
+if ! grep -q "# Amity" "$ROOT_DIR/.bashrc"; then
+
+    cat >> "$ROOT_DIR/.bashrc" << EOF
+
+# Amity
+echo "Amity..."
+cd "$APP_DIR" > /dev/null
+. bin/activate
 # Warm up pycache
 python -c "import bluepy3.btle, cec, config, gestures, hdmi, hdmi_tool, homekit, homekit_tool, keyboard, memory, messaging, pair_tool, remote, remote_adapter, tools"
-
 rm cec.log || true
+export PYTHONPATH=$APP_DIR
+
+EOF
+
+. $ROOT_DIR/.bashrc
+
+fi
+
 
 # Startup setup
 
-RUN_PATH="$APP_DIR/bin/run-$NAME.sh"
+mkdir -p ~/.config/systemd/user
+
+loginctl enable-linger
+
+function install_service() {
+    local name="$1"
+    local binary="$2"
+    local description="$3"
+
+    local RUN_PATH="$APP_DIR/bin/run-$name.sh"
 
 cat > "$RUN_PATH" << EOF
 #!/usr/bin/sh
 
 cd "$APP_DIR"
+
 . ./bin/activate
 
-echo Running...
-$APP_DIR/main.py
+export PYTHONPATH="$APP_DIR"
+
+$binary
 EOF
 
 chmod +x "$RUN_PATH"
 
-mkdir -p ~/.config/systemd/user
-
-cat > ~/.config/systemd/user/$NAME.service << EOF
+cat > ~/.config/systemd/user/$name.service << EOF
 [Unit]
-Description=$NAME HDMI-CEC controller
+Description=$description
 
 [Service]
 ExecStart=$RUN_PATH
@@ -155,7 +198,11 @@ WorkingDirectory=$APP_DIR
 WantedBy=default.target
 EOF
 
-loginctl enable-linger
+} # end install_service
+
+install_service "$NAME-hub" "$APP_DIR/main.py" "$NAME HDMI-CEC controller"
+install_service "$NAME-management" "$APP_DIR/management/main.py" "$NAME management"
+install_service "$NAME-redirect" "$APP_DIR/management/redirect.py" "$NAME HTTP to HTTPS redirect"
 
 # Kernel setup
 KERNEL_HAS_CEC_GPIO=`gunzip -c "$FIRMWARE_PATH/$KERNEL_IMG" | grep -c cec-gpio || true`
@@ -188,20 +235,34 @@ cd "$APP_DIR"
 
 if [ "$ACTION" = "enable" ]; then
 
-    systemctl --user start "$NAME"
-    systemctl --user enable "$NAME"
+    systemctl --user start "$NAME-hub"
+    systemctl --user enable "$NAME-hub"
+
+    systemctl --user start "$NAME-management"
+    systemctl --user enable "$NAME-management"
+
+    systemctl --user start "$NAME-redirect"
+    systemctl --user enable "$NAME-redirect"
 
 fi # "$ACTION" = "enable"
 
 if [ "$ACTION" = "disable" ]; then
 
-    systemctl --user stop "$NAME"
-    systemctl --user disable "$NAME"
+    systemctl --user stop "$NAME-hub"
+    systemctl --user disable "$NAME-hub"
+
+    systemctl --user stop "$NAME-management"
+    systemctl --user disable "$NAME-management"
+
+    systemctl --user stop "$NAME-redirect"
+    systemctl --user disable "$NAME-redirect"
 
 fi # "$ACTION" = "disable"
 
 if [ "$ACTION" = "restart" ]; then
 
-    systemctl --user restart "$NAME"
+    systemctl --user restart "$NAME-hub"
+    systemctl --user restart "$NAME-management"
+    systemctl --user restart "$NAME-redirect"
 
 fi # "$ACTION" = "restart"

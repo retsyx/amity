@@ -8,7 +8,7 @@ import tools
 
 log = tools.logger(__name__)
 
-from config import config
+from aconfig import config
 import pprint, time
 import cec
 from cec import Device, DeviceType, Key, Message, PowerStatus

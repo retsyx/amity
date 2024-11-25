@@ -2,10 +2,16 @@
 
 . ./bin/activate
 
-sudo /usr/bin/btmgmt le on | sudo tee -a log/pair_tool.log > /dev/null
-sudo /usr/bin/btmgmt pairable on | sudo tee -a log/pair_tool.log > /dev/null
+echo "Preparing..."
 
-/usr/bin/bt-agent --capability=NoInputNoOutput 2>&1 | sudo tee -a log/pair_tool.log > /dev/null &
+# bluepy3 compiles on the fly on first import. Ensure it is compiled by the unprivileged user,
+# and not by root.
+python -c "import bluepy3.btle"
+
+sudo /usr/bin/btmgmt le on | sudo tee -a var/log/pair_tool.log > /dev/null
+sudo /usr/bin/btmgmt pairable on | sudo tee -a var/log/pair_tool.log > /dev/null
+
+/usr/bin/bt-agent --capability=NoInputNoOutput 2>&1 | sudo tee -a var/log/pair_tool.log > /dev/null &
 AGENT_PID=`jobs -p`
 
 trap "kill -HUP $AGENT_PID" 2

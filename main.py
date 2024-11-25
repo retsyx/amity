@@ -11,17 +11,17 @@ import tools
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--log', default='log/amity.log', help='log file path')
+    arg_parser.add_argument('--log', default='var/log/hub.log', help='log file path')
     args = arg_parser.parse_args()
     log_name = args.log
 else:
-    log_name = 'amity'
+    log_name = 'hub'
 
 log = tools.logger(log_name)
 
 import asyncio, pprint, signal, traceback
 
-from config import config
+from aconfig import config, ConfigWatcher
 import remote, remote_adapter
 import hdmi
 from hdmi import Key
@@ -203,15 +203,26 @@ class Hub(remote.RemoteListener):
         self.key_state.pop(key, None)
         await self.check_release_all_keys()
 
+def config_update():
+    log.info('Config was updated. Exiting.')
+    tools.die('Config update')
+
 async def _main():
+    watcher = ConfigWatcher(config, config_update)
+    watcher.start()
     global args
     loop = asyncio.get_running_loop()
 
     log.info('Loading config...')
     config.load()
     log.info('Parsed activities:')
-    log.info(pprint.pformat(config['activities']))
-    activities = [hdmi.Activity(ad) for ad in config['activities']]
+    activities = config['activities']
+    if not activities:
+        log.error('No activities configured. Waiting for config update.')
+        await asyncio.Event().wait()
+
+    log.info(pprint.pformat(activities))
+    activities = [hdmi.Activity(ad) for ad in activities]
     log.info('Runtime activities:')
     log.info(pprint.pformat(activities))
 
@@ -227,8 +238,8 @@ async def _main():
     back_dev = config['adapters.back']
 
     if front_dev is None or back_dev is None:
-        log.error(f'Adapter devices must be set. front: {front_dev} back: {back_dev}')
-        return
+        log.error(f'Adapter devices must be set. front: {front_dev} back: {back_dev}. Waiting for config update.')
+        await asyncio.Event().wait()
 
     while True:
         log.info(f'Initializing CEC on devices front: {front_dev} back: {back_dev}...')

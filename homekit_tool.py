@@ -8,40 +8,17 @@
 
 import tools
 
-log = tools.logger('log/homekit_tool')
+log = tools.logger('var/log/homekit_tool')
 
 import argparse, os, subprocess, time
 
-from config import config
+from aconfig import config
+import service
 
 config_homekit_enable_path = 'homekit.enable'
-homekit_state_path = 'homekit.state'
-homekit_code_path = 'homekit.code'
-
-class AmityControl(object):
-    def __init__(self):
-        self.bin = '/usr/bin/systemctl'
-        self.name = 'amity'
-
-    def is_active(self):
-        output = subprocess.run([self.bin, '--user', 'is-active', self.name], capture_output=True)
-        return output.stdout.decode('utf-8').strip() == 'active'
-
-    def stop(self):
-        log.info(f'Stopping {self.name}')
-        subprocess.run([self.bin, '--user', 'stop', self.name], capture_output=True)
-
-    def start(self):
-        log.info(f'Starting {self.name}')
-        subprocess.run([self.bin, '--user', 'start', self.name], capture_output=True)
-
-    def safe_do(self, op):
-        active = self.is_active()
-        if active:
-            self.stop()
-        op()
-        if active:
-            self.start()
+homekit_state_path = 'var/homekit/state'
+homekit_code_path = 'var/homekit/code'
+homekit_code_img_path = 'var/homekit/code.png'
 
 def enable(control):
     log.info('Enable')
@@ -110,6 +87,10 @@ def reset(control):
             os.unlink(homekit_code_path)
         except FileNotFoundError:
             pass
+        try:
+            os.unlink(homekit_code_img_path)
+        except FileNotFoundError:
+            pass
     control.safe_do(op)
     if not control.is_active():
         return
@@ -129,7 +110,7 @@ def main():
     arg_parser.add_argument('action', default='', choices=actions, help='action to perform')
     args = arg_parser.parse_args()
     config.load()
-    control = AmityControl()
+    control = service.Control('amity-hub')
     match args.action:
         case 'enable':
             enable(control)
