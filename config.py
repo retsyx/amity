@@ -63,8 +63,9 @@ class Config(object):
         path = os.path.dirname(self.filename)
         if path == '':
             path = '.'
+        basename = os.path.basename(self.filename)
         entries = []
-        m = re.compile(self.filename + r'-(\d{8}-\d{6})')
+        m = re.compile(basename + r'-(\d{8}-\d{6})')
         for entry in os.scandir(path):
             if m.match(entry.name):
                 entries.append(entry)
@@ -72,7 +73,7 @@ class Config(object):
         max_backups = self['config.max_backups']
         for entry in entries[max_backups:]:
             log.info(f'Deleting backup {entry.name}')
-            os.unlink(entry.name)
+            os.unlink(os.path.join(path, entry.name))
 
     def save_complete(self, filename):
         with open(filename, 'w') as file:
@@ -183,8 +184,21 @@ class Config(object):
 
     def __setitem__(self, path, value):
         assert type(path) is str
-        self.__apply(self.user_cfg, path, value)
-        self.__apply(self.cfg, path, value)
+        if not path:
+            self.cfg = value
+            self.user_cfg = value
+        else:
+            self.__apply(self.user_cfg, path, value)
+            self.__apply(self.cfg, path, value)
+
+    def replace_user_root(self, value):
+        """ Replace all user settings while maintaining defaults """
+        self.cfg = {}
+        for path, default_value in self.default_paths.items():
+            self.__apply(self.cfg, path, default_value)
+        self.user_cfg = value
+        self.__overlay(self.cfg, self.user_cfg)
+
 
 config = Config('config.yaml')
 
