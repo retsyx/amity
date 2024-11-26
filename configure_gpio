@@ -7,9 +7,9 @@ set -e
 MODE=$1
 
 if [ "$MODE" = "internal" ]; then
-    PULLUP="GPIO_PULL_UP|"
+    PULLUP="GPIO_PULL_UP"
 elif [ "$MODE" = "external" ]; then
-    PULLUP=""
+    PULLUP="GPIO_PULL_DISABLE"
 else
     echo "Specify 'internal' or 'external' pullup"
     exit
@@ -39,11 +39,11 @@ cat >> "$TEMP_PATH_DTS_1" << EOF
                 __overlay__ {
                         cec@23 {
                                 compatible = "cec-gpio";
-                                cec-gpios = <&gpio 23 (GPIO_ACTIVE_HIGH | $PULLUP GPIO_OPEN_DRAIN)>;
+                                cec-gpios = <&gpio 23 (GPIO_ACTIVE_HIGH | $PULLUP | GPIO_OPEN_DRAIN)>;
                         };
                         cec@24 {
                                 compatible = "cec-gpio";
-                                cec-gpios = <&gpio 24 (GPIO_ACTIVE_HIGH | $PULLUP GPIO_OPEN_DRAIN)>;
+                                cec-gpios = <&gpio 24 (GPIO_ACTIVE_HIGH | $PULLUP | GPIO_OPEN_DRAIN)>;
                         };
                 };
         };
