@@ -50,12 +50,6 @@ Reconfigure the GPIO pins to disable the builtin Raspberry Pi pullup resistors:
 ./configure_gpio external
 ```
 
-And reboot:
-
-```commandline
-sudo reboot now
-```
-
 ### Wired Up Amity Board
 
 ![Amity Board](IMG_5440.jpeg "Amity Board")
@@ -102,14 +96,13 @@ The spliced HDMI cable method does not conform to the HDMI-CEC specification. In
 
 ## Changing Between Cable and Board
 
-If changing between a spliced HDMI cable and Amity board, then Amity must be configured accordingly, and rebooted before connecting the HDMI cables.
+If changing between a spliced HDMI cable and Amity board, then Amity must be configured accordingly, before connecting the HDMI cables.
 
 If changing from using a cable to using a board, the commands are:
 
 ```commandline
 cd ~/amity
 ./configure_gpio external
-sudo reboot now
 ```
 
 If changing from using a board to using a cable, the commands are:
@@ -117,5 +110,4 @@ If changing from using a board to using a cable, the commands are:
 ```commandline
 cd ~/amity
 ./configure_gpio internal
-sudo reboot now
 ```

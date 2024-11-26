@@ -8,8 +8,10 @@ MODE=$1
 
 if [ "$MODE" = "internal" ]; then
     PULLUP="GPIO_PULL_UP"
+    PINCTRL_PULLUP="pu"
 elif [ "$MODE" = "external" ]; then
     PULLUP="GPIO_PULL_DISABLE"
+    PINCTRL_PULLUP="pn"
 else
     echo "Specify 'internal' or 'external' pullup"
     exit
@@ -67,5 +69,5 @@ sudo cp $TEMP_PATH_DTB $DTB_PATH
 
 sudo mount "$FIRMWARE_PATH" --options remount,ro
 
-echo
-echo "CEC GPIO configuration updated, reboot now for changes to take effect."
+/usr/bin/pinctrl set 23 ip $PINCTRL_PULLUP
+/usr/bin/pinctrl set 24 ip $PINCTRL_PULLUP

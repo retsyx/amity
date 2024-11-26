@@ -116,12 +116,6 @@ Reconfigure the GPIO pins to disable the builtin Raspberry Pi pullup resistors:
 ./configure_gpio external
 ```
 
-And reboot:
-
-```commandline
-sudo reboot now
-```
-
 ### Pairing a Siri Remote or a BLE Keyboard Remote
 
 The preferred method of control is a Siri Remote or a keyboard BLE streamer remote (easier pairing, and great battery life!). The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Ensure the remote is charged.
