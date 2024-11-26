@@ -12,8 +12,18 @@ if [ "$MODE" = "internal" ]; then
 elif [ "$MODE" = "external" ]; then
     PULLUP="GPIO_PULL_DISABLE"
     PINCTRL_PULLUP="pn"
+elif [ "$MODE" = "status" ]; then
+    STATUS=$(/usr/bin/pinctrl get 23 | awk '{print$ 3}')
+    if [ "$STATUS" = "--" ]; then
+        echo "unknown"
+    elif [ "$STATUS" = "pn" ]; then
+        echo "external"
+    else
+        echo "internal"
+    fi
+    exit
 else
-    echo "Specify 'internal' or 'external' pullup"
+    echo "Specify 'internal' or 'external' to configure pullup, or 'status' to get current pullup configuration"
     exit
 fi
 
