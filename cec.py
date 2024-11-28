@@ -632,6 +632,7 @@ class Adapter(object):
         if self.laddrs.log_addr[0] >= INVALID_ADDRESS:
             s = f'Logical address allocation failed. Is HDMI-CEC {self.devname} pin attached?'
             log.info(s)
+            raise AdapterInitException(s)
 
         return self.laddrs
 
