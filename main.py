@@ -230,13 +230,20 @@ async def _main():
         log.error(f'Adapter devices must be set. front: {front_dev} back: {back_dev}')
         return
 
-    log.info(f'Initializing CEC on devices front: {front_dev} back: {back_dev}...')
-    controller = await hdmi.Controller(
-        front_dev,
-        back_dev,
-        'amity',
-        loop,
-        activities)
+    while True:
+        log.info(f'Initializing CEC on devices front: {front_dev} back: {back_dev}...')
+        try:
+            controller = await hdmi.Controller(
+                front_dev,
+                back_dev,
+                'amity',
+                loop,
+                activities)
+            break
+        except hdmi.cec.AdapterInitException:
+            log.info('Will retry in 10 seconds')
+            await asyncio.sleep(10)
+
 
     hub = Hub(controller)
 
