@@ -1,3 +1,7 @@
+import tools
+
+log = tools.logger('var/log/echo_test.log')
+
 import subprocess, sys
 
 from remote import SiriRemote, RemoteListener
@@ -52,4 +56,3 @@ if __name__ == '__main__':
         SiriRemote(mac, Callback())
     else:
         print("error: no mac address")
-
