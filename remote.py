@@ -10,7 +10,7 @@ import tools
 
 log = tools.logger(__name__)
 
-import time
+import subprocess, time
 from bluepy3.btle import AssignedNumbers, BTLEConnectError, BTLEException, DefaultDelegate, Peripheral
 
 class PnpInfo(object):
@@ -255,6 +255,10 @@ class SiriRemote(DefaultDelegate):
                 self.__ready = False
                 self.__device = Peripheral()
                 self.__device.withDelegate(self)
+                # The system will often connect on its own to the remote, and stop us from
+                # connecting. So disconnect the remote from the system.
+                log.info(f'Calling bluetoothctl to disconnect MAC {self.mac}')
+                subprocess.run(['/usr/bin/bluetoothctl', 'disconnect', self.mac], capture_output=True)
                 self.__device.connect(self.mac)
                 self.__device.getServices()
 

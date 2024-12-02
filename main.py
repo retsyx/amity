@@ -19,7 +19,7 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, pprint, signal, subprocess, traceback
+import asyncio, pprint, signal, traceback
 
 from config import config
 import remote, remote_adapter
@@ -262,8 +262,6 @@ async def _main():
         hub.add_pipe(sr_pipe)
         ra = remote_adapter.Adapter(sr_pipe)
         wrapper = remote.RemoteListenerAsyncWrapper(loop, ra)
-        log.info(f'Calling bluetoothctl to disconnect MAC {mac}')
-        subprocess.run(['/usr/bin/bluetoothctl', 'disconnect', mac], capture_output=True)
         log.info(f'Connecting to remote with MAC {mac}')
         siri = asyncio.to_thread(lambda: remote.SiriRemote(mac, wrapper))
     else:
