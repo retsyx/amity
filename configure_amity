@@ -1,0 +1,51 @@
+#!/bin/bash
+
+NAME=amity
+
+ACTION=$1
+
+if [ "$ACTION" = "" ]; then
+    echo "Available commands are enable, disable, restart, status"
+fi
+
+if [ "$ACTION" = "enable" ]; then
+
+    systemctl --user start "$NAME-hub"
+    systemctl --user enable "$NAME-hub"
+
+    systemctl --user start "$NAME-management"
+    systemctl --user enable "$NAME-management"
+
+    systemctl --user start "$NAME-redirect"
+    systemctl --user enable "$NAME-redirect"
+
+fi
+
+if [ "$ACTION" = "disable" ]; then
+
+    systemctl --user stop "$NAME-hub"
+    systemctl --user disable "$NAME-hub"
+
+    systemctl --user stop "$NAME-management"
+    systemctl --user disable "$NAME-management"
+
+    systemctl --user stop "$NAME-redirect"
+    systemctl --user disable "$NAME-redirect"
+
+fi
+
+if [ "$ACTION" = "restart" ]; then
+
+    systemctl --user restart "$NAME-hub"
+    systemctl --user restart "$NAME-management"
+    systemctl --user restart "$NAME-redirect"
+
+fi
+
+if [ "$ACTION" = "status" ]; then
+
+    systemctl --user status "$NAME-hub"
+    systemctl --user status "$NAME-management"
+    systemctl --user status "$NAME-redirect"
+
+fi

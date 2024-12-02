@@ -5,6 +5,7 @@ share/
 lib/
 lib64
 var/
+cec.log
 __pycache__/
 sdl2/
 auth_db.yaml

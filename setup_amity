@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 set -xe
 
@@ -7,10 +7,6 @@ ROOT_DIR=~
 APP_DIR=$ROOT_DIR/$NAME
 
 FIRMWARE_PATH=/boot/firmware
-
-ACTION=$1
-
-# This script is idempotent.
 
 strstr() { case $2 in *$1* ) return 0;; *) return 1;; esac ;}
 
@@ -30,239 +26,35 @@ else
     exit 1
 fi
 
-# Perform overall setup if not asked to perform a specific action
-
-if [ -z ${ACTION} ]; then
-
-# Install dependencies
-sudo apt update
-sudo apt install -y build-essential git libglib2.0-dev libbluetooth-dev python3-dev unzip vim
-sudo apt install -y libavahi-compat-libdnssd-dev
-sudo apt install -y bluez bluez-tools
-
-# Prevent keyboard power keys from rebooting or shutting down the machine
-if [ ! -f /etc/systemd/logind.conf.d/disable-power-key.conf ]; then
-    sudo mkdir -p /etc/systemd/logind.conf.d/
-    TEMP_CONF_PATH=`mktemp`
-    chmod 644 $TEMP_CONF_PATH
-cat > "$TEMP_CONF_PATH" << EOF
-[Login]
-HandlePowerKey=ignore
-EOF
-    sudo cp $TEMP_CONF_PATH /etc/systemd/logind.conf.d/disable-power-key.conf
-    sudo systemctl restart systemd-logind
-fi
-
-# Add overlay to config.txt, if necessary
-CONFIG_TXT_PATH="$FIRMWARE_PATH/config.txt"
-if ! grep -q "cec-gpio" "$CONFIG_TXT_PATH"; then
-    TEMP_CONFIG_TXT_PATH=`mktemp`
-    cp "$CONFIG_TXT_PATH" "$TEMP_CONFIG_TXT_PATH"
-    sudo cat >> "$TEMP_CONFIG_TXT_PATH" << EOF
-
-dtoverlay=cec-gpio
-
-EOF
-        sudo fsck -y "$FIRMWARE_PATH" || true
-        sudo mount "$FIRMWARE_PATH" --options remount,rw
-        sudo cp "$CONFIG_TXT_PATH" "$CONFIG_TXT_PATH".$NAME.backup
-        sudo cp "$TEMP_CONFIG_TXT_PATH" "$CONFIG_TXT_PATH"
-        sudo mount "$FIRMWARE_PATH" --options remount,ro
-fi
-
-# App setup
+# Kernel setup
+KERNEL_HAS_CEC_GPIO=`gunzip -c "$FIRMWARE_PATH/$KERNEL_IMG" | grep -c cec-gpio || true`
 
 cd "$ROOT_DIR"
 
 if [ ! -d "$APP_DIR" ]; then
-    git clone https://github.com/retsyx/amity $NAME
+    sudo apt-get -y update
+    sudo apt-get -y install git
+    git clone https://github.com/retsyx/amity.git
     # Setup a venv
     python -m venv "$APP_DIR"
 else
-    cd $APP_DIR
+    pushd $APP_DIR
     git fetch && git rebase
-    cd ..
+    popd
 fi
-
-VAR_DIR=$APP_DIR/var
-LOG_DIR=$VAR_DIR/log
-CONFIG_DIR=$VAR_DIR/config
-GUI_DIR=$VAR_DIR/gui
-NICEGUI_DIR=$GUI_DIR/nicegui
-HOMEKIT_DIR=$VAR_DIR/homekit
-
-mkdir -p "$LOG_DIR"
-mkdir -p "$CONFIG_DIR"
-touch "$CONFIG_DIR/config.yaml"
-mkdir -p "$GUI_DIR"
-# Create a self signed certificate that is valid for 100 years
-if [ ! -f "$GUI_DIR/key.pem" ]; then
-    /usr/bin/openssl req -x509 -newkey rsa:4096 -keyout "$GUI_DIR/key.pem" -out "$GUI_DIR/cert.pem" -sha256 -days 36500 -nodes -subj "/CN=Amity"
-fi
-mkdir -p "$NICEGUI_DIR"
-
-mkdir -p "$HOMEKIT_DIR"
-
-cd "$APP_DIR"
-
-# Create, and install cec-gpio overlay
-DTB_NAME=cec-gpio.dtbo
-DTB_DIR="$FIRMWARE_PATH/overlays"
-DTB_PATH=$DTB_DIR/$DTB_NAME
-
-if [ ! -f "$DTB_PATH" ]; then
-    ./configure_gpio internal
-fi
-
-# Activate venv
-. ./bin/activate
-
-# Allow python to bind to privileged network ports
-sudo setcap 'cap_net_bind_service=+ep' $(readlink -f $(which python))
-
-pip install --upgrade -r requirements.txt
-
-# Clone, build, and install our custom version of bluepy3
-cd "$ROOT_DIR"
-if [ ! -d "$ROOT_DIR/bluepy3" ]; then
-    git clone https://github.com/retsyx/bluepy3
-else
-    cd bluepy3
-    git stash # cleanup bluepy3 build droppings
-    git fetch && git rebase
-    cd ..
-fi
-
-cd bluepy3
-pip install .
-
-cd "$APP_DIR"
-
-if ! grep -q "# Amity" "$ROOT_DIR/.bashrc"; then
-
-    cat >> "$ROOT_DIR/.bashrc" << EOF
-
-# Amity
-echo "Amity..."
-cd "$APP_DIR" > /dev/null
-. bin/activate
-# Warm up pycache
-python -c "import bluepy3.btle, cec, config, gestures, hdmi, hdmi_tool, homekit, homekit_tool, keyboard, memory, messaging, pair_tool, remote, remote_adapter, tools"
-rm cec.log || true
-export PYTHONPATH=$APP_DIR
-
-EOF
-
-. $ROOT_DIR/.bashrc
-
-fi
-
-
-# Startup setup
-
-mkdir -p ~/.config/systemd/user
-
-loginctl enable-linger
-
-function install_service() {
-    local name="$1"
-    local binary="$2"
-    local description="$3"
-
-    local RUN_PATH="$APP_DIR/bin/run-$name.sh"
-
-cat > "$RUN_PATH" << EOF
-#!/usr/bin/sh
-
-cd "$APP_DIR"
-
-. ./bin/activate
-
-export PYTHONPATH="$APP_DIR"
-
-$binary
-EOF
-
-chmod +x "$RUN_PATH"
-
-cat > ~/.config/systemd/user/$name.service << EOF
-[Unit]
-Description=$description
-
-[Service]
-ExecStart=$RUN_PATH
-Restart=always
-WorkingDirectory=$APP_DIR
-
-[Install]
-WantedBy=default.target
-EOF
-
-} # end install_service
-
-install_service "$NAME-hub" "$APP_DIR/main.py" "$NAME HDMI-CEC controller"
-install_service "$NAME-management" "$APP_DIR/management/main.py" "$NAME management"
-install_service "$NAME-redirect" "$APP_DIR/management/redirect.py" "$NAME HTTP to HTTPS redirect"
-
-# Kernel setup
-KERNEL_HAS_CEC_GPIO=`gunzip -c "$FIRMWARE_PATH/$KERNEL_IMG" | grep -c cec-gpio || true`
 
 # If necessary, download, and install cec-gpio enabled kernel, and reboot
 if [ "$KERNEL_HAS_CEC_GPIO" -eq "0" ]; then
-    TEMP_KERNEL_ARCHIVE_PATH=`mktemp --suffix .zip`
+    KERNEL_ARCHIVE_DIR="$ROOT_DIR/linux-build/out"
+    mkdir -p $KERNEL_ARCHIVE_DIR
+    curl -L --remote-name --output-dir "$KERNEL_ARCHIVE_DIR" "$KERNEL_ARCHIVE_URL"
+fi
 
-    curl -L -o "$TEMP_KERNEL_ARCHIVE_PATH" "$KERNEL_ARCHIVE_URL"
+cd $APP_DIR
 
-    sudo fsck -y "$FIRMWARE_PATH" || true
-    sudo mount "$FIRMWARE_PATH" --options remount,rw
+./build/setup-amity-core.sh
 
-    sudo unzip -o "$TEMP_KERNEL_ARCHIVE_PATH" -d /
-    if [ $? -ne 0 ]; then
-        echo "unzip ${TEMP_KERNEL_ARCHIVE_PATH} failed"
-        exit 1
-    fi
-
-    BUILD="$(unzip -l ${TEMP_KERNEL_ARCHIVE_PATH} boot/vmlinuz-* | sed -n 's|^.*boot/vmlinuz-\(.*\)$|\1|p')"
-    sudo update-initramfs -c -v -k "${BUILD}"
-    echo "Rebooting..."
+if [ "$KERNEL_HAS_CEC_GPIO" -eq "0" ]; then
     sleep 5
     sudo shutdown -r now
 fi
-
-fi # End overall setup
-
-cd "$APP_DIR"
-
-if [ "$ACTION" = "enable" ]; then
-
-    systemctl --user start "$NAME-hub"
-    systemctl --user enable "$NAME-hub"
-
-    systemctl --user start "$NAME-management"
-    systemctl --user enable "$NAME-management"
-
-    systemctl --user start "$NAME-redirect"
-    systemctl --user enable "$NAME-redirect"
-
-fi # "$ACTION" = "enable"
-
-if [ "$ACTION" = "disable" ]; then
-
-    systemctl --user stop "$NAME-hub"
-    systemctl --user disable "$NAME-hub"
-
-    systemctl --user stop "$NAME-management"
-    systemctl --user disable "$NAME-management"
-
-    systemctl --user stop "$NAME-redirect"
-    systemctl --user disable "$NAME-redirect"
-
-fi # "$ACTION" = "disable"
-
-if [ "$ACTION" = "restart" ]; then
-
-    systemctl --user restart "$NAME-hub"
-    systemctl --user restart "$NAME-management"
-    systemctl --user restart "$NAME-redirect"
-
-fi # "$ACTION" = "restart"

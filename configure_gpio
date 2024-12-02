@@ -79,5 +79,5 @@ sudo cp $TEMP_PATH_DTB $DTB_PATH
 
 sudo mount "$FIRMWARE_PATH" --options remount,ro
 
-/usr/bin/pinctrl set 23 ip $PINCTRL_PULLUP
-/usr/bin/pinctrl set 24 ip $PINCTRL_PULLUP
+/usr/bin/pinctrl set 23 ip $PINCTRL_PULLUP || true
+/usr/bin/pinctrl set 24 ip $PINCTRL_PULLUP || true
