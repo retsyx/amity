@@ -67,7 +67,7 @@ Equipment that is known to be compatible with Amity:
 ## Prerequisites
 
 * A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer, that can run 64-bit Linux; with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
-* A MicroSD card.
+* A MicroSD card (4GB or larger).
 * A remote control
   * An unpaired Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also be used.
   * An Amazon Fire TV remote.
@@ -86,51 +86,35 @@ Amity splices into the HDMI-CEC bus between the TV, and the receiver using Raspb
 
 ### Initial Installation
 
-Amity setup, and configuration is done entirely in the command terminal, and requires some familiarity with SSH, running terminal commands, and light editing of a configuration file.
+It is assumed that the Raspberry Pi will be a dedicated device for home theater control. It may be possible to run other services on the same Raspberry Pi but it is not supported, and is strongly discouraged.
 
-It is assumed that the Raspberry Pi will be a dedicated device for home theater control. It may be possible to run Amity with other services on the same Raspberry Pi but it is not supported, and is strongly discouraged.
-
-1. Image Raspberry Pi a 64-bit image **without** Desktop (the 64-bit Lite image) on a MicroSD card. The best tool for this is [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Desktop **MUST NOT** be installed.
-2. Insert the MicroSD into the Rpi, power it on, and login with SSH (unless configured differently, the default user created by Raspberry Pi Imager is `pi`. All examples will assume the user is `pi`)
-3. Copy the line below, paste it into the terminal, and press enter. This will perform initial configuration of the system, and install Amity. It may take a while. Once complete, there will be a new sub directory named `amity`, i.e. `/home/pi/amity`
-
-    ```commandline
-    /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/retsyx/amity/main/setup_amity)"
-    ```
-
-Amity requires a Linux kernel compiled with `cec-gpio` support enabled. If the running kernel doesn't support `cec-gpio` (it likely doesn't), then Amity will download, and install an appropriate pre-compiled kernel, and then reboot. If the running kernel already supports `cec-gpio`, Amity will not replace it.
+1. Download the latest [Amity image](https://github.com/retsyx/amity/releases/latest/download/amity.img.gz).
+2. Using [Raspberry Pi Imager](https://www.raspberrypi.com/software/), write the image to a MicroSD card.
+    1. For 'Operating System', select 'Use custom', and select the Amity image.
+    2. When prompted to 'Use OS customization', select 'Yes'.
+    3. Set the hostname to something memorable, for example `amity`.
+    4. Select 'Set username and password' and set the password. The username **must** be `pi`.
+      * For advanced users:
+        * It is possible to not select 'Set username and password', and instead to enable SSH in the 'Services' tab and to specify a public SSH key.
+        * It is also possible to set neither a password, nor enable SSH. However, at this time, this completely precludes upgrading Amity to newer versions. An upgrade will require backing up the config, reinstalling Amity from scratch, and restoring the config.
+    5. If using WiFi, set your WiFi network information in the 'Configure Wireless LAN' section
+3. Insert the imaged MicroSD into the Raspberry Pi, and wait for it to to complete its initial boot sequence. This may take a few minutes, and a few reboots.
+4. In your web browser open the Amity administration page. For example, if the hostname in Raspberry Pi Imager was configured as `amity`, then browse to `https://amity.local` (on Mac) or `https://amity` (on Windows).
+ * The web browser will prompt that the site may be unsafe. This is because Amity creates a self signed security certificate for encryption. It is safe. Click on the details, and accept that the site is safe.
+5. Create the Amity administration user by entering a username and password. These can be anything.
+6. Login with the newly created user.
 
 ### Amity Board Configuration
 
 If using a spliced HDMI cable, skip this step.
 
-If using Amity Board, then in the terminal, ensure you are in the Amity directory:
-
-```commandline
-cd ~/amity
-```
-
-Reconfigure the GPIO pins to disable the builtin Raspberry Pi pullup resistors:
-
-```commandline
-./configure_gpio external
-```
+If using Amity Board, then select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
 
 ### Pairing a Siri Remote or a BLE Keyboard Remote
 
 The preferred method of control is a Siri Remote or a keyboard BLE streamer remote (easier pairing, and great battery life!). The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Ensure the remote is charged.
 
-In the terminal, ensure you are in the Amity directory:
-
-```commandline
-cd ~/amity
-```
-
-Then, to pair the remote, enter:
-
-```commandline
-./pair_remote
-```
+Select the 'Remotes' tab. The 'Remotes' panel shows if a remote or keyboard is paired, and allows pairing. Press the 'Pair' button. Wait for the initial prompt to start the pairing process on the remote.
 
 Hold the remote near the Raspberry Pi.
 
@@ -140,7 +124,7 @@ On an Amazon Fire remote, press and hold the home button until an orange LED fla
 
 Follow the prompts.
 
-If successful, then the remote has been paired, and is ready for use. In addition, Amity's `config.yaml` file was updated. More about `config.yaml` in the [HDMI Configuration](#hdmi-configuration) section.
+If successful, the remote has been paired, and is ready for use.
 
 ### Using a Keyboard for Control
 
@@ -152,99 +136,38 @@ This document uses the Siri remote as an example, but remote operation is simila
 
 ### HDMI Configuration
 
-Amity uses a concept of activities to organize the different uses of a home theater system, similar to Harmony remotes. Every activity has a source device (i.e. Apple TV, or PlayStation), an audio output device (i.e. a receiver, or TV for volume commands), an HDMI input switching device (i.e. a receiver), and a display (typically a TV). Amity supports up to 5 activities (because that is the number of buttons available on Siri remotes).
+Amity uses a concept of activities to organize the different uses of a home theater system, similar to Harmony remotes. Every activity has a source device (i.e. Apple TV, or PlayStation), an audio output device (i.e. a receiver, or TV for volume commands), and a display (typically a TV). Amity supports up to 5 activities (because that is the number of buttons available on Siri remotes).
 
 Configuring activities is fairly straightforward thanks to HDMI-CEC.
 
-#### Quick Sanity Scan
+Ensure that all home theater devices have HDMI-CEC enabled, and are discoverable. Select the 'Activities' tab, and press the 'Scan HDMI' button to list all the devices available on HDMI-CEC, and to create a recommended list of activities.
 
-Ensure that all home theater devices have HDMI-CEC enabled, and are discoverable. To list all the devices available on HDMI-CEC, in the Amity directory, run:
-
-```commandline
-./configure_hdmi scan
-```
+Press 'Save' to save the activities.
 
 The names of the devices are their HDMI On Screen Display (OSD) names, and are used to reference the devices in Amity configuration. Ensure that no two devices share the same name. Duplicate names are not supported, and will lead to confusion, failure, and disappointment.
 
 Devices that don't appear in the list don't have HDMI-CEC enabled or have a very broken HDMI-CEC implementation (i.e. Nintendo Switch) that may only partially work in general.
 
-If you don't see any devices, ensure the HDMI-CEC splice cable is correctly attached.
+If no devices are listed, ensure the HDMI-CEC splice is correctly attached, and that the HDMI cables are connected.
 
-#### Automatic Activity Recommendation
+#### Editing the List of Activities
 
-Now that all the devices are accounted for, Amity can generate a set of recommended activities:
+The order of the activities matters. Each activity is assigned an activation button on the remote based on its position in the list of activities. The assigned activity button on the remote is pictured next to the activity name. Read the [usage](#usage) topic to learn more. To re-order activities, press the up or down arrow buttons. To remove an activity, press the 'trash' button for that activity. To add a new activity, press the '+' button at the top of the activity list.
 
-```commandline
-./configure_hdmi recommend
-```
+#### Editing an Activity
 
-The activity configuration was written into `config.yaml` in the Amity directory (i.e. `~/amity/config.yaml`). Open `config.yaml` with your favorite text editor.
+To edit an activity, press the 'Edit' button of the activity.
 
-#### Editing config.yaml
+The fields of an activity are:
 
-Here's an example `config.yaml` with two activities:
+* `Name` - this can be any descriptive name you choose. The activity name is used with [HomeKit](#homekit).
+* `Display` - the HDMI OSD name of the display device. Typically a TV.
+* `Source` - the HDMI OSD name of the AV source device.
+* `Audio` - the HDMI OSD name of the audio output device, typically a receiver.
+* `Switch Device` (optional) - See [Strange Devices](#strange-devices)
+* `Input` (if 'Switch Device' is specified)
 
-```yaml
-adapters:
-    front: /dev/cec1
-    back: /dev/cec0
-remote:
-    mac: 12:34:56:78:9A:BC
-activities:
-    - name: Watch Living Room
-      display: TV
-      source: Living Room
-      audio: AVR-X3400H
-    - name: Play PlayStation 5
-      display: TV
-      source: PlayStation 5
-      audio: AVR-X3400H
-```
-
-At the top is an `adapters` section with the Linux kernel cec-gpio devices Amity discovered. The `front` adapter is connected to the TV, the `back` adapter is connected to the receiver.
-
-After is a `remote` section with the mac address of the paired remote. Below is the `activities` section with the activities that Amity guessed. The order of the activities matters. Each activity is assigned an activation button on the remote based on its position in the list of activities. More on this in the [usage](#usage) topic.
-
-Let's look at one activity in detail:
-
-
-```yaml
-- name: Watch Living Room
-  display: TV
-  source: Living Room
-  audio: AVR-X3400H
-```
-
-The fields are:
-
-* `name` - this can be any descriptive name you choose.
-* `display` - the HDMI OSD name of the display device. Typically a TV.
-* `source` - the HDMI OSD name of the AV source device.
-* `audio` - the HDMI OSD name of the audio output device, typically a receiver.
-
-Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output. 'Living Room' is the OSD name of the Apple TV in the living room. The name of the activity can be changed to 'Watch TV' for convenience. The activity name is used with [HomeKit](#homekit).
-
-And that's it... Amity is now fully configured with a paired remote, and two activities for watching Apple TV, and playing with a PlayStation 5. Let's start it!
-
-## Starting Amity
-
-To start Amity, type:
-
-```commandline
-./setup_amity enable
-```
-
-After this command Amity will run.
-
-Note that after startup, it may take a few button presses on the remote to establish the connection.
-
-## Stopping Amity
-
-To change configuration, or pair a different remote, Amity must be stopped. To stop Amity, and to prevent it from starting at every system start, type:
-
-```commandline
-./setup_amity disable
-```
+Remember to 'Save' the activities when done.
 
 ## Usage
 
@@ -252,7 +175,7 @@ Amity has two basic modes, standby, when the home theater is in standby, and act
 
 ### Standby
 
-In standby, 1 of 5 activities can be started. On a Gen 2 remote, the 5 activities are assigned to the select, and directional buttons - select, up, right, down, left. Note the order listed here matches the order of activities as specified in `config.yaml`. The select button starts the first activity, up the second, right the third, and so on. On a Gen 1 remote, there are no directional keys. Instead, press the touchpad (making a click) on the part of the touchpad that corresponds to the direction. Press the center for the first activity, towards the top of the touchpad for the second activity, towards the right for the third activity, and so on.
+In standby, 1 of 5 activities can be started. On a Gen 2 remote, the 5 activities are assigned to the select, and directional buttons - select, up, right, down, left. Note the order listed here matches the order of activities as specified in Activities configuration tab. The select button starts the first activity, up the second, right the third, and so on. On a Gen 1 remote, there are no directional keys. Instead, press the touchpad (making a click) on the part of the touchpad that corresponds to the direction. Press the center for the first activity, towards the top of the touchpad for the second activity, towards the right for the third activity, and so on.
 
 On a Gen 2 remote, pressing the power button will send a standby signal to all devices. This is useful, if a device is on when it shouldn't be. Gen 1 remotes don't have a power button. Instead, use a triple tap (not press) on the touchpad to signal a power button press.
 
@@ -274,30 +197,23 @@ HDMI-CEC devices can behave strangely. Here are some known workarounds.
 
 The Nintendo switch has a minimal HDMI-CEC implementation that appears to be nearly always dormant and ignores practically every command except standby. The Switch only appears when it is powered on directly by the user, or placed in the cradle, and then it automatically requests to be displayed.
 
-As a result, the Switch will often not show up in bus scans, or be auto-configured. The solution is to edit `config.yaml` manually to add an activity for the Switch. When active, the Switch defaults to calling itself `NintendoSwitch`, so an example activity configuration for a Switch would be:
+As a result, the Switch will often not show up in bus scans, or be auto-configured. The solution is to create a new activity for the Nintendo Switch:
 
-```yaml
-- name: Play Switch
-  display: TV
-  source: NintendoSwitch
-  audio: AVR-X3400H
-```
+1. Press the '+' button to create a new activity.
+2. Write in the activity name, for example `Play Switch`
+3. Select the appropriate Display, and Audio devices.
+4. Enter `NintendoSwitch` in the `Source` device field.
+5. Press 'OK', and then press 'Save'.
 
-Then to play, you would turn on the Switch, and select the `Play Switch` activity on the Siri remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
+Then to play, turn on the Switch, and select the `Play Switch` activity on the Siri remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
 
-Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, if the receiver supports selecting inputs over HDMI-CEC, Amity can be configured to select the input on the receiver. The configuration:
+Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, if the receiver supports selecting inputs over HDMI-CEC, Amity can be configured to select the input on the receiver.
 
-```yaml
-- name: Play Switch
-  display: TV
-  source: NintendoSwitch
-  audio: AVR-X3400H
-  switch:
-    device: AVR-X3400H
-    input: 6
-```
+1. Pressing the 'Edit' button of the `Play Switch` activity.
+2. Select the receiver as the `Switch Device`.
+3. Specify the `Input` number.
 
-This tells Amity that the input switching device is the AVR, and that the HDMI input to use is input 6. When selecting the `Play Switch` activity, Amity will tell the AVR to switch to input 6. This depends on the AVR supporting the feature, and on finding the correct value for the input, 6 in this case. Finding the input number is through trial, and error, at the moment. On a Denon AVR-X3400H the input values are:
+This functionality depends on the AVR supporting the feature, and on finding the correct value for the input. Finding the input number is through trial, and error, at the moment. On a Denon AVR-X3400H the numeric input values correspond to the named inputs as follows:
 
 1. CBL/SAT
 2. DVD
@@ -316,63 +232,15 @@ Amity can be integrated with HomeKit as a TV accessory. This allows controlling 
 
 It is highly recommended to complete all HDMI configuration, and setup before adding Amity into HomeKit.
 
-### Enabling HomeKit
+Select the 'HomeKit' tab, and press 'Enable'. Follow the instructions to pair Amity with HomeKit.
 
-Enabling HomeKit (if not already enabled) will restart Amity.
+## Backup & Restore
 
-In the terminal, ensure you are in the Amity directory:
+For backup, Amity configuration can be downloaded in the 'Configuration' section of the  'Advanced' tab. To restore a backup, use the upload feature.
 
-```commandline
-cd ~/amity
-```
+## CLI Management
 
-Then, to enable HomeKit support, enter:
-
-```commandline
-./configure_homekit enable
-```
-
-If Amity is not already paired to your Home, then the QR code and setup code required to add Amity into your Home will be displayed. In the iOS Home app, tap to add an accessory and either scan the QR code, or enter the setup code manually.
-
-If, for some reason, you need to re-display the most recent pairing code, use the command:
-
-```commandline
-./configure_homekit code
-```
-
-### Disabling HomeKit
-
-Disabling HomeKit (if not already disabled) will restart Amity.
-
-In the terminal, ensure you are in the Amity directory:
-
-```commandline
-cd ~/amity
-```
-
-Then, to disable HomeKit support, enter:
-
-```commandline
-./configure_homekit disable
-```
-
-### Resetting HomeKit Configuration
-
-This will reset Amity's HomeKit state, and restart Amity, if necessary. To re-add Amity, you will need to remove Amity in the iOS Home app, and add Amity as a new accessory.
-
-In the terminal, ensure you are in the Amity directory:
-
-```commandline
-cd ~/amity
-```
-
-Then, to reset HomeKit configuration, enter:
-
-```commandline
-./configure_homekit reset
-```
-
-If HomeKit support is still enabled, then the new QR code and setup code required to add Amity into your home will be displayed.
+Amity can also be [managed through the terminal](CLI.md).
 
 ## License
 
