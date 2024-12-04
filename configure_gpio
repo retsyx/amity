@@ -14,12 +14,12 @@ elif [ "$MODE" = "external" ]; then
     PINCTRL_PULLUP="pn"
 elif [ "$MODE" = "status" ]; then
     STATUS=$(/usr/bin/pinctrl get 23 | awk '{print$ 3}')
-    if [ "$STATUS" = "--" ]; then
-        echo "unknown"
-    elif [ "$STATUS" = "pn" ]; then
+    if [ "$STATUS" = "pn" ]; then
         echo "external"
-    else
+    elif [ "$STATUS" = "pu" ]; then
         echo "internal"
+    else
+        cat var/config/gpio 2> /dev/null || echo "unknown"
     fi
     exit
 else
@@ -81,3 +81,5 @@ sudo mount "$FIRMWARE_PATH" --options remount,ro
 
 /usr/bin/pinctrl set 23 ip $PINCTRL_PULLUP || true
 /usr/bin/pinctrl set 24 ip $PINCTRL_PULLUP || true
+
+echo $MODE > var/config/gpio
