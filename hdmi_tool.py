@@ -20,7 +20,10 @@ def all_adapter_devices():
 async def scan():
     devices = []
     for devname in all_adapter_devices():
-        adapter = cec.Adapter(devname=devname)
+        try:
+            adapter = cec.Adapter(devname=devname)
+        except cec.AdapterInitException:
+            continue
         if adapter.caps.driver != b'cec-gpio':
             continue
         log.info(f'Scanning for devices on cec-gpio device {devname}')
