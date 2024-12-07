@@ -134,7 +134,7 @@ IR remotes are *not* supported.
 
 This document uses the Siri remote as an example, but remote operation is similar in all cases. In particular, Amity uses the direction buttons for activity selection. Amazon Fire activity buttons are undocumented, and are not supported.
 
-### HDMI Configuration
+### Activity Configuration
 
 Amity uses a concept of activities to organize the different uses of a home theater system, similar to Harmony remotes. Every activity has a source device (i.e. Apple TV, or PlayStation), an audio output device (i.e. a receiver, or TV for volume commands), and a display (typically a TV). Amity supports up to 5 activities (because that is the number of buttons available on Siri remotes).
 
@@ -165,7 +165,7 @@ The fields of an activity are:
 * `Source` - the HDMI OSD name of the AV source device.
 * `Audio` - the HDMI OSD name of the audio output device, typically a receiver.
 * `Switch Device` (optional) - See [Strange Devices](#strange-devices)
-* `Input` (if 'Switch Device' is specified)
+* `Input` (if `Switch Device` is specified)
 
 Remember to 'Save' the activities when done.
 
@@ -209,7 +209,7 @@ Then to play, turn on the Switch, and select the `Play Switch` activity on the S
 
 Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, if the receiver supports selecting inputs over HDMI-CEC, Amity can be configured to select the input on the receiver.
 
-1. Pressing the 'Edit' button of the `Play Switch` activity.
+1. Press the 'Edit' button of the `Play Switch` activity.
 2. Select the receiver as the `Switch Device`.
 3. Specify the `Input` number.
 
@@ -230,7 +230,7 @@ This functionality depends on the AVR supporting the feature, and on finding the
 
 Amity can be integrated with HomeKit as a TV accessory. This allows controlling Amity with Siri, and integrating Amity into HomeKit automations. In addition, if using a Siri Remote, remote battery level, and low battery warnings are reported to HomeKit.
 
-It is highly recommended to complete all HDMI configuration, and setup before adding Amity into HomeKit.
+It is highly recommended to complete all activity configuration, and setup before adding Amity into HomeKit.
 
 Select the 'HomeKit' tab, and press 'Enable'. Follow the instructions to pair Amity with HomeKit.
 

@@ -38,17 +38,7 @@ Amity board requires 4 wires to the Raspberry Pi - GND, 3.3v, and two CEC GPIO p
 
 After [initial installation](../README.md#initial-installation) of Amity, and before plugging in the HDMI connections, Amity must be configured to use the board.
 
-In the terminal, ensure you are in the Amity directory:
-
-```commandline
-cd ~/amity
-```
-
-Reconfigure the GPIO pins to disable the builtin Raspberry Pi pullup resistors:
-
-```commandline
-./configure_gpio external
-```
+Select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
 
 ### Wired Up Amity Board
 
@@ -96,18 +86,4 @@ The spliced HDMI cable method does not conform to the HDMI-CEC specification. In
 
 ## Changing Between Cable and Board
 
-If changing between a spliced HDMI cable and Amity board, then Amity must be configured accordingly, before connecting the HDMI cables.
-
-If changing from using a cable to using a board, the commands are:
-
-```commandline
-cd ~/amity
-./configure_gpio external
-```
-
-If changing from using a board to using a cable, the commands are:
-
-```commandline
-cd ~/amity
-./configure_gpio internal
-```
+If changing between a spliced HDMI cable and Amity board, then Amity must be configured accordingly in the 'HDMI Splice' section of the 'Advanced' tab, before connecting the HDMI cables.
