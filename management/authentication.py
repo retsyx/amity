@@ -29,10 +29,10 @@ credential_path = 'credentials'
 auth_db.default(credential_path, {})
 auth_db.load()
 
-def hash_password(password, maxtime=0.1, salt_bytes=16):
+def hash_password(password, maxtime=1.0, salt_bytes=16):
     return scrypt.encrypt(os.urandom(salt_bytes), password, maxtime=maxtime)
 
-def verify_password(hash, password, maxtime=0.1):
+def verify_password(hash, password, maxtime=1.0):
     try:
         scrypt.decrypt(hash, password, maxtime, encoding=None)
         return True
