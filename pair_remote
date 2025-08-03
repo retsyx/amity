@@ -11,11 +11,11 @@ python -c "import bluepy3.btle"
 sudo /usr/bin/btmgmt le on | sudo tee -a var/log/pair_tool.log > /dev/null
 sudo /usr/bin/btmgmt pairable on | sudo tee -a var/log/pair_tool.log > /dev/null
 
-/usr/bin/bt-agent --capability=NoInputNoOutput 2>&1 | sudo tee -a var/log/pair_tool.log > /dev/null &
-AGENT_PID=`jobs -p`
+/usr/bin/yes yes | /usr/bin/bt-agent --capability=NoInputNoOutput 2>&1 | sudo tee -a var/log/pair_tool.log > /dev/null &
+AGENT_PIDS=`jobs -l | awk 'match($0, /[[:space:]][0-9]+[[:space:]]/) { print substr($0, RSTART+1, RLENGTH-1) }'`
 
-trap "kill -HUP $AGENT_PID" 2
+trap "kill -HUP $AGENT_PIDS" 2
 
 sudo `which python` ./pair_tool.py $1 $2 $3
 
-kill -HUP $AGENT_PID 2>&1 > /dev/null
+kill -HUP $AGENT_PIDS 2>&1 > /dev/null
