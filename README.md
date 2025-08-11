@@ -1,5 +1,5 @@
 # Amity
-Home theater control over HDMI-CEC
+HDMI-CEC that works
 
 ## Introduction
 
