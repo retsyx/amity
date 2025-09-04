@@ -80,7 +80,9 @@ Equipment that is known to be compatible with Amity:
 
 ### HDMI Splice Hardware
 
-Amity splices into the HDMI-CEC bus between the TV, and the receiver using Raspberry Pi GPIO. There are two methods to splice into the HDMI-CEC bus. One method is to strip an existing HDMI cable. The second method is to use [Amity Board](hw/README.md#amity-board), that passes through the HDMI A/V signals without degrading them. Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and do not work. Amity installs, by default, for use with a spliced HDMI cable.
+Amity splices into the HDMI-CEC bus between the TV, and the receiver using Raspberry Pi GPIO. There are two methods to splice into the HDMI-CEC bus. The preferred method is to use [Amity Board](hw/README.md#amity-board). The second method is to strip an existing HDMI cable. Amity installs, by default, for use with a spliced HDMI cable.
+
+Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and do not work in an actual home theater.
 
 [Acquire a board or prepare a cable before proceeding](hw/README.md).
 
