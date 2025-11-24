@@ -25,7 +25,7 @@ instpkgs()
 sudo apt-get -y update
 
 instpkgs bluez bluez-tools build-essential git libglib2.0-dev libbluetooth-dev python3-dev unzip vim
-instpkgs libavahi-compat-libdnssd-dev
+instpkgs libavahi-compat-libdnssd-dev libssl-dev
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
 if [ ! -f /etc/systemd/logind.conf.d/disable-power-key.conf ]; then
