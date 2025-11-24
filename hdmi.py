@@ -271,20 +271,28 @@ class ControllerImpl(object):
             await self.force_standby()
             return
 
+        fix = False
         ca = self.current_activity
-        source_device = await self.get_device(ca.source)
-        if source_device is not None:
-            if source_device.address != msg.src:
-                log.info('Putting thief in standby')
-                msg = Message(self.back_adapter.address, msg.src)
-                msg.set_data([Message.STANDBY])
-                await self.back_adapter.transmit(msg)
-                log.info('Taking back source')
-                await self.set_activity_input(ca)
-            else:
-                log.info(f'Device is not a thief')
+        if ca.source is None:
+            log.info('Activity has no defined source so device must be a thief')
+            fix = True
         else:
-            log.info(f"Can't find source device for current activity so will let source thief win")
+            source_device = await self.get_device(ca.source)
+            if source_device is not None:
+                if source_device.address != msg.src:
+                    fix = True
+                else:
+                    log.info(f'Device is not a thief')
+            else:
+                log.info(f"Can't find source device for current activity so will let source thief win")
+
+        if fix:
+            log.info('Putting thief in standby')
+            msg = Message(self.back_adapter.address, msg.src)
+            msg.set_data([Message.STANDBY])
+            await self.back_adapter.transmit(msg)
+            log.info('Taking back source')
+            await self.set_activity_input(ca)
 
     async def scan_devices(self):
         log.info('Scanning devices...')

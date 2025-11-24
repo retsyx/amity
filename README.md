@@ -49,7 +49,8 @@ Amity may also have terrible bugs.
 
 Amity is designed for a traditional setup centered around an audio/video receiver (AVR). For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray devices, and game consoles) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. The HDMI-CEC protocol only allows the designated TV to select sources. TVs will not heed arbitrary source selection commands from other devices. As a result, Amity cannot select inputs on a TV, and cannot control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
 
-For a device to be controlled by Amity, it must support HDMI-CEC.
+Amity can only control devices that support HDMI-CEC! However, devices that don't support HDMI-CEC (old game consoles, for example) can still be minimally supported.
+
 
 ### Amity is a Proof of Concept
 
@@ -63,6 +64,7 @@ Equipment that is known to be compatible with Amity:
 - Sony Playstation 4/5
 - Amazon Fire TV (media player)
 - Nintendo Switch (see [Strange Devices](#strange-devices))
+- Wii (see [Non-HDMI Sources](#non-hdmi-sources))
 
 ## Prerequisites
 
@@ -199,7 +201,7 @@ HDMI-CEC devices can behave strangely. Here are some known workarounds.
 
 The Nintendo switch has a minimal HDMI-CEC implementation that appears to be nearly always dormant and ignores practically every command except standby. The Switch only appears when it is powered on directly by the user, or placed in the cradle, and then it automatically requests to be displayed.
 
-As a result, the Switch will often not show up in bus scans, or be auto-configured. The solution is to create a new activity for the Nintendo Switch:
+As a result, the Switch will often not show up in device scans, or be auto-configured. The solution is to create a new activity for the Nintendo Switch:
 
 1. Press the '+' button to create a new activity.
 2. Write in the activity name, for example `Play Switch`
@@ -209,13 +211,18 @@ As a result, the Switch will often not show up in bus scans, or be auto-configur
 
 Then to play, turn on the Switch, and select the `Play Switch` activity on the Siri remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
 
-Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, if the receiver supports selecting inputs over HDMI-CEC, Amity can be configured to select the input on the receiver.
+Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, the Switch can be configured similarly to a [non-HDMI source](#non-hdmi-sources).
 
-1. Press the 'Edit' button of the `Play Switch` activity.
-2. Select the receiver as the `Switch Device`.
-3. Specify the `Input` number.
+## Non-HDMI Sources
 
-This functionality depends on the AVR supporting the feature, and on finding the correct value for the input. Finding the input number is through trial, and error, at the moment. On a Denon AVR-X3400H the numeric input values correspond to the named inputs as follows:
+Non-HDMI sources can be minimally supported, if the receiver supports input selection over HDMI-CEC. An activity for a non-HDMI source can still control the display and receiver, including power and volume, but cannot control the power of the non-HDMI source or send it menu commands. This limited support is particulary useful for old game consoles that require the use of their own game controllers in any case so a universal remote to control them is of limited value.
+
+To support a non-HDMI source, Amity can be configured to select the input on the receiver. In the activity settings:
+
+1. Select the receiver as the `Switch Device`.
+2. Specify the `Input` number.
+
+This functionality depends on the receiver supporting the feature, and on knowing the correct value for the input. On a Denon AVR-X3400H the numeric input values can be configured in the receiver setup menus. From the factory, the numeric input values on a Denon AVR-X3400H correspond to the named inputs as follows:
 
 1. CBL/SAT
 2. DVD
