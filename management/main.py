@@ -35,21 +35,23 @@ class Management(object):
         self.pages = [cls(self) for cls in (Activities, Remotes, HomeKit, Advanced)]
         self.tabs = []
 
-        ui.dark_mode(value = None)
-        ui.page_title('Amity')
+        @ui.page('/')
+        def root():
+            ui.dark_mode(value = None)
+            ui.page_title('Amity')
+            self.spinner = ui.dialog().classes("items-center justify-center").props('persistent')
+            with self.spinner:
+                ui.spinner(size="lg")
 
-        self.spinner = ui.dialog().classes("items-center justify-center").props('persistent')
-        with self.spinner:
-            ui.spinner(size="lg")
-
-        with ui.tabs().classes('w-full') as tabs:
-            tabs.bind_value_to(self, 'current_tab', forward=self.on_tab_change)
-            for page in self.pages:
-                self.tabs.append(ui.tab(page.name))
-        with ui.tab_panels(tabs, value=self.tabs[0]).classes('w-full'):
-            for tab, page in zip(self.tabs, self.pages):
-                with ui.tab_panel(tab).classes('items-center'):
-                    page.ui()
+            with ui.tabs().classes('w-full') as tabs:
+                tabs.bind_value_to(self, 'current_tab', forward=self.on_tab_change)
+                for page in self.pages:
+                    self.tabs.append(ui.tab(page.name))
+            with ui.tab_panels(tabs, value=self.tabs[0]).classes('w-full'):
+                for tab, page in zip(self.tabs, self.pages):
+                    with ui.tab_panel(tab).classes('items-center'):
+                        page.ui()
+            self.update()
 
     def on_tab_change(self, name):
         for page in self.pages:
@@ -59,7 +61,6 @@ class Management(object):
 
     def async_env_start(self):
         self.watcher.start()
-        self.update()
 
     def update(self):
         config.load()
