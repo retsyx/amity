@@ -8,10 +8,9 @@ import tools
 
 log = tools.logger(__name__)
 
-import asyncio, evdev, time
+import asyncio
 import evdev.ecodes as e
 from evdev import KeyEvent
-from watchdog.observers import Observer
 
 from aconfig import config
 from hdmi import Key
@@ -76,15 +75,24 @@ def isiterable(o):
     except:
         return False
 
-class Keyboard(object):
+class Handler(object):
+    def __init__(self, pipe):
+        self.name = 'Keyboard'
+        self.pipe = pipe
+        self.taskit = tools.Tasker('Keyboard')
+        self.taskit(self.battery_monitor_task())
+
+    def wait_on(self):
+        return self.taskit.tasks
+
     required_keys = config['keyboard.required_keys']
-    @classmethod
-    def is_keyboard(self, dev):
+
+    def probe(self, dev):
         caps = dev.capabilities()
         supported_keys = caps.get(e.EV_KEY)
         if not supported_keys:
             return False
-        for keys in Keyboard.required_keys:
+        for keys in self.required_keys:
             if isiterable(keys):
                 # This is a list of alternative keys, of which at least one needs to be supported
                 if not any(key in supported_keys for key in keys):
@@ -95,81 +103,22 @@ class Keyboard(object):
                     return False
         return True
 
-    def __init__(self, loop, pipe):
-        self.devices = []
-        self.loop = loop
-        self.pipe = pipe
-        self.taskit = tools.Tasker('Keyboard')
-        self.listen_to_all_devices()
-        self.start_input_monitor()
-        self.start_battery_monitor()
-
-    def wait_on(self):
-        return self.taskit.tasks
-
-    def start_input_monitor(self):
-        path = '/dev/input/'
-        log.info(f'Monitoring {path} for new input devices')
-        self.observer = Observer()
-        self.observer.schedule(self, path, recursive=False)
-        self.observer.start()
-
-    def dispatch(self, event):
-        if event.event_type == 'created' and not event.is_directory:
-            log.info(f'New input event source {event.src_path}')
-
-            # This sleep is obviously a hack...
-            # The issue is that the device is initially created with permissions
-            # that don't allow us to access it. It's chmoded after creation. In theory, we need
-            # to monitor the create, and then the modification messages to hit at the right time.
-            # That's an ugly can of worms that is best avoided with this very generous sleep on the
-            # observer's thread.
-            time.sleep(.5)
-            self.loop.call_soon_threadsafe(self.listen_device_at_path, event.src_path)
-        elif event.event_type == 'deleted' and not event.is_directory:
-            log.info(f'Input event source delete {event.src_path}')
-
-    def list_keyboards(self):
-        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-        devices = [device for device in devices if Keyboard.is_keyboard(device)]
-        return devices
-
     keymap = config['keyboard.keymap']
 
-    async def listen_device_task(self, device):
-        path = device.path
-        try:
-            async for event in device.async_read_loop():
-                if event.type != e.EV_KEY:
-                    continue
-                hkey = self.keymap.get(event.code, None)
-                if hkey is None:
-                    continue
-                if event.value == KeyEvent.key_down:
-                    log.info(f'Key press {hkey}')
-                    if self.pipe:
-                        self.pipe.key_press(hkey)
-                elif event.value == KeyEvent.key_up:
-                    log.info(f'Key release {hkey}')
-                    if self.pipe:
-                        self.pipe.key_release(hkey)
-        except OSError as exc:
-            log.info(f'Stopped listening to device {path}')
-
-    def listen_to_all_devices(self):
-        devices = self.list_keyboards()
-        for device in devices:
-            self.listen_device(device)
-
-    def listen_device_at_path(self, path):
-        self.listen_device(evdev.InputDevice(path))
-
-    def listen_device(self, device):
-        if not Keyboard.is_keyboard(device):
-            log.info(f'Not listening to non-Keyboard device {device}')
+    async def dispatch_input_event(self, event):
+        if event.type != e.EV_KEY:
             return
-        log.info(f'Listening to device {device}')
-        self.taskit(self.listen_device_task(device))
+        hkey = self.keymap.get(event.code, None)
+        if hkey is None:
+            return
+        if event.value == KeyEvent.key_down:
+            log.info(f'Key press {hkey:02X}')
+            if self.pipe:
+                self.pipe.key_press(hkey)
+        elif event.value == KeyEvent.key_up:
+            log.info(f'Key release {hkey:02X}')
+            if self.pipe:
+                self.pipe.key_release(hkey)
 
     async def battery_monitor_task(self):
         if not config['keyboard.battery.monitor.enable']:
@@ -198,20 +147,19 @@ class Keyboard(object):
                     except ValueError as e:
                         log.info(f'Unable to parse batter level line {line}')
                         battery_level = None
-                    if battery_level is not None:
+                    if battery_level:
                         if self.pipe:
                             self.pipe.battery_state(battery_level, False)
                     break
             await asyncio.sleep(period_sec)
 
-    def start_battery_monitor(self):
-        self.taskit(self.battery_monitor_task())
-
 async def main():
+    import evdev_input
+    h = Handler(None)
     loop = asyncio.get_event_loop()
-    kb = Keyboard(loop, None)
+    inp = evdev_input.EvdevInput([h], loop)
     while True:
-        await asyncio.gather(*list(kb.wait_on()))
+        await asyncio.gather(*list(inp.wait_on()))
         await asyncio.sleep(1)
 
 if __name__ == '__main__':

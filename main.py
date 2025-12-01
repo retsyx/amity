@@ -26,7 +26,7 @@ import remote, remote_adapter
 import hdmi
 from hdmi import Key
 import homekit
-import keyboard
+import evdev_input, keyboard, solarcell
 import memory
 import messaging
 
@@ -41,6 +41,8 @@ class KeyState(object):
         self.repeat_count = count
 
 class Hub(remote.RemoteListener):
+    # Used to ensure that repeat counted keys use a different KeyState than non-repeat counted
+    # keys.
     REPEAT_COUNT_FLAG = 0x8000
 
     def __init__(self, controller):
@@ -83,7 +85,8 @@ class Hub(remote.RemoteListener):
             self.key_state[key] = state
         elif count > 0:
             # This key is already counting, so add to the count, and finish
-            state.repeat_count += count
+            count += state.repeat_count
+            state.repeat_count = min(count, 10) # Don't accumulate too many key presses
             return
 
         # Don't let key presses leak across selection/activity modes
@@ -196,10 +199,10 @@ class Hub(remote.RemoteListener):
 
     async def press_key(self, key):
         hkey = key & ~self.REPEAT_COUNT_FLAG
-        log.info(f'Pressing key {hkey}')
+        log.info(f'Pressing key {hkey:02X}')
         while True:
             if not await self.controller.press_key(hkey, True):
-                log.info(f'Pressing key {hkey} failed')
+                log.info(f'Pressing key {hkey:02X} failed')
                 break
             state = self.key_state.get(key)
             if state is None:
@@ -209,7 +212,7 @@ class Hub(remote.RemoteListener):
                 state.repeat_count -= 1
                 if state.repeat_count == 0:
                     break
-        log.info(f'Pressing key {hkey} done')
+        log.info(f'Pressing key {hkey:02X} done')
         self.key_state.pop(key, None)
         await self.check_release_all_keys()
 
@@ -272,9 +275,15 @@ async def _main():
         # Wire hub and keyboard
         kb_pipe = messaging.Pipe()
         hub.add_pipe(kb_pipe)
-        kb = keyboard.Keyboard(loop, kb_pipe)
+        kb = keyboard.Handler(kb_pipe)
+
+        # Wire hub and SolarCell
+        sc_pipe = messaging.Pipe()
+        hub.add_pipe(sc_pipe)
+        sc = solarcell.Handler(sc_pipe)
+        inp = evdev_input.EvdevInput([kb, sc], loop)
     else:
-        kb = None
+        inp = None
 
     if config['homekit.enable']:
         # Wire hub and HomeKit
@@ -300,8 +309,8 @@ async def _main():
         futures = []
         if siri is not None:
             futures.append(siri)
-        if kb is not None:
-            futures.extend(kb.wait_on())
+        if inp is not None:
+            futures.extend(inp.wait_on())
         if mem is not None:
             futures.extend(mem.wait_on())
         await asyncio.gather(*futures)
