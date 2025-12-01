@@ -104,7 +104,7 @@ if [ ! -d "$ROOT_DIR/bluepy3" ]; then
     git clone https://github.com/retsyx/bluepy3
 else
     pushd bluepy3
-    git stash # cleanup bluepy3 build droppings
+    git stash && git stash drop || true # cleanup bluepy3 build droppings
     git fetch && git rebase
     popd
 fi

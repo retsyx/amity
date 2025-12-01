@@ -43,6 +43,7 @@ Usage: $0 [options]
     v8
     2712
 -o,--overlay         Configuration file to overlay
+-x,--external        External build step, called after kernel compilation, and before archiving
 -h,--help            This usage description
 
 EOF
@@ -68,6 +69,11 @@ while [ $# -gt 0 ]; do
 
     -o|--overlay)
       CONFIG_OVERLAY=$(readlink -f "$2")
+      shift 2
+      ;;
+
+    -x|--external)
+      EXTERNAL_CMD="$2"
       shift 2
       ;;
 
@@ -150,6 +156,10 @@ cp arch/arm64/boot/Image.gz "${DSTDIR}/boot/firmware/${KERNEL_IMG}"
 cp arch/arm64/boot/dts/broadcom/*.dtb "${DSTDIR}/boot/firmware/"
 cp arch/arm64/boot/dts/overlays/*.dtb* "${DSTDIR}/boot/firmware/overlays/"
 cp arch/arm64/boot/dts/overlays/README "${DSTDIR}/boot/firmware/overlays/"
+
+if [ "$EXTERNAL_CMD" != "" ]; then
+  $EXTERNAL_CMD $LINUX_SRC_DIR $DSTDIR $BUILD_ID
+fi
 
 ARCHIVE="kernel-$(sed -n 's|^.*\s\+\(\S\+\.\S\+\.\S\+\)\s\+Kernel Configuration$|\1|p' .config)$(sed -n 's|^CONFIG_LOCALVERSION=\"\(.*\)\"$|\1|p' .config).zip"
 cd "${DSTDIR}"

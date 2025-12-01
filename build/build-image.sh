@@ -42,8 +42,9 @@ mkdir -p ~/amity-build
 # Build GPIO enabled Linux kernels
 if [ "$COMPILE_KERNEL" = "YES" ]; then
     COMMITID=$(cat kernel-commitid)
-    ./kernel_tools/build-kernel.sh -s amity -t v8 -c $COMMITID -o kernel-config-overlay
-    ./kernel_tools/build-kernel.sh -s amity -t 2712 -c $COMMITID -o kernel-config-overlay
+    EXTERNAL_CMD=$(readlink -f ./module_tools/build-lg-magic.sh)
+    ./kernel_tools/build-kernel.sh -s amity -t v8 -c $COMMITID -o kernel-config-overlay -x ${EXTERNAL_CMD}
+    ./kernel_tools/build-kernel.sh -s amity -t 2712 -c $COMMITID -o kernel-config-overlay -x ${EXTERNAL_CMD}
 fi
 
 pushd ../..
@@ -67,6 +68,6 @@ if [ "$GID" = "" ]; then
 fi
 
 sudo chown $UID:$GID amity.img
-gzip --force amity.img
+xz --force amity.img
 
 popd
