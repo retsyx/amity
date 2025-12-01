@@ -20,7 +20,7 @@ config.default('keyboard.required_keys', (e.KEY_ENTER, e.KEY_UP,
                                           e.KEY_RIGHT, e.KEY_DOWN,
                                           e.KEY_LEFT, e.KEY_BACK,
                                           e.KEY_VOLUMEUP, e.KEY_VOLUMEDOWN,
-                                          e.KEY_MUTE, e.KEY_POWER))
+                                          e.KEY_MUTE, (e.KEY_POWER, e.KEY_SLEEP)))
 
 config.default('keyboard.keymap', {
         e.KEY_ENTER : Key.SELECT.value,
@@ -66,6 +66,13 @@ config.default('keyboard.keymap', {
         e.KEY_YELLOW : Key.F4.value,
     })
 
+def isiterable(o):
+    try:
+        iter(o)
+        return True
+    except:
+        return False
+
 class Keyboard(object):
     required_keys = config['keyboard.required_keys']
     @classmethod
@@ -74,9 +81,15 @@ class Keyboard(object):
         supported_keys = caps.get(e.EV_KEY)
         if not supported_keys:
             return False
-        for key in Keyboard.required_keys:
-            if key not in supported_keys:
-                return False
+        for keys in Keyboard.required_keys:
+            if isiterable(keys):
+                # This is a list of alternative keys, of which at least one needs to be supported
+                if not any(key in supported_keys for key in keys):
+                    return False
+            else:
+                # This is a single required key
+                if keys not in supported_keys:
+                    return False
         return True
 
     def __init__(self, loop, pipe):
