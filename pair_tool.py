@@ -16,17 +16,40 @@ from bluepy3 import btle
 from bluepy3.btle import AssignedNumbers
 from aconfig import config
 
+class LogAndPrint(object):
+    def __init__(self, log, stdout):
+        self.log = log
+        self.stdout = stdout
+
+    def debug(self, *args):
+        self.log.debug(*args)
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            self.stdout.write(*args)
+            self.stdout.write('\n')
+
+    def info(self, *args):
+        self.log.info(*args)
+        if self.log.getEffectiveLevel() <= logging.INFO:
+            self.stdout.write(*args)
+            self.stdout.write('\n')
+
 class Scanner(object):
     def __init__(self):
         self.scanner = btle.Scanner()
         self.scanner.withDelegate(self)
         self.pairing = False
+        self.known_addresses = set()
+        self.log = LogAndPrint(log, sys.stdout)
 
     def handleDiscovery(self, entry, isNewDev, isNewData):
         pass
 
     def check_pair(self, entry):
-        log.debug(f'Device RSSI {entry.rssi} addr {entry.addr} data {entry.getScanData()}')
+        device_str = f'Device RSSI {entry.rssi} addr {entry.addr} data {entry.getScanData()}'
+        self.log.debug(device_str)
+        if entry.addr not in self.known_addresses:
+            self.known_addresses.add(entry.addr)
+            log.info(device_str)
 
         # First 2 bytes are manufacturer ID 004C which is Apple
         # Last 2 bytes are the PNP product ID:
@@ -48,14 +71,14 @@ class Scanner(object):
                 name = kind
                 is_siri_remote = True
                 break
-        log.debug(f'is_siri_remote {is_siri_remote}')
+        self.log.debug(f'is_siri_remote {is_siri_remote}')
         if name is None:
             service_uuids = entry.getValue(entry.COMPLETE_16B_SERVICES)
             if service_uuids is None:
                 service_uuids = entry.getValue(entry.INCOMPLETE_16B_SERVICES)
             if service_uuids is None:
                 service_uuids = []
-            log.debug(f'service_uuids {service_uuids}')
+            self.log.debug(f'service_uuids {service_uuids}')
             if AssignedNumbers.human_interface_device in service_uuids:
                 name = entry.getValueText(entry.COMPLETE_LOCAL_NAME)
                 if name is None:
@@ -63,36 +86,37 @@ class Scanner(object):
                 if name is None:
                     name = 'Input Device'
 
-        log.debug(f'name is {name}')
+        self.log.debug(f'name is {name}')
 
         # This is neither an internally supported Siri Remote, nor a generic keyboard device
         if name is None:
             return
 
         if entry.rssi < -50:
-            log.info(f'Bring {name} closer to me!\n')
+            self.log.info(f'Bring {name} closer to me!\n')
             return
 
         try:
             device = btle.Peripheral(entry)
         except btle.BTLEException as e:
-            log.debug(f'Failed to create peripheral {e}')
+            self.log.debug(f'Failed to create peripheral {e}')
             return
 
-        log.info('Pairing...')
+        self.log.info('Pairing...')
         try:
             self.pairing = True
             device.setBondable(True)
             device.setSecurityLevel(btle.SEC_LEVEL_MEDIUM)
             public_addr, _ = device.pair()
             self.pairing = False
-            log.info(f'Paired with {name}')
+            self.log.info(f'Paired with {name}')
 
             return is_siri_remote, name, public_addr
         except btle.BTLEManagementError:
-            log.info('Pairing failed. Try resetting the remote.')
+            self.log.info('Pairing failed. Try resetting the remote.')
 
     def scan(self):
+        self.log.info('Bring the remote close to me, and start the pairing process on the remote.\n')
         while True:
             try:
                 entries = self.scanner.scan(1)
@@ -102,7 +126,7 @@ class Scanner(object):
                         return remote
             except (btle.BTLEConnectError, BrokenPipeError) as e:
                 if self.pairing:
-                    log.info('Pairing failed. Try resetting the remote.')
+                    self.log.info('Pairing failed. Try resetting the remote.')
 
 def main():
     arg_parser = argparse.ArgumentParser()
@@ -114,9 +138,6 @@ def main():
     args = arg_parser.parse_args()
     if args.debug:
         tools.set_log_level('debug')
-    log.addHandler(logging.StreamHandler(sys.stdout))
-    log.info('Bring the remote close to me, and start the pairing process on the remote.\n')
-
     scanner = Scanner()
     is_siri_remote, name, public_addr = scanner.scan()
 
@@ -143,7 +164,7 @@ def main():
 
         # Unpair the previous remote, if there is one
         if not args.keep and old_addr is not None and old_addr != public_addr:
-            log.debug(f'Unpairing previous remote {old_addr}')
+            log.info(f'Unpairing previous remote {old_addr}')
             subprocess.run(['/usr/bin/bluetoothctl', 'remove', old_addr], capture_output=True)
     else:
         if is_siri_remote:
