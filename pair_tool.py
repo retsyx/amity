@@ -33,23 +33,15 @@ class LogAndPrint(object):
             self.stdout.write(*args)
             self.stdout.write('\n')
 
-class Scanner(object):
-    def __init__(self):
-        self.scanner = btle.Scanner()
-        self.scanner.withDelegate(self)
-        self.pairing = False
-        self.known_addresses = set()
-        self.log = LogAndPrint(log, sys.stdout)
+class Detector(object):
+    def __init__(self, log):
+        self.is_siri_remote = False
+        self.log = log
 
-    def handleDiscovery(self, entry, isNewDev, isNewData):
-        pass
-
-    def check_pair(self, entry):
-        device_str = f'Device RSSI {entry.rssi} addr {entry.addr} data {entry.getScanData()}'
-        self.log.debug(device_str)
-        if entry.addr not in self.known_addresses:
-            self.known_addresses.add(entry.addr)
-            log.info(device_str)
+class SiriRemoteDetector(Detector):
+    def __init__(self, log):
+        super().__init__(log)
+        self.is_siri_remote = True
 
         # First 2 bytes are manufacturer ID 004C which is Apple
         # Last 2 bytes are the PNP product ID:
@@ -57,40 +49,95 @@ class Scanner(object):
         # Gen 1.5 - 026D
         # Gen 2 - 0314
         # Gen 3 - 0315
-        supported_manufacturer_strings = {
+        self.supported_manufacturer_strings = {
             '4c008a076602' : 'Siri Remote, Gen 1',
             '4c008a076d02' : 'Siri Remote, Gen 1.5',
             '4c00070d021403' : 'Siri Remote, Gen 2',
             '4c00070d021503' : 'Siri Remote, Gen 3',
         }
-        mfr = entry.getValueText(entry.MANUFACTURER)
-        name = None
-        is_siri_remote = False
-        for prefix, kind in supported_manufacturer_strings.items():
+
+    def probe(self, entry):
+        mfr = entry.getValueText(entry.MANUFACTURER).lower()
+        for prefix, name in self.supported_manufacturer_strings.items():
             if mfr.startswith(prefix):
-                name = kind
-                is_siri_remote = True
-                break
-        self.log.debug(f'is_siri_remote {is_siri_remote}')
+                return name
+        return None
+
+class LgMagicRemoteDetector(Detector):
+    def __init__(self, log):
+        super().__init__(log)
+        self.magic = ''.join((f'{ord(c):02x}' for c in 'webOS'))
+
+    def probe(self, entry):
+        mfr = entry.getValueText(entry.MANUFACTURER).lower()
+        if not mfr.startswith('c400'):
+            return None
+        if self.magic not in mfr[2:]:
+            return None
+        name = entry.getValueText(entry.COMPLETE_LOCAL_NAME)
         if name is None:
-            service_uuids = entry.getValue(entry.COMPLETE_16B_SERVICES)
-            if service_uuids is None:
-                service_uuids = entry.getValue(entry.INCOMPLETE_16B_SERVICES)
-            if service_uuids is None:
-                service_uuids = []
-            self.log.debug(f'service_uuids {service_uuids}')
-            if AssignedNumbers.human_interface_device in service_uuids:
-                name = entry.getValueText(entry.COMPLETE_LOCAL_NAME)
-                if name is None:
-                    name = entry.getValueText(entry.SHORT_LOCAL_NAME)
-                if name is None:
-                    name = 'Input Device'
+            name = entry.getValueText(entry.SHORT_LOCAL_NAME)
+        if name is None:
+            name = 'LG Magic Remote'
+        return name
+
+class KeyboardDetector(Detector):
+    def __init__(self, log):
+        super().__init__(log)
+
+    def probe(self, entry):
+        name = None
+        service_uuids = entry.getValue(entry.COMPLETE_16B_SERVICES)
+        if service_uuids is None:
+            service_uuids = entry.getValue(entry.INCOMPLETE_16B_SERVICES)
+        if service_uuids is None:
+            service_uuids = []
+        self.log.debug(f'service_uuids {service_uuids}')
+        if AssignedNumbers.human_interface_device in service_uuids:
+            name = entry.getValueText(entry.COMPLETE_LOCAL_NAME)
+            if name is None:
+                name = entry.getValueText(entry.SHORT_LOCAL_NAME)
+            if name is None:
+                name = 'Keyboard'
+        return name
+
+class Scanner(object):
+    def __init__(self):
+        self.scanner = btle.Scanner()
+        self.scanner.withDelegate(self)
+        self.pairing = False
+        self.known_addresses = set()
+        self.log = LogAndPrint(log, sys.stdout)
+        self.detectors = tuple((det(self.log) for det in (
+            SiriRemoteDetector,
+            LgMagicRemoteDetector,
+            KeyboardDetector,
+        )))
+
+    def handleDiscovery(self, entry, isNewDev, isNewData):
+        pass
+
+    def check_pair(self, entry):
+        device_str = f'Device RSSI {entry.rssi} addr {entry.addr} data {entry.getScanData()}'
+        if entry.addr not in self.known_addresses:
+            self.known_addresses.add(entry.addr)
+            self.log.debug(device_str)
+            log.info(device_str)
+
+        name = None
+        for detector in self.detectors:
+            name = detector.probe(entry)
+            if name is not None:
+                is_siri_remote = detector.is_siri_remote
+                break
 
         self.log.debug(f'name is {name}')
 
         # This is neither an internally supported Siri Remote, nor a generic keyboard device
         if name is None:
             return
+
+        self.log.debug(f'is_siri_remote {is_siri_remote}')
 
         if entry.rssi < -50:
             self.log.info(f'Bring {name} closer to me!\n')
