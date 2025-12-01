@@ -98,7 +98,12 @@ class Hub(remote.RemoteListener):
             Key.UP : 1,
             Key.RIGHT : 2,
             Key.DOWN : 3,
-            Key.LEFT : 4
+            Key.LEFT : 4,
+            Key.F1 : 0,
+            Key.F2 : 1,
+            Key.F3 : 2,
+            Key.F4 : 3,
+            Key.F5 : 4,
         }
 
         if self.controller.current_activity is hdmi.no_activity:
@@ -117,6 +122,11 @@ class Hub(remote.RemoteListener):
             (Key.POWER, Key.RIGHT),
             (Key.POWER, Key.DOWN),
             (Key.POWER, Key.LEFT),
+            (Key.F1, ), # Not really a macro... But always use F keys for activity selection
+            (Key.F2, ),
+            (Key.F3, ),
+            (Key.F4, ),
+            (Key.F5, ),
         }
 
         for macro in macros:
@@ -126,7 +136,7 @@ class Hub(remote.RemoteListener):
                     key_count += 1
             if key_count == len(macro):
                 self.in_macro = True
-                index = activity_map.get(macro[1])
+                index = activity_map.get(macro[-1])
                 if index is not None:
                     await self.set_activity(index)
                 return
