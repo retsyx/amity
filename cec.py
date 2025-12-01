@@ -104,6 +104,7 @@ class Key(IntEnum):
     RIGHT = 0x04
     ROOT_MENU = 0x09
     SETUP_MENU = 0x0A
+    CONTENTS_MENU = 0x0B
     BACK = 0x0D
     NUMBER_0 = 0x20
     NUMBER_1 = 0x21
@@ -129,16 +130,18 @@ class Key(IntEnum):
     FORWARD = 0x4B
     BACKWARD = 0x4C
     SUB_PICTURE = 0x51
+    VOD = 0x52
     GUIDE = 0x53
     PLAY_FUNCTION = 0x60
     PAUSE_PLAY = 0x61
     SET_INPUT = 0x69
     POWER_OFF = 0x6C
     POWER_ON = 0x6D
-    F1 = 0x71
-    F2 = 0x72
-    F3 = 0x73
-    F4 = 0x74
+    F1 = 0x71 # Blue
+    F2 = 0x72 # Red
+    F3 = 0x73 # Green
+    F4 = 0x74 # Yellow
+    F5 = 0x75
 
 class PowerStatus(IntEnum):
     ON = 0
