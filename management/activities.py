@@ -351,13 +351,23 @@ class Activities(object):
             'keyboard_double_arrow_left',
             'error'
         ]
+
+        colors = [
+            'blue',
+            'red',
+            'green',
+            'yellow',
+            'gray',
+        ]
+
         index = self.activities.index(activity)
         if index >= len(icons) - 1:
             icon = icons[-1]
             color = 'negative'
         else:
             icon = icons[index]
-            color = 'primary'
+            color = colors[index]
+
         with ui.row().classes('w-full').style('align-items: center;'):
             ui.icon(icon, color=color, size='36px')
             ui.label('').bind_text(activity, 'name').style('width: 200px; text-align: left;')
