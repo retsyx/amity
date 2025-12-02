@@ -1,11 +1,11 @@
 # Amity CLI
 
 Amity can also be managed from the command line. This requires some familiarity with SSH, running terminal commands, and light editing of a configuration file.
-Read the [README](README.md) for an overview of Amity and its functionality.
+Read the [README](../README.md) for an overview of Amity and its functionality.
 
 ## Initial Installation
 
-Follow all the steps in [README](README.md#initial-installation) to install Amity on a Raspberry Pi.
+Follow all the steps in [README](../README.md#initial-installation) to install Amity on a Raspberry Pi.
 **Ensure to create a user in the web interface to secure it.**
 
 Using the `pi` user password or the SSH private key, SSH into the Amity Raspberry Pi.
@@ -111,7 +111,7 @@ The fields are:
 * `source` - the HDMI OSD name of the AV source device.
 * `audio` - the HDMI OSD name of the audio output device, typically a receiver.
 
-Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output. 'Living Room' is the OSD name of the Apple TV in the living room. The name of the activity can be changed to 'Watch TV' for convenience. The activity name is used with [HomeKit](#homekit).
+Amity configured an activity with a source device called 'Living Room', using the TV as a display, and the audio receiver for audio output. 'Living Room' is the OSD name of the Apple TV in the living room. The name of the activity can be changed to 'Watch TV' for convenience. The activity name is used with [HomeKit](#enabling-homekit).
 
 And that's it... Amity is now fully configured with a paired remote, and two activities for watching Apple TV, and playing with a PlayStation 5. Let's start it!
 
@@ -169,4 +169,4 @@ If HomeKit support is still enabled, then the new QR code and setup code require
 
 ## License
 
-Amity source code is licensed under the [GPLv3](LICENSE).
+Amity source code is licensed under the [GPLv3](../LICENSE).

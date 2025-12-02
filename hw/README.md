@@ -45,23 +45,23 @@ The second way is to 3D print the [connector housings](cable/), and to use stand
 
 ### Amity Board Wired With a 1x4 2.54mm Connector
 
-![Amity Board](IMG_5440.jpeg "Amity Board")
+![Amity Board](images/IMG_5440.jpeg "Amity Board")
 
 ### Amity Board in a Case
 
 A STEP file for a 3D printable case is available [here](case/).
 
-![Amity Board](IMG_5472.jpeg "Amity Board in case")
+![Amity Board](images/IMG_5472.jpeg "Amity Board in case")
 
 ### Raspberry Pi 5 Wired With a 3x2 2.54mm Connector
 
-![Wired Raspberry Pi 5](IMG_5442.jpeg "Wired Raspberry Pi 5")
+![Wired Raspberry Pi 5](images/IMG_5442.jpeg "Wired Raspberry Pi 5")
 
 ### Amity Board Wired With Standard Jumper Wires in 3D Printed 1x4 Housing
 
 A STEP file for the 3D printable 1x4 housing is available [here](cable/).
 
-![Amity Board](IMG_5549.jpeg "Amity Board")
+![Amity Board](images/IMG_5549.jpeg "Amity Board")
 
 ### Raspberry Pi 5 Wired with Standard Jumper Wires in 3D Printed 3x6L Housing With Tab
 
@@ -69,7 +69,7 @@ The positioning tab's "Out" label should face out from the Raspberry Pi board, a
 
 A STEP file for the 3D printable 3x6L housing is available [here](cable/).
 
-![Wired Raspberry Pi 5](IMG_5548.jpeg "Wired Raspberry Pi 5")
+![Wired Raspberry Pi 5](images/IMG_5548.jpeg "Wired Raspberry Pi 5")
 
 ### Configuring Amity
 
@@ -101,11 +101,11 @@ The spliced HDMI cable method does not conform to the HDMI-CEC specification. In
 
 ### A Spliced HDMI Cable
 
-![A spliced HDMI cable](IMG_5429.jpeg "A spliced HDMI cable")
+![A spliced HDMI cable](images/IMG_5429.jpeg "A spliced HDMI cable")
 
 ### A Spliced HDMI Cable Attached to a Raspberry Pi 5
 
-![Plugged in](IMG_5437.jpeg "Plugged in")
+![Plugged in](images/IMG_5437.jpeg "Plugged in")
 
 ## Changing Between Cable and Board
 
