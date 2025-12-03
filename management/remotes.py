@@ -34,11 +34,17 @@ class Remotes(object):
 
     def update(self):
         if config['remote.mac']:
-            self.remote_status = 'A Siri Remote is paired.'
+            name = config['remote.name']
+            if not name:
+                name = 'Siri Remote'
+            self.remote_status = f'{name} is paired.'
         else:
             self.remote_status = ''
         if config['keyboard.mac']:
-            self.keyboard_status = 'A keyboard is paired.'
+            name = config['keyboard.name']
+            if not name:
+                name = 'A keyboard'
+            self.keyboard_status = f'{name} is paired.'
         else:
             self.keyboard_status = ''
 

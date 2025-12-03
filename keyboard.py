@@ -66,6 +66,9 @@ config.default('keyboard.keymap', {
         e.KEY_YELLOW : Key.F4.value,
     })
 
+config.default('keyboard.battery.monitor.enable', True)
+config.default('keyboard.battery.monitor.period_sec', 3600)
+
 def isiterable(o):
     try:
         iter(o)
@@ -99,6 +102,7 @@ class Keyboard(object):
         self.taskit = tools.Tasker('Keyboard')
         self.listen_to_all_devices()
         self.start_input_monitor()
+        self.start_battery_monitor()
 
     def wait_on(self):
         return self.taskit.tasks
@@ -166,6 +170,42 @@ class Keyboard(object):
             return
         log.info(f'Listening to device {device}')
         self.taskit(self.listen_device_task(device))
+
+    async def battery_monitor_task(self):
+        if not config['keyboard.battery.monitor.enable']:
+            log.info('Keyboard battery monitoring disabled')
+            return
+        mac = config['keyboard.mac']
+        if mac is None:
+            log.info('No keyboard mac. Not monitoring battery')
+            return
+        period_sec = config['keyboard.battery.monitor.period_sec']
+        log.info(f'Keyboard battery monitoring period {period_sec}s')
+        while True:
+            proc = await asyncio.create_subprocess_shell(f'/usr/bin/bluetoothctl info {mac}',
+                                                        stdout=asyncio.subprocess.PIPE,
+                                                        stderr=asyncio.subprocess.PIPE)
+            stdout, stderr = await proc.communicate()
+            log.info(f'bluetoothctl info status {proc.returncode}')
+            log.debug(f'stdout:\n{stdout.decode()}\nstderr:\n{stderr.decode()}')
+            if stdout:
+                for line in stdout.decode().splitlines():
+                    if 'Battery Percentage' not in line:
+                        continue
+                    try:
+                        battery_level = int(line.split(':')[1].strip().split(' ')[0][2:], 16)
+                        log.info(f'Battery level {battery_level}')
+                    except ValueError as e:
+                        log.info(f'Unable to parse batter level line {line}')
+                        battery_level = None
+                    if battery_level is not None:
+                        if self.pipe:
+                            self.pipe.battery_state(battery_level, False)
+                    break
+            await asyncio.sleep(period_sec)
+
+    def start_battery_monitor(self):
+        self.taskit(self.battery_monitor_task())
 
 async def main():
     loop = asyncio.get_event_loop()

@@ -98,7 +98,7 @@ class KeyboardDetector(Detector):
             if name is None:
                 name = entry.getValueText(entry.SHORT_LOCAL_NAME)
             if name is None:
-                name = 'Keyboard'
+                name = 'A keyboard'
         return name
 
 class Scanner(object):
@@ -189,30 +189,40 @@ def main():
     is_siri_remote, name, public_addr = scanner.scan()
 
     if is_siri_remote:
-        config_path = 'remote.mac'
+        mac_path = 'remote.mac'
+        name_path = 'remote.name'
+        other_mac_path = 'keyboard.mac'
+        other_name_path = 'keyboard.name'
     else:
-        # Amity intercepts keyboard events and so doesn't use the keyboard MAC address directly.
-        # The MAC is tracked to allow managing keyboards here, and ensuring that only one is
-        # paired at any given time.
-        # Note that at the moment both a Siri remote, and a keybord can be paired at once.
-        config_path = 'keyboard.mac'
+        # Amity intercepts keyboard events and so doesn't use the keyboard MAC to connect.
+        # The MAC is tracked to allow managing keyboards here, to ensure that only one is
+        # paired at any given time. The MAC is also used to monitor keyboard battery level, if
+        # it is available.
+        mac_path = 'keyboard.mac'
+        name_path = 'keyboard.name'
+        other_mac_path = 'remote.mac'
+        other_name_path = 'remote.name'
 
     if not args.nowrite:
-        old_addr = None
-        backup = False
+        # Only one remote can be paired at any given time.
         config.load()
-        if config[config_path] is not None:
-            backup = True
-            old_addr = config[config_path]
+        old_addrs = (config['remote.mac'], config['keyboard.mac'])
+        backup = any(old_addrs)
 
         # Update the config
-        config[config_path] = public_addr
+        config[mac_path] = public_addr
+        config[name_path] = name
+        if not args.keep:
+            config[other_mac_path] = None
+            config[other_name_path] = None
         config.save(backup)
 
         # Unpair the previous remote, if there is one
-        if not args.keep and old_addr is not None and old_addr != public_addr:
-            log.info(f'Unpairing previous remote {old_addr}')
-            subprocess.run(['/usr/bin/bluetoothctl', 'remove', old_addr], capture_output=True)
+        if not args.keep:
+            for old_addr in old_addrs:
+                if old_addr is not None and old_addr != public_addr:
+                    log.info(f'Unpairing previous remote {old_addr}')
+                    subprocess.run(['/usr/bin/bluetoothctl', 'remove', old_addr], capture_output=True)
     else:
         if is_siri_remote:
             log.info(f'Remote configuration is:\n')
