@@ -119,7 +119,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 @ui.page('/login')
-def login():
+async def login():
     def try_login():
         if not verify(username.value, password.value):
             ui.notify('Wrong username or password', color='negative')
@@ -146,7 +146,7 @@ def login():
 
 # Set initial password, or change password
 @ui.page('/enroll')
-def enroll():
+async def enroll():
     def try_enroll():
         if password.value != confirm_password.value:
             ui.notify('Password mismatch', color='negative')
@@ -180,7 +180,7 @@ def enroll():
 
 # Logout current user
 @ui.page('/logout')
-def logout():
+async def logout():
     username = app.storage.user.get('username')
     if username:
         log.info(f'Logout {username}')

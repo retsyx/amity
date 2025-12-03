@@ -36,7 +36,7 @@ class Management(object):
         self.tabs = []
 
         @ui.page('/')
-        def root():
+        async def root():
             ui.dark_mode(value = None)
             ui.page_title('Amity')
             self.spinner = ui.dialog().classes("items-center justify-center").props('persistent')

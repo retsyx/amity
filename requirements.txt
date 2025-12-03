@@ -1,5 +1,6 @@
 evdev == 1.9.2
 HAP-python[QRCode] == 4.9.2
+fastapi == 0.123.5
 nicegui == 3.3.1
 pillow == 12.0.0
 pyyaml == 6.0.3
