@@ -93,7 +93,7 @@ Note that all of the commonly available HDMI breakout boards advertised for sale
 
 It is assumed that the Raspberry Pi will be a dedicated device for home theater control. It may be possible to run other services on the same Raspberry Pi but it is not supported, and is strongly discouraged.
 
-1. Download the latest [Amity image](https://github.com/retsyx/amity/releases/latest/download/amity.img.gz).
+1. Download the latest [Amity image](https://github.com/retsyx/amity/releases/latest/download/amity.img.xz).
 2. Using Raspberry Pi Imager, write the image to a MicroSD card.
     1. [Raspberry Pi Imager version 1.9.6](https://github.com/raspberrypi/rpi-imager/releases/tag/v1.9.6) or earlier must be used. Version 2.0, and later break the OS customization functionality for custom images.
     2. For 'Operating System', select 'Use custom', and select the Amity image.
