@@ -95,13 +95,8 @@ class Advanced(object):
         zip_path = compress_directory_to_zip('var/config')
         ui.download(zip_path, 'configs.zip', 'application/zip')
 
-    def upload_config(self, event):
-        try:
-            text = event.content.read().decode('utf-8')
-        except UnicodeDecodeError:
-            log.info('Uploaded config file is not valid UTF-8')
-            ui.notify('File is not a valid configuration file', color='negative')
-            return
+    async def upload_config(self, event):
+        text = await event.file.text()
         try:
             new_config = yaml.safe_load(text)
         except yaml.scanner.ScannerError:
