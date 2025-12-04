@@ -107,6 +107,7 @@ class Scanner(object):
         self.scanner.withDelegate(self)
         self.pairing = False
         self.known_addresses = set()
+        sys.stdout.reconfigure(line_buffering=True)
         self.log = LogAndPrint(log, sys.stdout)
         self.detectors = tuple((det(self.log) for det in (
             SiriRemoteDetector,
