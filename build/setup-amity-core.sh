@@ -61,8 +61,11 @@ fi
 
 # Disable userconfig service so it doesn't prompt to create a user on first boot, if no password
 # or SSH public key was specified when burning the image.
-sudo systemctl disable userconfig
-sudo systemctl enable getty@tty1
+sudo systemctl mask userconfig
+
+# Block console logins because Amity uses remote control keyboards for input. A keyboard could be
+# used to login...
+sudo systemctl mask getty.target
 
 # App setup
 
