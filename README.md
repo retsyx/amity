@@ -116,6 +116,18 @@ If using a spliced HDMI cable, skip this step.
 
 If using Amity Board, then select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
 
+### HDMI Connections
+
+Amity connects between the TV and the receiver.
+
+If using Amity Board:
+
+1. Disconnect the HDMI cable connecting the TV input to the receiver's output.
+2. Use one HDMI cable to connect the TV's input to the Amity Board HDMI port marked `TV`.
+3. Use a second HDMI cable to connect the receiver output to Amity's HDMI port marked `AVR`.
+
+If using a spliced HDMI cable, use the cable to connect the TV input to the receiver's output.
+
 ### Pairing a Remote
 
 The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Pairing and unpairing steps for supported remotes are listed [here](doc/supported-remotes.md). Ensure the remote is charged.
