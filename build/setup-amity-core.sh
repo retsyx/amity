@@ -71,6 +71,10 @@ sudo systemctl mask getty.target
 
 cd "$APP_DIR"
 
+# Clean up git cruft from the build machine
+git reflog expire --expire=now --expire-unreachable=now --all
+git gc --prune=now --aggressive
+
 VAR_DIR=$APP_DIR/var
 LOG_DIR=$VAR_DIR/log
 CONFIG_DIR=$VAR_DIR/config
