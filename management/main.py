@@ -72,7 +72,9 @@ def main():
     mgmt = Management()
     app.add_middleware(authentication.AuthMiddleware)
     app.on_startup(mgmt.async_env_start)
-    ui.run(port=443,
+    ui.run(reload=False,
+           show=False,
+           port=443,
            ssl_certfile='var/gui/cert.pem',
            ssl_keyfile='var/gui/key.pem',
            storage_secret=authentication.get_storage_secret(),
