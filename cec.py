@@ -105,6 +105,7 @@ class Key(IntEnum):
     ROOT_MENU = 0x09
     SETUP_MENU = 0x0A
     CONTENTS_MENU = 0x0B
+    FAVORITE_MENU = 0x0C
     BACK = 0x0D
     NUMBER_0 = 0x20
     NUMBER_1 = 0x21
@@ -142,6 +143,11 @@ class Key(IntEnum):
     F3 = 0x73 # Green
     F4 = 0x74 # Yellow
     F5 = 0x75
+    # Below are all invalid HDMI-CEC key codes that are more than 1 byte.
+    # They are a hack to allow extending the number of F keys that can be represented internally
+    # for activity selection.
+    F6 = 0x100
+    F7 = 0x101
 
 class PowerStatus(IntEnum):
     ON = 0

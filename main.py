@@ -107,6 +107,8 @@ class Hub(remote.RemoteListener):
             Key.F3 : 2,
             Key.F4 : 3,
             Key.F5 : 4,
+            Key.F6 : 5,
+            Key.F7 : 6,
         }
 
         if self.controller.current_activity is hdmi.no_activity:
@@ -130,6 +132,8 @@ class Hub(remote.RemoteListener):
             (Key.F3, ),
             (Key.F4, ),
             (Key.F5, ),
+            (Key.F6, ),
+            (Key.F7, ),
         }
 
         for macro in macros:

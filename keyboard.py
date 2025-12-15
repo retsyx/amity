@@ -29,6 +29,7 @@ config.default('keyboard.keymap', {
         e.KEY_DOWN : Key.DOWN.value,
         e.KEY_LEFT : Key.LEFT.value,
         e.KEY_BACK : Key.BACK.value,
+        e.KEY_ESC : Key.BACK.value,
         e.KEY_VOLUMEUP : Key.VOLUME_UP.value,
         e.KEY_VOLUMEDOWN : Key.VOLUME_DOWN.value,
         e.KEY_CHANNELUP : Key.CHANNEL_UP.value,
@@ -63,6 +64,16 @@ config.default('keyboard.keymap', {
         e.KEY_RED : Key.F2.value,
         e.KEY_GREEN: Key.F3.value,
         e.KEY_YELLOW : Key.F4.value,
+        e.KEY_F8 : Key.SETUP_MENU.value, # Vizio XRT270
+        e.KEY_WWW : Key.DISPLAY_INFO.value, # Vizio XRT270 Microphone key
+        e.KEY_LEFTBRACE : Key.SET_INPUT.value, # Vizio XRT270 Input key
+        e.KEY_UNKNOWN : Key.F1.value, # Vizio XRT270 Star and Sling keys
+        e.KEY_NEXTSONG : Key.F2.value, # Vizio XRT270 Netflix key
+        e.KEY_PREVIOUSSONG : Key.F3.value, # Vizio XRT270 Prime Video key
+        e.KEY_F14 : Key.F4.value, # Vizio XRT270 Disney+ key
+        e.KEY_F19 : Key.F5.value, # Vizio XRT270 iHeart Radio key
+        e.KEY_F20 : Key.F6.value, # Vizio XRT270 Xumo Play key
+        e.KEY_EDIT : Key.F7.value, # Vizio XRT270 Watch Free key
     })
 
 config.default('keyboard.battery.monitor.enable', True)
@@ -110,6 +121,7 @@ class Handler(object):
             return
         hkey = self.keymap.get(event.code, None)
         if hkey is None:
+            log.debug(f'Unhandled key {event.code:02X}')
             return
         if event.value == KeyEvent.key_down:
             log.info(f'Key press {hkey:02X}')
