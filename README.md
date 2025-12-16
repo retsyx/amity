@@ -13,7 +13,7 @@ Amity came out of a need to replace an aging Logitech Harmony Hub Smart Control 
 
 ### How?
 
-Remotes like the Siri Remote, the Amazon Fire TV remote, or the LG Magic Remote are high quality, and readily available. They are simple, robust, last a long time on a charge, are very easy to use by everyone in the family, and there is probably one laying unused in a drawer somewhere. So why not use one to control the home theater?
+Remotes like the Siri Remote, the Amazon Fire TV remote, the Samsung SolarCell remote, or the Vizio voice remote are high quality, and readily available. They are simple, robust, last a long time on a charge, are very easy to use by everyone in the family, and there is probably one laying unused in a drawer somewhere. So why not use one to control the home theater?
 
 Raspberry Pis are powerful, flexible, readily available, and cheap enough (especially the Pi Zero 2 W).
 
@@ -26,12 +26,12 @@ Amity can be extremely cheap to put together. An example breakdown of costs:
 - Raspberry Pi Zero 2 W with headers - $18
 - MicroSD card - $10
 - Raspberry Pi power adapter - $10
-- A remote - free if you already have a [supported remote](doc/supported-remotes.md) and don't mind losing features like voice commands. Otherwise, ~$25 - $60.
+- A remote - free if you already have a [supported remote](doc/supported-remotes.md) and don't mind losing features like voice commands. Otherwise, ~$20 - $60.
 - HDMI cable - $6
 - Amity board - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board decreases substantially.
 - Some Dupont (2.54mm) connector wires - $6
 
-The total cost can be less than $55, if using a stripped HDMI cable, or up to ~$71 with a low volume manufactured Amity board.
+The total cost can be less than $50, if using a stripped HDMI cable, or up to ~$65 with a low volume manufactured Amity board.
 
 ## Caveats
 
@@ -70,13 +70,7 @@ Equipment that is known to be compatible with Amity:
 
 * A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer, that can run 64-bit Linux; with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
 * A MicroSD card (4GB or larger).
-* A remote control ([list of supported remotes](doc/supported-remotes.md))
-  * A Siri Remote. Preferably, a Gen 2 or Gen 3 remote (aluminum case with a power button in the top right corner), but a Gen 1 remote (black top) can also be used.
-  * An Amazon Fire TV remote.
-  * An LG Magic Remote.
-  * Common third party RF remotes that are actually keyboards.
-  * Most keyboards.
-  * IR remotes are *not* supported.
+* A remote control. See the [list of supported remotes](doc/supported-remotes.md).
 * [Amity Board](hw/README.md) (or a stripped and spliced HDMI cable) and an extra HDMI cable.
 
 ## Setup
@@ -130,7 +124,7 @@ If using a spliced HDMI cable, use the cable to connect the TV input to the rece
 
 ### Pairing a Remote
 
-The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like an Apple TV, or Mac, it will fail to work with Amity in unpredictable ways. Pairing and unpairing steps for supported remotes are listed [here](doc/supported-remotes.md). Ensure the remote is charged.
+The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like a streamer or TV, it will fail to work with Amity in unpredictable ways. Pairing and unpairing steps for supported remotes are listed [here](doc/supported-remotes.md). Ensure the remote is charged.
 
 1. Select the 'Remotes' tab. The 'Remotes' panel shows if a remote or keyboard is paired, and allows pairing. Press the 'Pair' button. Wait for the initial prompt to start the pairing process on the remote.
 
@@ -183,7 +177,7 @@ Amity has two basic modes, standby, when the home theater is in standby, and act
 
 ### Standby
 
-In standby, 1 of 5 activities can be started. The 5 activities are assigned to the select, and directional buttons - select, up, right, down, left (or blue, red, green, yellow. only 4). Note the order listed here matches the order of activities as specified in Activities configuration tab. The select button starts the first activity, up the second, right the third, and so on.
+In standby, 1 of at least 5 activities can be started (some remotes with streaming app buttons may allow more than 5 activities). The 5 activities are assigned to the select, and directional buttons - select, up, right, down, left. Note the order listed here matches the order of activities as specified in the Activities configuration tab. The select button starts the first activity, up the second, right the third, and so on. On remotes with color buttons (blue, red, green, yellow) the color buttons are assigned to the first 4 activities.
 
 Pressing the power button will send a standby signal to all devices. This is useful, if a device is on when it shouldn't be.
 
