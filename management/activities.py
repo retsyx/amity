@@ -349,6 +349,11 @@ class Activities(object):
             'keyboard_double_arrow_right',
             'keyboard_double_arrow_down',
             'keyboard_double_arrow_left',
+            'radio_button_unchecked',
+            'keyboard_double_arrow_up',
+            'keyboard_double_arrow_right',
+            'keyboard_double_arrow_down',
+            'keyboard_double_arrow_left',
             'error'
         ]
 
@@ -357,6 +362,7 @@ class Activities(object):
             'red',
             'green',
             'yellow',
+            'white',
             'gray',
         ]
 
@@ -366,6 +372,8 @@ class Activities(object):
             color = 'negative'
         else:
             icon = icons[index]
+            if index >= len(colors):
+                index = -1
             color = colors[index]
 
         with ui.row().classes('w-full').style('align-items: center;'):

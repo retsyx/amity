@@ -148,6 +148,9 @@ class Key(IntEnum):
     # for activity selection.
     F6 = 0x100
     F7 = 0x101
+    F8 = 0x102
+    F9 = 0x103
+    F10 = 0x104
 
 class PowerStatus(IntEnum):
     ON = 0

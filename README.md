@@ -175,25 +175,27 @@ Remember to 'Save' the activities when done.
 
 Amity has two basic modes, standby, when the home theater is in standby, and active when an activity has been selected.
 
+Note that while Amity supports multi-button and long button presses for additional functionality, the vast majority of users (e.g. family members) can ignore all of it and fully use Amity with simple button presses.
+
 ### Standby
 
-In standby, 1 of at least 5 activities can be started (some remotes with streaming app buttons may allow more than 5 activities). The 5 activities are assigned to the select, and directional buttons - select, up, right, down, left. Note the order listed here matches the order of activities as specified in the Activities configuration tab. The select button starts the first activity, up the second, right the third, and so on. On remotes with color buttons (blue, red, green, yellow) the color buttons are assigned to the first 4 activities.
+In standby, 1 of up to 10 activities can be started. The first 5 activities are assigned to the select, and directional buttons - select, up, right, down, left. Note the order listed here matches the order of activities as specified in the Activities configuration tab. The select button starts the first activity, up the second, right the third, and so on. The next 5 activities are assigned to long presses of the same buttons, in the same order. A long press of the select button starts the sixth activity, a long press of the up button starts the seventh activity, and so on. On remotes with color buttons (blue, red, green, yellow), the color buttons are assigned to the first 4 activities.
 
-Pressing the power button will send a standby signal to all devices. This is useful, if a device is on when it shouldn't be.
+A short press of the power button starts the first activity. A long press of the power button sends a standby command to all devices. This is useful, if a device is on when it shouldn't be.
 
 After an activity has been selected, Amity transitions into the active mode.
 
-Check if your remote has idiosyncrasies that may make operation a little different than expected in the list of [supported remotes](doc/supported-remotes.md).
+Check if your remote has idiosyncrasies that may make operation a little different than described in the list of [supported remotes](doc/supported-remotes.md).
 
 ### Active
 
-When active, all the buttons should behave as expected for the selected activity. For example, when using a PlayStation, the directional buttons navigate the PlayStation interface, select selects, back/menu backs out, and volume controls control the audio device. Touchpad swipes can also be used.
+When active, all the buttons should behave as expected for the selected activity. For example, when using a PlayStation, the directional buttons navigate the PlayStation interface, select selects, back/menu backs out, and volume controls control the audio device. On remotes equiped with a touchpad, swipes can also be used.
 
-Press the power button to end the activity and put the system in standby.
+A short press of the power button ends the activity and puts the system in standby. A long press of the power button refreshes the current activity to ensure all devices are as they should be. This is useful, if a device is not on when it should be.
 
-Press the power button, and one of the activity selection buttons (select, and directional) at the same time, to jump directly from one activity to another, without putting the system in standby.
+For remotes that support multiple simultaneous button presses; press the power button, and then one of the activity selection buttons (select, and directional) at the same time, to jump directly from the current activity to one of the other activities, without putting the system in standby.
 
-Check if your remote has idiosyncrasies that may make operation a little different than expected in the list of [supported remotes](doc/supported-remotes.md).
+Check if your remote has idiosyncrasies that may make operation a little different than described in the list of [supported remotes](doc/supported-remotes.md).
 
 ## Strange Devices
 

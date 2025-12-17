@@ -19,7 +19,7 @@ else:
 
 log = tools.logger(log_name)
 
-import asyncio, pprint, signal, traceback
+import asyncio, pprint, signal, time, traceback
 
 from aconfig import config, ConfigWatcher
 import remote, remote_adapter
@@ -31,6 +31,22 @@ import memory
 import messaging
 
 config.default('homekit.enable', False)
+config.default('hub.long_press.duration_sec', .5)
+config.default('hub.long_press.keymap', {
+    Key.SELECT.value : Key.F6.value,
+    Key.UP.value : Key.F7.value,
+    Key.RIGHT.value : Key.F8.value,
+    Key.DOWN.value : Key.F9.value,
+    Key.LEFT.value : Key.F10.value,
+    Key.F1.value : Key.F6.value,
+    Key.F2.value : Key.F7.value,
+    Key.F3.value : Key.F8.value,
+    Key.F4.value : Key.F9.value,
+    Key.F5.value : Key.F10.value,
+})
+config.default('hub.short_press.keymap', {
+    Key.POWER.value : Key.SELECT.value,
+})
 config.default('keyboard.enable', True)
 config.default('memory.monitor.enable', False)
 config.default('memory.monitor.period_sec', 5*60)
@@ -38,6 +54,7 @@ config.default('remote.battery.low_threshold', 10)
 
 class KeyState(object):
     def __init__(self, count):
+        self.timestamp = time.time()
         self.repeat_count = count
 
 class Hub(remote.RemoteListener):
@@ -52,6 +69,8 @@ class Hub(remote.RemoteListener):
         self.wait_for_release = False
         self.pipes = []
         self.in_macro = False
+        self.macro_index = None
+        self.macro_executed = False
         self.set_wait_for_release()
 
     def set_wait_for_release(self):
@@ -69,6 +88,42 @@ class Hub(remote.RemoteListener):
     # Duck typed methods for messaging
     async def client_set_activity(self, index):
         await self.set_activity(index)
+
+    activity_map = {
+        Key.SELECT : 0,
+        Key.UP : 1,
+        Key.RIGHT : 2,
+        Key.DOWN : 3,
+        Key.LEFT : 4,
+        Key.F1 : 0,
+        Key.F2 : 1,
+        Key.F3 : 2,
+        Key.F4 : 3,
+        Key.F5 : 4,
+        Key.F6 : 5,
+        Key.F7 : 6,
+        Key.F8 : 7,
+        Key.F9 : 8,
+        Key.F10 : 9,
+    }
+
+    macros = (
+        (Key.POWER, Key.SELECT),
+        (Key.POWER, Key.UP),
+        (Key.POWER, Key.RIGHT),
+        (Key.POWER, Key.DOWN),
+        (Key.POWER, Key.LEFT),
+        (Key.F1, ), # Not really a macro... But always use F keys for activity selection
+        (Key.F2, ),
+        (Key.F3, ),
+        (Key.F4, ),
+        (Key.F5, ),
+        (Key.F6, ),
+        (Key.F7, ),
+        (Key.F8, ),
+        (Key.F9, ),
+        (Key.F10, ),
+    )
 
     async def client_press_key(self, key, count):
         # unwrap enums, and use ints consistently
@@ -96,80 +151,95 @@ class Hub(remote.RemoteListener):
                 self.key_state.pop(key, None)
             return
 
-        activity_map = {
-            Key.SELECT : 0,
-            Key.UP : 1,
-            Key.RIGHT : 2,
-            Key.DOWN : 3,
-            Key.LEFT : 4,
-            Key.F1 : 0,
-            Key.F2 : 1,
-            Key.F3 : 2,
-            Key.F4 : 3,
-            Key.F5 : 4,
-            Key.F6 : 5,
-            Key.F7 : 6,
-        }
-
         if self.controller.current_activity is hdmi.no_activity:
             if count > 0:
                 # Ignore key sequences originating from swipes...
                 self.key_state.pop(key)
-                return
-            index = activity_map.get(hkey)
-            if index is not None:
-                await self.set_activity(index)
             return
 
-        macros = {
-            (Key.POWER, Key.SELECT),
-            (Key.POWER, Key.UP),
-            (Key.POWER, Key.RIGHT),
-            (Key.POWER, Key.DOWN),
-            (Key.POWER, Key.LEFT),
-            (Key.F1, ), # Not really a macro... But always use F keys for activity selection
-            (Key.F2, ),
-            (Key.F3, ),
-            (Key.F4, ),
-            (Key.F5, ),
-            (Key.F6, ),
-            (Key.F7, ),
-        }
-
-        for macro in macros:
-            key_count = 0
-            for k in macro:
-                if k in self.key_state:
-                    key_count += 1
-            if key_count == len(macro):
-                self.in_macro = True
-                index = activity_map.get(macro[-1])
-                if index is not None:
-                    await self.set_activity(index)
-                return
+        if not self.in_macro:
+            for macro_index, macro in enumerate(self.macros):
+                key_count = 0
+                for k in macro:
+                    if k in self.key_state:
+                        key_count += 1
+                if key_count == len(macro):
+                    self.in_macro = True
+                    self.macro_index = macro_index
+                    self.macro_executed = False
+                    return
 
         if hkey == Key.POWER:
             return
 
         self.taskit(self.press_key(key))
 
+    def map_key_press(self, key, time_pressed_sec):
+        if time_pressed_sec >= config['hub.long_press.duration_sec']:
+            key = config['hub.long_press.keymap'].get(key, key)
+            log.info(f'Long press key {key:02X}')
+        else:
+            key = config['hub.short_press.keymap'].get(key, key)
+            log.info(f'Short press key {key:02X}')
+        return key
+
     async def client_release_key(self, key):
         # unwrap enums, and use ints consistently
         if type(key) is Key:
             key = key.value
         log.info(f'Client release key {key:02X}')
-        if self.key_state.pop(key, None) is None:
+
+        state = self.key_state.pop(key, None)
+        if state is None:
+            log.info('No state for key?')
             return
 
-        if key == Key.POWER:
-            if self.in_macro:
-                self.in_macro = False
-            else:
-                await self.standby()
+        if self.controller.current_activity is hdmi.no_activity:
+            if not self.in_macro:
+                key = self.map_key_press(key, time.time() - state.timestamp)
+                if key == Key.POWER:
+                    await self.standby()
+                else:
+                    index = self.activity_map.get(key)
+                    if index is not None:
+                        await self.set_activity(index)
+        else:
+            if self.in_macro and not self.macro_executed:
+                skip = False
+                now = time.time()
+                fn_key = self.macros[self.macro_index][-1]
+                if key == Key.POWER:
+                    # The macro's power key has been released
+                    fn_state = self.key_state.get(fn_key, None)
+                    if fn_state is not None:
+                        time_pressed_sec = now - fn_state.timestamp
+                    else:
+                        log.error('Macro state is inconsistent')
+                        skip = True
+                elif fn_key == key:
+                    # The macro's function key has been released
+                    time_pressed_sec = now - state.timestamp
+                else:
+                    # Some other key has been released
+                    skip = True
+
+                if not skip:
+                    key = self.map_key_press(fn_key, time_pressed_sec)
+                    index = self.activity_map.get(key)
+                    if index is not None:
+                        await self.set_activity(index)
+                    self.macro_executed = True
+            elif not self.in_macro and key == Key.POWER:
+                if time.time() - state.timestamp >= config['hub.long_press.duration_sec']:
+                    await self.controller.fix_current_activity()
+                else:
+                    await self.standby()
 
         if not self.key_state:
             self.wait_for_release = False
             self.in_macro = False
+            self.macro_index = None
+            self.macro_executed = False
 
     async def client_battery_state(self, level, is_charging):
         is_low = level <= config['remote.battery.low_threshold'] and not is_charging
