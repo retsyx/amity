@@ -31,6 +31,40 @@ import memory
 import messaging
 
 config.default('homekit.enable', False)
+config.default('hub.activity_map', {
+    Key.SELECT.value : 0,
+    Key.UP.value : 1,
+    Key.RIGHT.value : 2,
+    Key.DOWN.value : 3,
+    Key.LEFT.value : 4,
+    Key.F1.value : 0,
+    Key.F2.value : 1,
+    Key.F3.value : 2,
+    Key.F4.value : 3,
+    Key.F5.value : 4,
+    Key.F6.value : 5,
+    Key.F7.value : 6,
+    Key.F8.value : 7,
+    Key.F9.value : 8,
+    Key.F10.value : 9,
+})
+config.default('hub.macros', [
+    (Key.POWER.value, Key.SELECT.value),
+    (Key.POWER.value, Key.UP.value),
+    (Key.POWER.value, Key.RIGHT.value),
+    (Key.POWER.value, Key.DOWN.value),
+    (Key.POWER.value, Key.LEFT.value),
+    (Key.F1.value, ), # Not really a macro... But always use F keys for activity selection
+    (Key.F2.value, ),
+    (Key.F3.value, ),
+    (Key.F4.value, ),
+    (Key.F5.value, ),
+    (Key.F6.value, ),
+    (Key.F7.value, ),
+    (Key.F8.value, ),
+    (Key.F9.value, ),
+    (Key.F10.value, ),
+])
 config.default('hub.long_press.duration_sec', .5)
 config.default('hub.long_press.keymap', {
     Key.SELECT.value : Key.F6.value,
@@ -47,6 +81,7 @@ config.default('hub.long_press.keymap', {
 config.default('hub.short_press.keymap', {
     Key.POWER.value : Key.SELECT.value,
 })
+config.default('hub.play_pause.mode', 'emulate')
 config.default('keyboard.enable', True)
 config.default('memory.monitor.enable', False)
 config.default('memory.monitor.period_sec', 5*60)
@@ -63,6 +98,9 @@ class Hub(remote.RemoteListener):
     REPEAT_COUNT_FLAG = 0x8000
 
     def __init__(self, controller):
+        self.activity_map = config['hub.activity_map']
+        self.macros = config['hub.macros']
+        self.play_pause_mode = config['hub.play_pause.mode']
         self.taskit = tools.Tasker('Hub')
         self.controller = controller
         self.key_state = {}
@@ -71,6 +109,7 @@ class Hub(remote.RemoteListener):
         self.in_macro = False
         self.macro_index = None
         self.macro_executed = False
+        self.play_pause_is_playing = False
         self.set_wait_for_release()
 
     def set_wait_for_release(self):
@@ -88,42 +127,6 @@ class Hub(remote.RemoteListener):
     # Duck typed methods for messaging
     async def client_set_activity(self, index):
         await self.set_activity(index)
-
-    activity_map = {
-        Key.SELECT : 0,
-        Key.UP : 1,
-        Key.RIGHT : 2,
-        Key.DOWN : 3,
-        Key.LEFT : 4,
-        Key.F1 : 0,
-        Key.F2 : 1,
-        Key.F3 : 2,
-        Key.F4 : 3,
-        Key.F5 : 4,
-        Key.F6 : 5,
-        Key.F7 : 6,
-        Key.F8 : 7,
-        Key.F9 : 8,
-        Key.F10 : 9,
-    }
-
-    macros = (
-        (Key.POWER, Key.SELECT),
-        (Key.POWER, Key.UP),
-        (Key.POWER, Key.RIGHT),
-        (Key.POWER, Key.DOWN),
-        (Key.POWER, Key.LEFT),
-        (Key.F1, ), # Not really a macro... But always use F keys for activity selection
-        (Key.F2, ),
-        (Key.F3, ),
-        (Key.F4, ),
-        (Key.F5, ),
-        (Key.F6, ),
-        (Key.F7, ),
-        (Key.F8, ),
-        (Key.F9, ),
-        (Key.F10, ),
-    )
 
     async def client_press_key(self, key, count):
         # unwrap enums, and use ints consistently
@@ -253,6 +256,7 @@ class Hub(remote.RemoteListener):
             await self.controller.force_standby()
         else:
             await self.controller.standby()
+        self.play_pause_is_playing = False
         self.set_wait_for_release()
         for pipe in self.pipes:
             pipe.notify_set_activity(-1)
@@ -274,6 +278,17 @@ class Hub(remote.RemoteListener):
     async def press_key(self, key):
         hkey = key & ~self.REPEAT_COUNT_FLAG
         log.info(f'Pressing key {hkey:02X}')
+        if hkey == Key.PAUSE_PLAY:
+            match self.play_pause_mode:
+                case 'send':
+                    pass
+                case 'select':
+                    log.info('Mapping PLAY_PAUSE to SELECT')
+                    hkey = Key.SELECT
+                case _: # emulate
+                    hkey = Key.PAUSE if self.play_pause_is_playing else Key.PLAY
+                    self.play_pause_is_playing = not self.play_pause_is_playing
+                    log.info(f'Emulating PLAY_PAUSE as key {hkey:02X}')
         while True:
             if not await self.controller.press_key(hkey, True):
                 log.info(f'Pressing key {hkey:02X} failed')

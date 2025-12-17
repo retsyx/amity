@@ -42,7 +42,7 @@ config.default('solarcell.keymap', {
     0x79 : Key.ROOT_MENU.value,     # Home
     0xA0 : Key.DISPLAY_INFO.value,  # Microphone
     0xB4 : Key.F2.value,            # Activity Samsung TV Plus
-    0xB9 : Key.SELECT.value,        # Pause
+    0xB9 : Key.PAUSE_PLAY.value,    # Pause
     0xD2 : Key.SETUP_MENU.value,    # Settings
     0xDF : Key.F4.value,            # Activity Disney+
     0xEF : Key.SUB_PICTURE.value,   # Picture-in-Picture

@@ -32,9 +32,7 @@ config.default('homekit.keymap',
                     8 : Key.SELECT.value,
                     9 : Key.BACK.value,
                     10 : Key.ROOT_MENU.value,
-                    # 11 is officialy play/pause but play/pause doesn't seem to be as universal
-                    # as select which will play/pause in more cases?
-                    11 : Key.SELECT.value, # Key.PAUSE_PLAY.value,
+                    11 : Key.PAUSE_PLAY.value,
                     # 15 is officially display info. However, info doesn't seem to be as useful as
                     # the root menu button which Apple uses for ATV instead of info.
                     15 : Key.ROOT_MENU.value, # Key.DISPLAY_INFO.value,
