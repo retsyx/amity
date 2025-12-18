@@ -1,0 +1,5 @@
+Reference,Value,Datasheet,Footprint,Qty,DNP
+"D1,D2",4148,https://www.digikey.com/en/products/detail/taiwan-semiconductor-corporation/TS4148-RCG/7359811,Diode_SMD:D_0603_1608Metric,2,
+"J1,J2",HDMI_A,https://www.digikey.com/en/products/detail/amphenol-cs-fci/10029449-001RLF/1001325,Connector_Video:HDMI_A_Amphenol_10029449-x01xLF_Horizontal,2,
+J3,Connector,https://www.digikey.com/en/products/detail/sullins-connector-solutions/PPTC032LJBN-RC/775975,Connector_PinSocket_2.54mm:PinSocket_2x03_P2.54mm_Horizontal,1,
+"R1,R2",27K,https://www.digikey.com/en/products/detail/bourns-inc/CR0603-JW-273ELF/3784345,Resistor_SMD:R_0603_1608Metric,2,
