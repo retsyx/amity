@@ -100,6 +100,9 @@ class Hub(remote.RemoteListener):
     def __init__(self, controller):
         self.activity_map = config['hub.activity_map']
         self.macros = config['hub.macros']
+        self.long_press_keymap = config['hub.long_press.keymap']
+        self.long_press_duration_sec = config['hub.long_press.duration_sec']
+        self.short_press_keymap = config['hub.short_press.keymap']
         self.play_pause_mode = config['hub.play_pause.mode']
         self.taskit = tools.Tasker('Hub')
         self.controller = controller
@@ -178,11 +181,11 @@ class Hub(remote.RemoteListener):
         self.taskit(self.press_key(key))
 
     def map_key_press(self, key, time_pressed_sec):
-        if time_pressed_sec >= config['hub.long_press.duration_sec']:
-            key = config['hub.long_press.keymap'].get(key, key)
+        if time_pressed_sec >= self.long_press_duration_sec:
+            key = self.long_press_keymap.get(key, key)
             log.info(f'Long press key {key:02X}')
         else:
-            key = config['hub.short_press.keymap'].get(key, key)
+            key = self.short_press_keymap.get(key, key)
             log.info(f'Short press key {key:02X}')
         return key
 
@@ -233,7 +236,7 @@ class Hub(remote.RemoteListener):
                         await self.set_activity(index)
                     self.macro_executed = True
             elif not self.in_macro and key == Key.POWER:
-                if time.time() - state.timestamp >= config['hub.long_press.duration_sec']:
+                if time.time() - state.timestamp >= self.long_press_duration_sec:
                     await self.controller.fix_current_activity()
                 else:
                     await self.standby()
