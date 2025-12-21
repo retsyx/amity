@@ -27,7 +27,7 @@ sudo apt-get -y update
 instpkgs bluez=5.66-1+rpt1+deb12u2 bluez-tools=2.0~20170911.0.7cb788c-4 build-essential=12.9
 instpkgs git libglib2.0-dev libbluetooth-dev=5.66-1+rpt1+deb12u2
 instpkgs libavahi-compat-libdnssd-dev=0.8-10+deb12u1
-instpkgs libssl-dev python3-dev unzip vim
+instpkgs libssl-dev python3-dev unzip
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
 if [ ! -f /etc/systemd/logind.conf.d/disable-power-key.conf ]; then
@@ -66,6 +66,8 @@ sudo systemctl mask userconfig
 # Block console logins because Amity uses remote control keyboards for input. A keyboard could be
 # used to login...
 sudo systemctl mask getty.target
+
+sudo ln -s /usr/bin/vim.tiny /usr/bin/vim
 
 # App setup
 
