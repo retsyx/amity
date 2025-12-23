@@ -15,13 +15,14 @@ from evdev import KeyEvent
 from aconfig import config
 from hdmi import Key
 
-config.default('keyboard.required_keys', (e.KEY_ENTER, e.KEY_UP,
+config.default('keyboard.required_keys', ((e.KEY_ENTER, e.KEY_SELECT), e.KEY_UP,
                                           e.KEY_RIGHT, e.KEY_DOWN,
                                           e.KEY_LEFT, e.KEY_BACK,
                                           e.KEY_VOLUMEUP, e.KEY_VOLUMEDOWN,
                                           e.KEY_MUTE, (e.KEY_POWER, e.KEY_SLEEP)))
 
 config.default('keyboard.keymap', {
+        e.KEY_SELECT : Key.SELECT.value,
         e.KEY_ENTER : Key.SELECT.value,
         e.KEY_KPENTER : Key.SELECT.value,
         e.KEY_UP : Key.UP.value,
@@ -74,6 +75,9 @@ config.default('keyboard.keymap', {
         e.KEY_F19 : Key.F5.value, # Vizio XRT270 iHeart Radio key
         e.KEY_F20 : Key.F6.value, # Vizio XRT270 Xumo Play key
         e.KEY_EDIT : Key.F7.value, # Vizio XRT270 Watch Free key
+        e.KEY_CAMERA_ACCESS_DISABLE : Key.F1.value, # Google TV Remote YouTube key
+        e.KEY_CAMERA_ACCESS_TOGGLE : Key.F2.value, # Google TV Remote Netflix key
+        e.KEY_SPREADSHEET : Key.F3.value, # Google TV Remote star key
     })
 
 config.default('keyboard.battery.monitor.enable', True)

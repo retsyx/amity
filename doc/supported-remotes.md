@@ -6,6 +6,8 @@ Amity supports several different remotes. Due to differences in how the remotes 
 
 * [<img src="images/fire-tv-remote.png" alt="Fire TV Remote" style="vertical-align: middle; padding: 10px; width: 25px"> Fire TV Remote](fire-tv-remote.md)
 
+* [<img src="images/google-tv-remote.png" alt="Google TV Remote" style="vertical-align: middle; padding: 10px; width: 25px"> Google TV Remote](Google-tv-remote.md)
+
 * [<img src="images/lg-magic-remote.png" alt="LG Magic Remote" style="vertical-align: middle; padding: 10px; width: 25px"> LG Magic Remote](lg-magic-remote.md)
 
 * [<img src="images/solarcell.png" alt="SolarCell Remote" style="vertical-align: middle; padding: 10px; width: 25px"> Samsung SolarCell/Smart Remote](solarcell.md)
