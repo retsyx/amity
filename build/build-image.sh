@@ -57,6 +57,11 @@ pushd ~/amity-build
 
 sudo ~/pimod/pimod.sh amity.Pifile
 
+# Mount the image as a loopback device and zero free blocks to improve compressed image size
+LOOP_DEVICE=$(sudo losetup -fP --show amity.img)
+sudo zerofree ${LOOP_DEVICE}p2
+sudo losetup -d ${LOOP_DEVICE}
+
 # All systems define UID?
 if [ "$UID" = "" ]; then
     UID=$(id -u)
@@ -68,6 +73,7 @@ if [ "$GID" = "" ]; then
 fi
 
 sudo chown $UID:$GID amity.img
+
 xz --force amity.img
 
 popd

@@ -17,5 +17,8 @@ RUN sudo -u pi bash build/setup-amity-core.sh
 # Cleanup
 WORKDIR /home/pi
 RUN rm -r linux-build/out
-RUN apt autoremove --purge
-RUN apt clean
+RUN apt-get -y autoremove --purge
+RUN apt-get -y clean
+RUN rm -rf /var/lib/apt/lists/*
+
+SHRINK
