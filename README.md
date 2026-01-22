@@ -28,10 +28,9 @@ Amity can be extremely cheap to put together. An example breakdown of costs:
 - Raspberry Pi power adapter - $10
 - A remote - free if you already have a [supported remote](doc/supported-remotes.md) and don't mind losing features like voice commands. Otherwise, ~$20 - $60.
 - HDMI cable - $6
-- Amity board - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board decreases substantially.
-- Some Dupont (2.54mm) connector wires - $6
+- [Amity Fin](hw/README.md) - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board decreases substantially.
 
-The total cost can be less than $50, if using a stripped HDMI cable, or up to ~$65 with a low volume manufactured Amity board.
+The total cost can be less than $50, if using a stripped HDMI cable, or up to ~$65 with a low volume manufactured Amity Fin.
 
 ## Caveats
 
@@ -39,9 +38,7 @@ The total cost can be less than $50, if using a stripped HDMI cable, or up to ~$
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
-Amity attaches to your home theater with HDMI, between the TV and the receiver. This requires using a [Amity Board (a custom PCB)](hw/README.md), or a carefully stripped HDMI cable, so the HDMI-CEC signals can be wired in to Raspberry Pi GPIO pins. Performing the wiring incorrectly may damage your HDMI equipment and/or Raspberry Pi.
-
-Amity may also have terrible bugs.
+While Amity has been tested and has worked reliably with the HDMI equipment I have available, there may still be an unexpected risk of unknown bugs. Also, when hooking up the hardware, you may make a mistake - this may destroy your HDMI equipment and/or your Raspberry Pi.
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
@@ -71,17 +68,17 @@ Equipment that is known to be compatible with Amity:
 * A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer, that can run 64-bit Linux; with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
 * A MicroSD card (4GB or larger).
 * A remote control. See the [list of supported remotes](doc/supported-remotes.md).
-* [Amity Board](hw/README.md) (or a stripped and spliced HDMI cable) and an extra HDMI cable.
+* [Amity Fin](hw/README.md) and an extra HDMI cable.
 
 ## Setup
 
 ### HDMI Hardware
 
-Amity inserts itself into the HDMI-CEC bus between the TV, and the receiver. There are two methods to splice into the HDMI-CEC bus. The preferred method is to use [Amity Board](hw/README.md). The second method is to strip an existing HDMI cable. Amity installs, by default, for use with a spliced HDMI cable.
+Amity inserts itself into the HDMI-CEC bus between the TV, and the receiver. There are two methods to splice into the HDMI-CEC bus. The preferred method is to use [Amity Fin](hw/README.md).
 
 Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and break video display in an actual home theater.
 
-[Acquire an Amity Board or prepare a cable before proceeding](hw/README.md).
+[Acquire Amity Fin before proceeding](hw/README.md).
 
 ### Initial Installation
 
@@ -104,23 +101,17 @@ It is assumed that the Raspberry Pi will be a dedicated device for home theater 
 5. Create the Amity administration user by entering a username and password. These can be anything.
 6. Login with the newly created user.
 
-### Amity Board Configuration
+### Amity Fin Configuration
 
-If using a spliced HDMI cable, skip this step.
-
-If using Amity Board, then select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
+If using Amity Fin, select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
 
 ### HDMI Connections
 
 Amity connects between the TV and the receiver.
 
-If using Amity Board:
-
 1. Disconnect the HDMI cable connecting the TV input to the receiver's output.
-2. Use one HDMI cable to connect the TV's input to the Amity Board HDMI port marked `TV`.
-3. Use a second HDMI cable to connect the receiver output to Amity's HDMI port marked `AVR`.
-
-If using a spliced HDMI cable, use the cable to connect the TV input to the receiver's output.
+2. Use one HDMI cable to connect the TV's input to the Amity Fin HDMI port marked `TV`.
+3. Use a second HDMI cable to connect the receiver output to the Amity Fin HDMI port marked `AVR`.
 
 ### Pairing a Remote
 

@@ -1,4 +1,12 @@
-# Amity Case
+# 3D Printable Cases
 
-3D printable case for Amity Board.
+### Amity Fin on a Raspberry Pi Zero
+
+* [Bottom](fin-rpi-zero-bottom.step)
+* [Top](fin-rpi-zero-top.step)
+* [Cap](fin-rpi-zero-cap.step)
+
+### Amity Board
+
+[Case](board-case.step).
 
