@@ -71,6 +71,10 @@ config.default('keyboard.keymap', {
         e.KEY_UNKNOWN : Key.F1.value, # Vizio XRT270 Star and Sling keys
         e.KEY_NEXTSONG : Key.F2.value, # Vizio XRT270 Netflix key
         e.KEY_PREVIOUSSONG : Key.F3.value, # Vizio XRT270 Prime Video key
+        e.KEY_F1 : Key.F1.value,
+        e.KEY_F2 : Key.F2.value,
+        e.KEY_F3 : Key.F3.value,
+        e.KEY_F4 : Key.F4.value,
         e.KEY_F14 : Key.F4.value, # Vizio XRT270 Disney+ key
         e.KEY_F19 : Key.F5.value, # Vizio XRT270 iHeart Radio key
         e.KEY_F20 : Key.F6.value, # Vizio XRT270 Xumo Play key
