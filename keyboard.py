@@ -17,7 +17,7 @@ from hdmi import Key
 
 config.default('keyboard.required_keys', ((e.KEY_ENTER, e.KEY_SELECT), e.KEY_UP,
                                           e.KEY_RIGHT, e.KEY_DOWN,
-                                          e.KEY_LEFT, e.KEY_BACK,
+                                          e.KEY_LEFT, (e.KEY_BACK, e.KEY_ESC),
                                           e.KEY_VOLUMEUP, e.KEY_VOLUMEDOWN,
                                           e.KEY_MUTE, (e.KEY_POWER, e.KEY_SLEEP)))
 
