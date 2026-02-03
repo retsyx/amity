@@ -287,6 +287,8 @@ class Message(Structure):
     def __str__(self):
         return ':'.join(f'{c:02X}' for c in self.msg[:self.len])
 
+
+
 class EventStateChange(Structure):
     _fields_ = [
         ('phys_addr', c_uint16),
@@ -658,10 +660,14 @@ class Adapter(object):
 
     async def transmit(self, msg: Message):
         state = AsyncState(msg, asyncio.Event())
-        ret = self.ioctl(Ioctl.TRANSMIT, msg)
+        try:
+            ret = self.ioctl(Ioctl.TRANSMIT, msg)
+        except OSError as e:
+            msg.tx_status = Message.TX_STATUS_ERROR
+            ret = -1
         if ret != 0:
             log.info(f'TX {msg} failed')
-            return None
+            return msg
         log.info(f'TX {msg.sequence} {msg}')
         self.states[msg.sequence] = state
         await state.event.wait()
