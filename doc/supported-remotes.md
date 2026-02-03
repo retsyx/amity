@@ -16,4 +16,6 @@ Amity supports several different remotes. Due to differences in how the remotes 
 
 * [<img src="images/vizio-xrt270.png" alt="Vizio XRT270R Remote" style="vertical-align: middle; padding: 10px; width: 25px"> Vizio XRT270R Remote](vizio-xrt270.md)
 
-* [<img src="images/keyboard.png" alt="Keyboard" style="vertical-align: middle; padding: 10px; height: 25px"> Keyboards](keyboards.md)
+* [<img src="images/couch-clicker-atomic.png" alt="Couch Clicker Atomic" style="vertical-align: middle; padding: 10px; width: 50px"> Couch Clicker Atomic](couch-clicker-atomic.md)
+
+* [<img src="images/keyboard.png" alt="Keyboard" style="vertical-align: middle; padding: 10px; height: 50px"> Keyboards](keyboards.md)
