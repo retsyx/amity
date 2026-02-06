@@ -17,10 +17,15 @@ This installs the required system packages and clones the pimod repository.
 ## Building the Image
 
 ```commandline
-./build-image.sh
+./build-image.sh -v <VERSION>
 ```
 
-The output image is in `~/amity-build/amity.img.gz`
+Where `VERSION` is the release version. Presently, the version is used to populate `amity-os.json` with the assumption that it is hosted as a GitHub release file. For use with Raspberry Pi Imager 2.0 or later.
+
+Output:
+
+* Amity image: `~/amity-build/amity.img.gz`
+* Raspberry PI OS list JSON: `~/amity-build/amity-os.json`
 
 ## Internals
 

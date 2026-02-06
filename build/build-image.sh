@@ -3,12 +3,14 @@
 set -xe
 
 COMPILE_KERNEL=YES
+VERSION=v999.999.999
 
 usage()
 {
   cat <<EOF
 
 Usage: $0 [options]
+-v,--version         Release version (presently only used for amity-os.json)
 -n,--nokernel        Skip compiling the kernel
 -h,--help            This usage description
 
@@ -21,6 +23,11 @@ while [ $# -gt 0 ]; do
     -n|--nokernel)
       COMPILE_KERNEL=NO
       shift 1
+      ;;
+
+    -v|--version)
+      VERSION="$2"
+      shift 2
       ;;
 
     -h|--help)
@@ -72,8 +79,47 @@ if [ "$GID" = "" ]; then
     GID=$(id -g)
 fi
 
+RELEASE_DATE=$(date +"%Y-%m-%d")
+EXTRACT_SIZE=$(stat -c %s amity.img)
+EXTRACT_HASH=$(sha256sum amity.img | awk '{print $1}')
+
 sudo chown $UID:$GID amity.img
 
 xz --force amity.img
+
+DOWNLOAD_SIZE=$(stat -c %s amity.img.xz)
+DOWNLOAD_HASH=$(sha256sum amity.img.xz | awk '{print $1}')
+
+jq -n \
+  --arg VERSION "$VERSION" \
+  --arg RELEASE_DATE "$RELEASE_DATE" \
+  --argjson EXTRACT_SIZE "$EXTRACT_SIZE" \
+  --arg EXTRACT_HASH "$EXTRACT_HASH" \
+  --argjson DOWNLOAD_SIZE "$DOWNLOAD_SIZE" \
+  --arg DOWNLOAD_HASH "$DOWNLOAD_HASH" \
+'{
+  "os_list": [
+    {
+      "name": "Amity",
+      "description": "HDMI-CEC Home Theater Control",
+      "url": "https://github.com/retsyx/amity/releases/download/\($VERSION)/amity.img.xz",
+      "icon": "https://github.com/retsyx/amity/releases/download/\($VERSION)/icon.png",
+      "website": "https://github.com/retsyx/amity",
+      "release_date": $RELEASE_DATE,
+      "extract_size": $EXTRACT_SIZE,
+      "extract_sha256": $EXTRACT_HASH,
+      "image_download_size": $DOWNLOAD_SIZE,
+      "image_download_sha256": $DOWNLOAD_HASH,
+      "devices": [
+        "pi3-64bit",
+        "pi4-64bit",
+        "pi5-64bit"
+      ],
+      "init_format": "cloudinit-rpi",
+      "architecture": "arm64",
+      "capabilities": []
+    }
+ ]
+}' > amity-os.json
 
 popd

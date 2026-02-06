@@ -24,9 +24,9 @@ instpkgs()
 
 sudo apt-get -y update
 
-instpkgs bluez=5.66-1+rpt1+deb12u2 bluez-tools=2.0~20170911.0.7cb788c-4 build-essential=12.9
-instpkgs git libglib2.0-dev libbluetooth-dev=5.66-1+rpt1+deb12u2
-instpkgs libavahi-compat-libdnssd-dev=0.8-10+deb12u1
+instpkgs bluez=5.82-1.1+rpt1 bluez-tools=2.0~20170911.0.7cb788c-4+b2 build-essential=12.12
+instpkgs git libglib2.0-dev libbluetooth-dev=5.82-1.1+rpt1
+instpkgs libavahi-compat-libdnssd-dev=0.8-16
 instpkgs libssl-dev python3-dev unzip
 
 # Prevent keyboard power keys from rebooting or shutting down the machine
@@ -121,9 +121,9 @@ fi
 cd bluepy3
 pip install .
 
-# Build the bluepy3 helper against BlueZ version 5.66
+# Build the bluepy3 helper against BlueZ version 5.82
 cd "$APP_DIR"
-echo -e 'import bluepy3.helpermaker as X\nX.make_helper(build="5.66")' | python
+echo -e 'import bluepy3.helpermaker as X\nX.make_helper(build="5.82")' | python
 
 # Setup .bashrc
 if ! grep -q "# Amity" "$ROOT_DIR/.bashrc"; then

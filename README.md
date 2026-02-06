@@ -84,22 +84,27 @@ Note that all of the commonly available HDMI breakout boards advertised for sale
 
 It is assumed that the Raspberry Pi will be a dedicated device for home theater control. It may be possible to run other services on the same Raspberry Pi but it is not supported, and is strongly discouraged.
 
-1. Download the latest [Amity image](https://github.com/retsyx/amity/releases/latest/download/amity.img.xz).
-2. Using Raspberry Pi Imager, write the image to a MicroSD card.
-    1. [Raspberry Pi Imager version 1.9.6](https://github.com/raspberrypi/rpi-imager/releases/tag/v1.9.6) or earlier must be used. Version 2.0, and later break the OS customization functionality for custom images.
-    2. For 'Operating System', select 'Use custom', and select the Amity image.
-    3. When prompted to 'Use OS customization', select 'Yes'.
+Installation is performed with [Raspberry Pi Imager 2.0](https://www.raspberrypi.com/software/) or later (earlier versions will not work).
+
+1. In Raspberry Pi Imager, press `App Options` (bottom left of the app).
+2. In the App Options popup, press `Edit` to edit the Content Repository.
+3. In the Content Repository popup, select `Use custom URL` and paste this URL into the text field: `https://github.com/retsyx/amity/releases/latest/download/amity-os.json`
+4. Press `Apply & Restart`.
+5. Run through the configuration wizard:
+    1. Select the Raspberry Pi device you are going to use.
+    2. Select the OS - `Amity`.
+    3. Select the MicroSD.
     4. Set the hostname to something memorable, for example `amity`.
-    5. Select 'Set username and password' and set the password. The username **must** be `pi`.
-      * For advanced users:
-        * It is possible to not select 'Set username and password', and instead to enable SSH in the 'Services' tab and to specify a public SSH key.
-        * It is also possible to set neither a password, nor enable SSH. However, at this time, this completely precludes upgrading Amity to newer versions. An upgrade will require backing up the config, reinstalling Amity from scratch, and restoring the config.
-    6. If using WiFi, set your WiFi network information in the 'Configure Wireless LAN' section
-3. Insert the imaged MicroSD into the Raspberry Pi, and wait for it to to complete its initial boot sequence. This may take a few minutes, and a few reboots.
-4. In your web browser open the Amity administration page. For example, if the hostname in Raspberry Pi Imager was configured as `amity`, then browse to `https://amity.local` (on Mac) or `https://amity` (on Windows).
+    5. Optionally, set localisation or leave as is.
+    6. Set the username and password. It **must** be `pi`.
+    7. If using WiFi, set WiFi network information.
+    8. Optionally, enable SSH, and set credentials. It is recommended to enable SSH.
+6. Write the image to the MicroSD card.
+7. Insert the imaged MicroSD into the Raspberry Pi, and wait for it to to complete its initial boot sequence. This may take a few minutes, and a few reboots.
+8. In your web browser open the Amity administration page. For example, if the hostname in Raspberry Pi Imager was configured as `amity`, then browse to `https://amity.local` (on Mac) or `https://amity` (on Windows).
  * The web browser will prompt that the site may be unsafe. This is because Amity creates a self signed security certificate for encryption. It is safe. Click on the details, and accept that the site is safe.
-5. Create the Amity administration user by entering a username and password. These can be anything.
-6. Login with the newly created user.
+9. Create the Amity administration user by entering a username and password. These can be anything.
+10. Login with the newly created user.
 
 ### Amity Fin Configuration
 
