@@ -57,6 +57,8 @@ class Remotes(object):
             self.top.control.stop()
             self.proc = await asyncio.create_subprocess_shell('./pair_remote',
                         stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.DEVNULL,
+                        # setsid so that the process group kill below doesn't kill us, too
                         preexec_fn=os.setsid)
             self.top.taskit(self.read_stdout(event.client))
         else:
