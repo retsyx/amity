@@ -153,6 +153,10 @@ RUN_PATH=$APP_DIR/bin/run-amity-warmup.sh
 cat > "$RUN_PATH" << EOF
 #!/bin/bash
 
+# Unblock bluetooth
+BLUETOOTH_RFKILL_ID=\$(rfkill | grep bluetooth | awk '{print \$1}')
+sudo rfkill unblock \$BLUETOOTH_RFKILL_ID
+
 # Create a self signed certificate that is valid for 100 years
 if [ ! -f "$GUI_DIR/key.pem" ]; then
     /usr/bin/openssl req -x509 -newkey rsa:4096 -keyout "$GUI_DIR/key.pem" -out "$GUI_DIR/cert.pem" -sha256 -days 36500 -nodes -subj "/CN=Amity"
