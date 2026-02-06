@@ -156,6 +156,13 @@ class Scanner(object):
             device.setBondable(True)
             device.setSecurityLevel(btle.SEC_LEVEL_MEDIUM)
             public_addr, _ = device.pair()
+            # Disconnect locally in bluepy3 so bluetoothctl can connect below
+            device.disconnect()
+            # Enable trust for the device
+            subprocess.run(['/usr/bin/bluetoothctl', 'trust', public_addr], capture_output=True)
+            # And connect to it to tickle the system to auto-connect in the future (ZOMG!?)
+            subprocess.run(['/usr/bin/bluetoothctl', 'connect', public_addr], capture_output=True)
+
             self.pairing = False
             self.log.info(f'Paired with {name}')
 
