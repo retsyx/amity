@@ -2,8 +2,10 @@ evdev == 1.9.2
 HAP-python[QRCode] == 4.9.2
 fastapi == 0.124.0
 nicegui == 3.7.1
-pillow == 12.0.0
+pillow == 12.1.1
 pyyaml == 6.0.3
 qrcode == 8.2
 scrypt == 0.9.4
 watchdog == 6.0.0
+paho-mqtt == 2.1.0
+aiomqtt == 2.5.0

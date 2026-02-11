@@ -82,9 +82,10 @@ class Remotes(object):
                     line = line.decode().strip()
                     if not line: continue # Empty line
                     log.info(f'Message "{line}"')
-                    ui.notify(line)
                     if 'Paired with' in line:
+                        ui.notify(line, type='positive')
                         break
+                    ui.notify(line)
                 except Exception as e:
                     print(str(e))
         await self.proc.wait()

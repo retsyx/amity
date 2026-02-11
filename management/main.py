@@ -24,6 +24,7 @@ import authentication
 from activities import Activities
 from remotes import Remotes
 from homekit import HomeKit
+from mqtt import MQTT
 from advanced import Advanced
 
 class Management(object):
@@ -32,7 +33,7 @@ class Management(object):
         self.taskit = tools.Tasker('Management')
         self.control = Control('amity-hub')
         self.current_tab = None
-        self.pages = [cls(self) for cls in (Activities, Remotes, HomeKit, Advanced)]
+        self.pages = [cls(self) for cls in (Activities, Remotes, HomeKit, MQTT, Advanced)]
         self.tabs = []
 
         @ui.page('/')

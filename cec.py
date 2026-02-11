@@ -125,6 +125,7 @@ class Key(IntEnum):
     VOLUME_DOWN = 0x42
     TOGGLE_MUTE = 0x43
     PLAY = 0x44
+    STOP = 0x45
     PAUSE = 0x46
     REWIND = 0x48
     FAST_FORWARD = 0x49

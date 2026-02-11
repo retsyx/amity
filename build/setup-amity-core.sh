@@ -83,6 +83,7 @@ CONFIG_DIR=$VAR_DIR/config
 GUI_DIR=$VAR_DIR/gui
 NICEGUI_DIR=$GUI_DIR/nicegui
 HOMEKIT_DIR=$VAR_DIR/homekit
+MQTT_DIR=$VAR_DIR/mqtt
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$CONFIG_DIR"
@@ -90,6 +91,7 @@ touch "$CONFIG_DIR/config.yaml"
 mkdir -p "$GUI_DIR"
 mkdir -p "$NICEGUI_DIR"
 mkdir -p "$HOMEKIT_DIR"
+mkdir -p "$MQTT_DIR"
 
 # Create, and install cec-gpio overlay
 DTB_NAME=cec-gpio.dtbo

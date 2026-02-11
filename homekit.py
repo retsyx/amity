@@ -19,6 +19,7 @@ from hdmi import Key
 
 from aconfig import config
 
+config.default('homekit.enable', False)
 config.default('homekit.keymap',
                 {
                     0 : Key.REWIND.value,

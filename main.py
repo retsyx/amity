@@ -26,11 +26,11 @@ import remote, remote_adapter
 import hdmi
 from hdmi import Key
 import homekit
+import mqtt
 import evdev_input, keyboard, solarcell
 import memory
 import messaging
 
-config.default('homekit.enable', False)
 config.default('hub.activity_map', {
     Key.SELECT.value : 0,
     Key.UP.value : 1,
@@ -384,6 +384,15 @@ async def _main():
         hk = homekit.HomeKit(activity_names, loop, hk_pipe)
         await hk.start()
 
+    if config['mqtt.enable']:
+        # Wire hub and MQTT
+        mqtt_pipe = messaging.Pipe()
+        hub.add_pipe(mqtt_pipe)
+        mq = mqtt.MQTT(activity_names, loop, mqtt_pipe)
+        await mq.start()
+    else:
+        mq = None
+
     mac = config['remote.mac']
     if mac is not None:
         # Wire hub and Siri remote
@@ -405,6 +414,8 @@ async def _main():
             futures.extend(inp.wait_on())
         if mem is not None:
             futures.extend(mem.wait_on())
+        if mq is not None:
+            futures.extend(mq.wait_on())
         await asyncio.gather(*futures)
         await asyncio.sleep(1)
 

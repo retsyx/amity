@@ -2,4 +2,4 @@
 
 . ./bin/activate
 
-./hdmi_tool.py $1 $2 $3 $4
+./hdmi_tool.py $@

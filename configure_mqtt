@@ -2,4 +2,4 @@
 
 . ./bin/activate
 
-./homekit_tool.py $@
+./mqtt_tool.py $@
