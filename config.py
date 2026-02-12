@@ -198,17 +198,3 @@ class Config(object):
             self.__apply(self.cfg, path, default_value)
         self.user_cfg = value
         self.__overlay(self.cfg, self.user_cfg)
-
-
-def main():
-    c = Config('test.yaml')
-    c.default('remote.mac', 0)
-    c.load()
-    print(f'1 {c.user_cfg}')
-    previous = c['remote.mac']
-    c['remote.mac'] = previous + 1
-    print(f'2 {c.user_cfg}')
-    c.save(True)
-
-if __name__ == '__main__':
-    main()
