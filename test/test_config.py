@@ -10,6 +10,7 @@ import unittest
 import os
 import tempfile
 import yaml
+from enum import IntEnum
 
 from config import Config
 
@@ -380,6 +381,122 @@ class TestConfigPartialOverlay(unittest.TestCase):
             self.assertEqual(c['a.b.y'], 'default_y')
             self.assertEqual(c['a.b.z'], 'default_z')
             self.assertEqual(c['a.c'], 'default_c')
+        finally:
+            os.unlink(fname)
+
+
+class Color(IntEnum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+
+def _color_representer(dumper, data):
+    return dumper.represent_scalar('!Color', data.name)
+
+def _color_constructor(loader, node):
+    return Color[loader.construct_scalar(node)]
+
+
+class TestConfigYamlHandler(unittest.TestCase):
+    """Test YAML handler registration for custom types."""
+
+    def test_default_with_enum(self):
+        """Test that enum values can be used in defaults after registering a handler."""
+        c = Config('dummy.yaml')
+        c.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+        c.default('theme.color', Color.RED)
+        self.assertEqual(c['theme.color'], Color.RED)
+
+    def test_save_complete_roundtrip(self):
+        """Test that enum values survive save_complete and reload."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            fname = f.name
+        try:
+            c = Config('dummy.yaml')
+            c.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c.default('theme.primary', Color.BLUE)
+            c.default('theme.secondary', Color.GREEN)
+            c.save_complete(fname)
+
+            c2 = Config(fname)
+            c2.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c2.default('theme.primary', Color.RED)
+            c2.default('theme.secondary', Color.RED)
+            c2.load()
+            self.assertEqual(c2['theme.primary'], Color.BLUE)
+            self.assertEqual(c2['theme.secondary'], Color.GREEN)
+        finally:
+            os.unlink(fname)
+
+    def test_save_and_load_roundtrip(self):
+        """Test that enum values survive save/load cycle."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            fname = f.name
+        try:
+            c = Config(fname)
+            c.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c.default('theme.color', Color.RED)
+            c.load()
+            c['theme.color'] = Color.BLUE
+            c.save()
+
+            c2 = Config(fname)
+            c2.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c2.default('theme.color', Color.RED)
+            c2.load()
+            self.assertEqual(c2['theme.color'], Color.BLUE)
+        finally:
+            os.unlink(fname)
+
+    def test_enum_in_dict_values(self):
+        """Test enum values used as dict values in config."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            fname = f.name
+        try:
+            c = Config(fname)
+            c.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c.default('keymap', {0: Color.RED, 1: Color.GREEN, 2: Color.BLUE})
+            c.load()
+            c['keymap'] = {0: Color.RED, 1: Color.GREEN, 2: Color.BLUE}
+            c.save()
+
+            c2 = Config(fname)
+            c2.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c2.default('keymap', {})
+            c2.load()
+            self.assertEqual(c2['keymap'][0], Color.RED)
+            self.assertEqual(c2['keymap'][1], Color.GREEN)
+            self.assertEqual(c2['keymap'][2], Color.BLUE)
+        finally:
+            os.unlink(fname)
+
+    def test_handler_isolation_between_instances(self):
+        """Test that handlers registered on one Config don't affect another."""
+        c1 = Config('dummy1.yaml')
+        c1.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+
+        c2 = Config('dummy2.yaml')
+        # c2 has no handler registered — dumping a Color should fail
+        c2.default('theme.color', Color.RED)
+        with self.assertRaises(yaml.representer.RepresenterError):
+            save_and_read_yaml(c2)
+
+    def test_yaml_tag_format(self):
+        """Test that the YAML output contains the expected tag."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            fname = f.name
+        try:
+            c = Config(fname)
+            c.register_yaml_handler('!Color', Color, _color_representer, _color_constructor)
+            c.default('theme.color', Color.GREEN)
+            c.load()
+            c['theme.color'] = Color.GREEN
+            c.save()
+
+            with open(fname, 'r') as f:
+                content = f.read()
+            self.assertIn('!Color', content)
+            self.assertIn('GREEN', content)
         finally:
             os.unlink(fname)
 

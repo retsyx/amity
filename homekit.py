@@ -22,21 +22,21 @@ from aconfig import config
 config.default('homekit.enable', False)
 config.default('homekit.keymap',
                 {
-                    0 : Key.REWIND.value,
-                    1 : Key.FAST_FORWARD.value,
-                    2 : Key.FORWARD.value,
-                    3 : Key.BACKWARD.value,
-                    4 : Key.UP.value,
-                    5 : Key.DOWN.value,
-                    6 : Key.LEFT.value,
-                    7 : Key.RIGHT.value,
-                    8 : Key.SELECT.value,
-                    9 : Key.BACK.value,
-                    10 : Key.ROOT_MENU.value,
-                    11 : Key.PAUSE_PLAY.value,
+                    0 : Key.REWIND,
+                    1 : Key.FAST_FORWARD,
+                    2 : Key.FORWARD,
+                    3 : Key.BACKWARD,
+                    4 : Key.UP,
+                    5 : Key.DOWN,
+                    6 : Key.LEFT,
+                    7 : Key.RIGHT,
+                    8 : Key.SELECT,
+                    9 : Key.BACK,
+                    10 : Key.ROOT_MENU,
+                    11 : Key.PAUSE_PLAY,
                     # 15 is officially display info. However, info doesn't seem to be as useful as
                     # the root menu button which Apple uses for ATV instead of info.
-                    15 : Key.ROOT_MENU.value, # Key.DISPLAY_INFO.value,
+                    15 : Key.ROOT_MENU, # Key.DISPLAY_INFO,
                 })
 
 

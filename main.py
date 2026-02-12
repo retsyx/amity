@@ -31,55 +31,63 @@ import evdev_input, keyboard, solarcell
 import memory
 import messaging
 
+def _key_representer(dumper, data):
+    return dumper.represent_scalar('!Key', data.name)
+
+def _key_constructor(loader, node):
+    return Key[loader.construct_scalar(node)]
+
+config.register_yaml_handler('!Key', Key, _key_representer, _key_constructor)
+
 config.default('hub.activity_map', {
-    Key.SELECT.value : 0,
-    Key.UP.value : 1,
-    Key.RIGHT.value : 2,
-    Key.DOWN.value : 3,
-    Key.LEFT.value : 4,
-    Key.F1.value : 0,
-    Key.F2.value : 1,
-    Key.F3.value : 2,
-    Key.F4.value : 3,
-    Key.F5.value : 4,
-    Key.F6.value : 5,
-    Key.F7.value : 6,
-    Key.F8.value : 7,
-    Key.F9.value : 8,
-    Key.F10.value : 9,
+    Key.SELECT : 0,
+    Key.UP : 1,
+    Key.RIGHT : 2,
+    Key.DOWN : 3,
+    Key.LEFT : 4,
+    Key.F1 : 0,
+    Key.F2 : 1,
+    Key.F3 : 2,
+    Key.F4 : 3,
+    Key.F5 : 4,
+    Key.F6 : 5,
+    Key.F7 : 6,
+    Key.F8 : 7,
+    Key.F9 : 8,
+    Key.F10 : 9,
 })
 config.default('hub.macros', [
-    (Key.POWER.value, Key.SELECT.value),
-    (Key.POWER.value, Key.UP.value),
-    (Key.POWER.value, Key.RIGHT.value),
-    (Key.POWER.value, Key.DOWN.value),
-    (Key.POWER.value, Key.LEFT.value),
-    (Key.F1.value, ), # Not really a macro... But always use F keys for activity selection
-    (Key.F2.value, ),
-    (Key.F3.value, ),
-    (Key.F4.value, ),
-    (Key.F5.value, ),
-    (Key.F6.value, ),
-    (Key.F7.value, ),
-    (Key.F8.value, ),
-    (Key.F9.value, ),
-    (Key.F10.value, ),
+    (Key.POWER, Key.SELECT),
+    (Key.POWER, Key.UP),
+    (Key.POWER, Key.RIGHT),
+    (Key.POWER, Key.DOWN),
+    (Key.POWER, Key.LEFT),
+    (Key.F1, ), # Not really a macro... But always use F keys for activity selection
+    (Key.F2, ),
+    (Key.F3, ),
+    (Key.F4, ),
+    (Key.F5, ),
+    (Key.F6, ),
+    (Key.F7, ),
+    (Key.F8, ),
+    (Key.F9, ),
+    (Key.F10, ),
 ])
 config.default('hub.long_press.duration_sec', .5)
 config.default('hub.long_press.keymap', {
-    Key.SELECT.value : Key.F6.value,
-    Key.UP.value : Key.F7.value,
-    Key.RIGHT.value : Key.F8.value,
-    Key.DOWN.value : Key.F9.value,
-    Key.LEFT.value : Key.F10.value,
-    Key.F1.value : Key.F6.value,
-    Key.F2.value : Key.F7.value,
-    Key.F3.value : Key.F8.value,
-    Key.F4.value : Key.F9.value,
-    Key.F5.value : Key.F10.value,
+    Key.SELECT : Key.F6,
+    Key.UP : Key.F7,
+    Key.RIGHT : Key.F8,
+    Key.DOWN : Key.F9,
+    Key.LEFT : Key.F10,
+    Key.F1 : Key.F6,
+    Key.F2 : Key.F7,
+    Key.F3 : Key.F8,
+    Key.F4 : Key.F9,
+    Key.F5 : Key.F10,
 })
 config.default('hub.short_press.keymap', {
-    Key.POWER.value : Key.SELECT.value,
+    Key.POWER : Key.SELECT,
 })
 config.default('hub.play_pause.mode', 'emulate')
 config.default('keyboard.enable', True)

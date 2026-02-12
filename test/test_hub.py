@@ -61,18 +61,18 @@ class TestHubInit(unittest.TestCase):
         """Set up test fixtures"""
         # Set config values using direct assignment
         test_common.mock_config['hub.activity_map'] = {
-            Key.SELECT.value: 0,
-            Key.UP.value: 1,
+            Key.SELECT: 0,
+            Key.UP: 1,
         }
         test_common.mock_config['hub.macros'] = [
-            (Key.POWER.value, Key.SELECT.value),
+            (Key.POWER, Key.SELECT),
         ]
         test_common.mock_config['hub.long_press.duration_sec'] = 0.5
         test_common.mock_config['hub.long_press.keymap'] = {
-            Key.SELECT.value: Key.F6.value,
+            Key.SELECT: Key.F6,
         }
         test_common.mock_config['hub.short_press.keymap'] = {
-            Key.POWER.value: Key.SELECT.value,
+            Key.POWER: Key.SELECT,
         }
         test_common.mock_config['hub.play_pause.mode'] = 'emulate'
         test_common.mock_config['remote.battery.low_threshold'] = 10
@@ -100,8 +100,8 @@ class TestHubInit(unittest.TestCase):
         with patch('asyncio.get_running_loop'):
             hub = Hub(self.controller)
 
-        self.assertEqual(hub.activity_map[Key.SELECT.value], 0)
-        self.assertEqual(hub.activity_map[Key.UP.value], 1)
+        self.assertEqual(hub.activity_map[Key.SELECT], 0)
+        self.assertEqual(hub.activity_map[Key.UP], 1)
         self.assertEqual(hub.long_press_duration_sec, 0.5)
         self.assertEqual(hub.play_pause_mode, 'emulate')
 
@@ -113,18 +113,18 @@ class TestHubSync(unittest.TestCase):
         """Set up test fixtures"""
         # Set config values using direct assignment
         test_common.mock_config['hub.activity_map'] = {
-            Key.SELECT.value: 0,
-            Key.UP.value: 1,
+            Key.SELECT: 0,
+            Key.UP: 1,
         }
         test_common.mock_config['hub.macros'] = [
-            (Key.POWER.value, Key.SELECT.value),
+            (Key.POWER, Key.SELECT),
         ]
         test_common.mock_config['hub.long_press.duration_sec'] = 0.5
         test_common.mock_config['hub.long_press.keymap'] = {
-            Key.SELECT.value: Key.F6.value,
+            Key.SELECT: Key.F6,
         }
         test_common.mock_config['hub.short_press.keymap'] = {
-            Key.POWER.value: Key.SELECT.value,
+            Key.POWER: Key.SELECT,
         }
         test_common.mock_config['hub.play_pause.mode'] = 'emulate'
         test_common.mock_config['remote.battery.low_threshold'] = 10
@@ -156,27 +156,27 @@ class TestHubSync(unittest.TestCase):
 
     def test_map_key_press_long(self):
         """Test mapping a long key press"""
-        key = Key.SELECT.value
+        key = Key.SELECT
         mapped_key = self.hub.map_key_press(key, 0.6)
-        self.assertEqual(mapped_key, Key.F6.value)
+        self.assertEqual(mapped_key, Key.F6)
 
     def test_map_key_press_exactly_at_threshold(self):
         """Test mapping at exactly the threshold duration"""
-        key = Key.SELECT.value
+        key = Key.SELECT
         mapped_key = self.hub.map_key_press(key, 0.5)
-        self.assertEqual(mapped_key, Key.F6.value)
+        self.assertEqual(mapped_key, Key.F6)
 
     def test_map_key_press_short(self):
         """Test mapping a short key press"""
-        key = Key.POWER.value
+        key = Key.POWER
         mapped_key = self.hub.map_key_press(key, 0.3)
-        self.assertEqual(mapped_key, Key.SELECT.value)
+        self.assertEqual(mapped_key, Key.SELECT)
 
     def test_map_key_press_no_mapping(self):
         """Test key with no mapping returns same key"""
-        key = Key.UP.value
+        key = Key.UP
         mapped_key = self.hub.map_key_press(key, 0.3)
-        self.assertEqual(mapped_key, Key.UP.value)
+        self.assertEqual(mapped_key, Key.UP)
 
     def test_auto_clear_wait_for_release(self):
         """Test auto clearing wait_for_release"""
@@ -204,19 +204,19 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         """Set up async test fixtures"""
         # Set config values using direct assignment
         test_common.mock_config['hub.activity_map'] = {
-            Key.SELECT.value: 0,
-            Key.UP.value: 1,
-            Key.RIGHT.value: 2,
+            Key.SELECT: 0,
+            Key.UP: 1,
+            Key.RIGHT: 2,
         }
         test_common.mock_config['hub.macros'] = [
-            (Key.POWER.value, Key.SELECT.value),
+            (Key.POWER, Key.SELECT),
         ]
         test_common.mock_config['hub.long_press.duration_sec'] = 0.5
         test_common.mock_config['hub.long_press.keymap'] = {
-            Key.SELECT.value: Key.F6.value,
+            Key.SELECT: Key.F6,
         }
         test_common.mock_config['hub.short_press.keymap'] = {
-            Key.POWER.value: Key.SELECT.value,
+            Key.POWER: Key.SELECT,
         }
         test_common.mock_config['hub.play_pause.mode'] = 'emulate'
         test_common.mock_config['remote.battery.low_threshold'] = 10
@@ -334,19 +334,19 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = no_activity
         self.hub.wait_for_release = False
 
-        await self.hub.client_press_key(Key.SELECT.value, 0)
+        await self.hub.client_press_key(Key.SELECT, 0)
 
         # Unflagged keys (count=0) are kept in no_activity mode
         # (only flagged keys with count>0 are removed)
         self.assertEqual(len(self.hub.key_state), 1)
-        self.assertIn(Key.SELECT.value, self.hub.key_state)
+        self.assertIn(Key.SELECT, self.hub.key_state)
 
     async def test_client_press_key_with_count_during_no_activity(self):
         """Test that counted keys are removed during no_activity"""
         self.controller.current_activity = no_activity
         self.hub.wait_for_release = False
 
-        await self.hub.client_press_key(Key.SELECT.value, 2)
+        await self.hub.client_press_key(Key.SELECT, 2)
 
         # Counted keys should be removed immediately in no_activity
         self.assertEqual(len(self.hub.key_state), 0)
@@ -356,20 +356,20 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = Mock()
         self.hub.wait_for_release = False
 
-        await self.hub.client_press_key(Key.UP.value, 0)
+        await self.hub.client_press_key(Key.UP, 0)
 
         # Should have key state
-        self.assertIn(Key.UP.value, self.hub.key_state)
+        self.assertIn(Key.UP, self.hub.key_state)
 
     async def test_client_press_key_with_count(self):
         """Test key press with repeat count"""
         self.controller.current_activity = Mock()
         self.hub.wait_for_release = False
 
-        await self.hub.client_press_key(Key.UP.value, 2)
+        await self.hub.client_press_key(Key.UP, 2)
 
         # Should have key state with REPEAT_COUNT_FLAG
-        flagged_key = Key.UP.value | Hub.REPEAT_COUNT_FLAG
+        flagged_key = Key.UP | Hub.REPEAT_COUNT_FLAG
         self.assertIn(flagged_key, self.hub.key_state)
         self.assertEqual(self.hub.key_state[flagged_key].repeat_count, 2)
 
@@ -378,11 +378,11 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = Mock()
         self.hub.wait_for_release = False
 
-        await self.hub.client_press_key(Key.UP.value, 2)
-        await self.hub.client_press_key(Key.UP.value, 3)
+        await self.hub.client_press_key(Key.UP, 2)
+        await self.hub.client_press_key(Key.UP, 3)
 
         # Should accumulate counts
-        flagged_key = Key.UP.value | Hub.REPEAT_COUNT_FLAG
+        flagged_key = Key.UP | Hub.REPEAT_COUNT_FLAG
         self.assertEqual(self.hub.key_state[flagged_key].repeat_count, 5)
 
     async def test_client_press_key_max_count(self):
@@ -391,12 +391,12 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.wait_for_release = False
 
         # First call with count=7
-        await self.hub.client_press_key(Key.UP.value, 7)
+        await self.hub.client_press_key(Key.UP, 7)
         # Second call with count=8 should cap total at 10 (not 7+8=15)
-        await self.hub.client_press_key(Key.UP.value, 8)
+        await self.hub.client_press_key(Key.UP, 8)
 
         # Should be capped at 10 when accumulating
-        flagged_key = Key.UP.value | Hub.REPEAT_COUNT_FLAG
+        flagged_key = Key.UP | Hub.REPEAT_COUNT_FLAG
         self.assertEqual(self.hub.key_state[flagged_key].repeat_count, 10)
 
     async def test_client_press_key_wait_for_release(self):
@@ -404,7 +404,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = Mock()
         self.hub.wait_for_release = True
 
-        await self.hub.client_press_key(Key.UP.value, 1)
+        await self.hub.client_press_key(Key.UP, 1)
 
         # Counted key state should be removed
         self.assertEqual(len(self.hub.key_state), 0)
@@ -414,17 +414,17 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = Mock()
         self.hub.wait_for_release = False
 
-        await self.hub.client_press_key(Key.POWER.value, 0)
+        await self.hub.client_press_key(Key.POWER, 0)
 
         # Should have key state but not call press_key
-        self.assertIn(Key.POWER.value, self.hub.key_state)
+        self.assertIn(Key.POWER, self.hub.key_state)
         # press_key should not be called for POWER key
         self.controller.press_key.assert_not_called()
 
     async def test_client_release_key_no_state(self):
         """Test releasing key with no prior state"""
         # Should handle gracefully without errors
-        await self.hub.client_release_key(Key.UP.value)
+        await self.hub.client_release_key(Key.UP)
 
     async def test_client_release_key_from_no_activity_to_activity(self):
         """Test releasing key to activate activity from no_activity"""
@@ -433,10 +433,10 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.in_macro = False
 
         # Simulate short press by setting timestamp in the past
-        self.hub.key_state[Key.SELECT.value] = KeyState(0)
-        self.hub.key_state[Key.SELECT.value].timestamp = time.time() - 0.2
+        self.hub.key_state[Key.SELECT] = KeyState(0)
+        self.hub.key_state[Key.SELECT].timestamp = time.time() - 0.2
 
-        await self.hub.client_release_key(Key.SELECT.value)
+        await self.hub.client_release_key(Key.SELECT)
 
         # Should set activity index 0
         self.controller.set_activity.assert_called_once_with(0)
@@ -448,10 +448,10 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.in_macro = False
 
         # Simulate short press of POWER (< 0.5 seconds)
-        self.hub.key_state[Key.POWER.value] = KeyState(0)
-        self.hub.key_state[Key.POWER.value].timestamp = time.time() - 0.2
+        self.hub.key_state[Key.POWER] = KeyState(0)
+        self.hub.key_state[Key.POWER].timestamp = time.time() - 0.2
 
-        await self.hub.client_release_key(Key.POWER.value)
+        await self.hub.client_release_key(Key.POWER)
 
         # Should call standby
         self.controller.standby.assert_called_once()
@@ -463,10 +463,10 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.in_macro = False
 
         # Simulate long press of POWER (>= 0.5 seconds)
-        self.hub.key_state[Key.POWER.value] = KeyState(0)
-        self.hub.key_state[Key.POWER.value].timestamp = time.time() - 0.6
+        self.hub.key_state[Key.POWER] = KeyState(0)
+        self.hub.key_state[Key.POWER].timestamp = time.time() - 0.6
 
-        await self.hub.client_release_key(Key.POWER.value)
+        await self.hub.client_release_key(Key.POWER)
 
         # Should call fix_current_activity
         self.controller.fix_current_activity.assert_called_once()
@@ -479,10 +479,10 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.macro_executed = True
 
         # Add and release single key
-        self.hub.key_state[Key.SELECT.value] = KeyState(0)
-        self.hub.key_state[Key.SELECT.value].timestamp = time.time() - 0.2
+        self.hub.key_state[Key.SELECT] = KeyState(0)
+        self.hub.key_state[Key.SELECT].timestamp = time.time() - 0.2
 
-        await self.hub.client_release_key(Key.SELECT.value)
+        await self.hub.client_release_key(Key.SELECT)
 
         # Macro state should be cleared
         self.assertFalse(self.hub.in_macro)
@@ -510,7 +510,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.press_key = press_key_wrapper
 
         # Unflagged key with repeat_count=0 (normal button press)
-        key = Key.UP.value
+        key = Key.UP
         self.hub.key_state[key] = KeyState(0)
 
         # Create task
@@ -535,7 +535,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = Mock()
 
         # Flagged key with repeat_count=1 (self-terminating)
-        key = Key.UP.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.UP | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(1)
 
         await self.hub.press_key(key)
@@ -550,7 +550,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.current_activity = Mock()
 
         # Flagged key with repeat_count=3
-        key = Key.UP.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.UP | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(3)
 
         await self.hub.press_key(key)
@@ -564,7 +564,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.press_key.return_value = False
 
         # Add key state with repeat count
-        key = Key.UP.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.UP | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(3)
 
         await self.hub.press_key(key)
@@ -578,13 +578,13 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.play_pause_is_playing = True
 
         # Use flagged key for self-terminating test
-        key = Key.PAUSE_PLAY.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.PAUSE_PLAY | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(1)
 
         await self.hub.press_key(key)
 
         # Should send PAUSE and toggle state
-        self.controller.press_key.assert_called_with(Key.PAUSE.value, True)
+        self.controller.press_key.assert_called_with(Key.PAUSE, True)
         self.assertFalse(self.hub.play_pause_is_playing)
 
     async def test_press_key_pause_play_emulate_to_play(self):
@@ -593,13 +593,13 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.play_pause_is_playing = False
 
         # Use flagged key for self-terminating test
-        key = Key.PAUSE_PLAY.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.PAUSE_PLAY | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(1)
 
         await self.hub.press_key(key)
 
         # Should send PLAY and toggle state
-        self.controller.press_key.assert_called_with(Key.PLAY.value, True)
+        self.controller.press_key.assert_called_with(Key.PLAY, True)
         self.assertTrue(self.hub.play_pause_is_playing)
 
     async def test_press_key_pause_play_select_mode(self):
@@ -607,26 +607,26 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.play_pause_mode = 'select'
 
         # Use flagged key for self-terminating test
-        key = Key.PAUSE_PLAY.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.PAUSE_PLAY | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(1)
 
         await self.hub.press_key(key)
 
         # Should map to SELECT
-        self.controller.press_key.assert_called_with(Key.SELECT.value, True)
+        self.controller.press_key.assert_called_with(Key.SELECT, True)
 
     async def test_press_key_pause_play_send_mode(self):
         """Test PAUSE_PLAY in send mode (flagged key)"""
         self.hub.play_pause_mode = 'send'
 
         # Use flagged key for self-terminating test
-        key = Key.PAUSE_PLAY.value | Hub.REPEAT_COUNT_FLAG
+        key = Key.PAUSE_PLAY | Hub.REPEAT_COUNT_FLAG
         self.hub.key_state[key] = KeyState(1)
 
         await self.hub.press_key(key)
 
         # Should send as-is
-        self.controller.press_key.assert_called_with(Key.PAUSE_PLAY.value, True)
+        self.controller.press_key.assert_called_with(Key.PAUSE_PLAY, True)
 
     async def test_press_key_pause_play_unflagged(self):
         """Test PAUSE_PLAY with unflagged key (normal button press)"""
@@ -650,7 +650,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.controller.press_key = press_key_wrapper
 
         # Unflagged key (normal press - requires external state removal)
-        key = Key.PAUSE_PLAY.value
+        key = Key.PAUSE_PLAY
         self.hub.key_state[key] = KeyState(0)
 
         # Create task
@@ -681,7 +681,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
     async def test_check_release_all_keys_only_power(self):
         """Test releasing all keys when only POWER is pressed"""
         self.controller.current_activity = Mock()
-        self.hub.key_state = {Key.POWER.value: KeyState(0)}
+        self.hub.key_state = {Key.POWER: KeyState(0)}
 
         await self.hub.check_release_all_keys()
 
@@ -690,7 +690,7 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
     async def test_check_release_all_keys_other_keys_pressed(self):
         """Test NOT releasing when other keys are pressed"""
         self.controller.current_activity = Mock()
-        self.hub.key_state = {Key.UP.value: KeyState(0)}
+        self.hub.key_state = {Key.UP: KeyState(0)}
 
         await self.hub.check_release_all_keys()
 
@@ -711,8 +711,8 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.wait_for_release = False
 
         # Press both keys in macro sequence
-        await self.hub.client_press_key(Key.POWER.value, 0)
-        await self.hub.client_press_key(Key.SELECT.value, 0)
+        await self.hub.client_press_key(Key.POWER, 0)
+        await self.hub.client_press_key(Key.SELECT, 0)
 
         # Should detect macro
         self.assertTrue(self.hub.in_macro)
@@ -725,14 +725,14 @@ class TestHubAsync(unittest.IsolatedAsyncioTestCase):
         self.hub.wait_for_release = False
 
         # Setup macro state
-        await self.hub.client_press_key(Key.POWER.value, 0)
-        await self.hub.client_press_key(Key.SELECT.value, 0)
+        await self.hub.client_press_key(Key.POWER, 0)
+        await self.hub.client_press_key(Key.SELECT, 0)
 
         # Ensure SELECT key has a short press timestamp
-        self.hub.key_state[Key.SELECT.value].timestamp = time.time() - 0.2
+        self.hub.key_state[Key.SELECT].timestamp = time.time() - 0.2
 
         # Release the function key (SELECT)
-        await self.hub.client_release_key(Key.SELECT.value)
+        await self.hub.client_release_key(Key.SELECT)
 
         # Should execute macro and set activity
         self.assertTrue(self.hub.macro_executed)

@@ -22,66 +22,66 @@ config.default('keyboard.required_keys', ((e.KEY_ENTER, e.KEY_SELECT), e.KEY_UP,
                                           e.KEY_MUTE, (e.KEY_POWER, e.KEY_SLEEP)))
 
 config.default('keyboard.keymap', {
-        e.KEY_SELECT : Key.SELECT.value,
-        e.KEY_ENTER : Key.SELECT.value,
-        e.KEY_KPENTER : Key.SELECT.value,
-        e.KEY_UP : Key.UP.value,
-        e.KEY_RIGHT : Key.RIGHT.value,
-        e.KEY_DOWN : Key.DOWN.value,
-        e.KEY_LEFT : Key.LEFT.value,
-        e.KEY_BACK : Key.BACK.value,
-        e.KEY_ESC : Key.BACK.value,
-        e.KEY_VOLUMEUP : Key.VOLUME_UP.value,
-        e.KEY_VOLUMEDOWN : Key.VOLUME_DOWN.value,
-        e.KEY_CHANNELUP : Key.CHANNEL_UP.value,
-        e.KEY_CHANNELDOWN : Key.CHANNEL_DOWN.value,
-        e.KEY_MUTE : Key.TOGGLE_MUTE.value,
-        e.KEY_POWER : Key.POWER.value,
-        e.KEY_SLEEP : Key.POWER.value,
-        e.KEY_MENU : Key.BACK.value,
-        e.KEY_SEARCH : Key.DISPLAY_INFO.value,
-        e.KEY_HOME : Key.ROOT_MENU.value,
-        e.KEY_HOMEPAGE : Key.ROOT_MENU.value,
-        e.KEY_REWIND : Key.REWIND.value,
-        e.KEY_PLAYPAUSE : Key.PAUSE_PLAY.value,
-        e.KEY_PLAY : Key.PLAY.value,
-        e.KEY_PAUSE : Key.PAUSE.value,
-        e.KEY_FASTFORWARD : Key.FAST_FORWARD.value,
-        e.KEY_PROGRAM : Key.GUIDE.value,
-        e.KEY_SETUP : Key.SETUP_MENU.value,
-        e.KEY_VIDEO : Key.VOD.value,
-        e.KEY_LIST : Key.CONTENTS_MENU.value,
-        e.KEY_0 : Key.NUMBER_0.value,
-        e.KEY_1 : Key.NUMBER_1.value,
-        e.KEY_2 : Key.NUMBER_2.value,
-        e.KEY_3 : Key.NUMBER_3.value,
-        e.KEY_4 : Key.NUMBER_4.value,
-        e.KEY_5 : Key.NUMBER_5.value,
-        e.KEY_6 : Key.NUMBER_6.value,
-        e.KEY_7 : Key.NUMBER_7.value,
-        e.KEY_8 : Key.NUMBER_8.value,
-        e.KEY_9 : Key.NUMBER_9.value,
-        e.KEY_BLUE : Key.F1.value,
-        e.KEY_RED : Key.F2.value,
-        e.KEY_GREEN: Key.F3.value,
-        e.KEY_YELLOW : Key.F4.value,
-        e.KEY_F8 : Key.SETUP_MENU.value, # Vizio XRT270
-        e.KEY_WWW : Key.DISPLAY_INFO.value, # Vizio XRT270 Microphone key
-        e.KEY_LEFTBRACE : Key.SET_INPUT.value, # Vizio XRT270 Input key
-        e.KEY_UNKNOWN : Key.F1.value, # Vizio XRT270 Star and Sling keys
-        e.KEY_NEXTSONG : Key.F2.value, # Vizio XRT270 Netflix key
-        e.KEY_PREVIOUSSONG : Key.F3.value, # Vizio XRT270 Prime Video key
-        e.KEY_F1 : Key.F1.value,
-        e.KEY_F2 : Key.F2.value,
-        e.KEY_F3 : Key.F3.value,
-        e.KEY_F4 : Key.F4.value,
-        e.KEY_F14 : Key.F4.value, # Vizio XRT270 Disney+ key
-        e.KEY_F19 : Key.F5.value, # Vizio XRT270 iHeart Radio key
-        e.KEY_F20 : Key.F6.value, # Vizio XRT270 Xumo Play key
-        e.KEY_EDIT : Key.F7.value, # Vizio XRT270 Watch Free key
-        e.KEY_CAMERA_ACCESS_DISABLE : Key.F1.value, # Google TV Remote YouTube key
-        e.KEY_CAMERA_ACCESS_TOGGLE : Key.F2.value, # Google TV Remote Netflix key
-        e.KEY_SPREADSHEET : Key.F3.value, # Google TV Remote star key
+        e.KEY_SELECT : Key.SELECT,
+        e.KEY_ENTER : Key.SELECT,
+        e.KEY_KPENTER : Key.SELECT,
+        e.KEY_UP : Key.UP,
+        e.KEY_RIGHT : Key.RIGHT,
+        e.KEY_DOWN : Key.DOWN,
+        e.KEY_LEFT : Key.LEFT,
+        e.KEY_BACK : Key.BACK,
+        e.KEY_ESC : Key.BACK,
+        e.KEY_VOLUMEUP : Key.VOLUME_UP,
+        e.KEY_VOLUMEDOWN : Key.VOLUME_DOWN,
+        e.KEY_CHANNELUP : Key.CHANNEL_UP,
+        e.KEY_CHANNELDOWN : Key.CHANNEL_DOWN,
+        e.KEY_MUTE : Key.TOGGLE_MUTE,
+        e.KEY_POWER : Key.POWER,
+        e.KEY_SLEEP : Key.POWER,
+        e.KEY_MENU : Key.BACK,
+        e.KEY_SEARCH : Key.DISPLAY_INFO,
+        e.KEY_HOME : Key.ROOT_MENU,
+        e.KEY_HOMEPAGE : Key.ROOT_MENU,
+        e.KEY_REWIND : Key.REWIND,
+        e.KEY_PLAYPAUSE : Key.PAUSE_PLAY,
+        e.KEY_PLAY : Key.PLAY,
+        e.KEY_PAUSE : Key.PAUSE,
+        e.KEY_FASTFORWARD : Key.FAST_FORWARD,
+        e.KEY_PROGRAM : Key.GUIDE,
+        e.KEY_SETUP : Key.SETUP_MENU,
+        e.KEY_VIDEO : Key.VOD,
+        e.KEY_LIST : Key.CONTENTS_MENU,
+        e.KEY_0 : Key.NUMBER_0,
+        e.KEY_1 : Key.NUMBER_1,
+        e.KEY_2 : Key.NUMBER_2,
+        e.KEY_3 : Key.NUMBER_3,
+        e.KEY_4 : Key.NUMBER_4,
+        e.KEY_5 : Key.NUMBER_5,
+        e.KEY_6 : Key.NUMBER_6,
+        e.KEY_7 : Key.NUMBER_7,
+        e.KEY_8 : Key.NUMBER_8,
+        e.KEY_9 : Key.NUMBER_9,
+        e.KEY_BLUE : Key.F1,
+        e.KEY_RED : Key.F2,
+        e.KEY_GREEN: Key.F3,
+        e.KEY_YELLOW : Key.F4,
+        e.KEY_F8 : Key.SETUP_MENU, # Vizio XRT270
+        e.KEY_WWW : Key.DISPLAY_INFO, # Vizio XRT270 Microphone key
+        e.KEY_LEFTBRACE : Key.SET_INPUT, # Vizio XRT270 Input key
+        e.KEY_UNKNOWN : Key.F1, # Vizio XRT270 Star and Sling keys
+        e.KEY_NEXTSONG : Key.F2, # Vizio XRT270 Netflix key
+        e.KEY_PREVIOUSSONG : Key.F3, # Vizio XRT270 Prime Video key
+        e.KEY_F1 : Key.F1,
+        e.KEY_F2 : Key.F2,
+        e.KEY_F3 : Key.F3,
+        e.KEY_F4 : Key.F4,
+        e.KEY_F14 : Key.F4, # Vizio XRT270 Disney+ key
+        e.KEY_F19 : Key.F5, # Vizio XRT270 iHeart Radio key
+        e.KEY_F20 : Key.F6, # Vizio XRT270 Xumo Play key
+        e.KEY_EDIT : Key.F7, # Vizio XRT270 Watch Free key
+        e.KEY_CAMERA_ACCESS_DISABLE : Key.F1, # Google TV Remote YouTube key
+        e.KEY_CAMERA_ACCESS_TOGGLE : Key.F2, # Google TV Remote Netflix key
+        e.KEY_SPREADSHEET : Key.F3, # Google TV Remote star key
     })
 
 config.default('keyboard.battery.monitor.enable', True)

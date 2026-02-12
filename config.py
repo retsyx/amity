@@ -16,15 +16,21 @@ class Config(object):
         self.cfg = {}
         self.loaded = False
         self.filename = filename
+        self.loader_class = type('Loader', (yaml.SafeLoader,), {})
+        self.dumper_class = type('Dumper', (yaml.SafeDumper,), {})
         self.default('config.max_backups', 10)
         log.info(f'filename {self.filename}')
+
+    def register_yaml_handler(self, tag, data_type, representer, constructor):
+        self.dumper_class.add_representer(data_type, representer)
+        self.loader_class.add_constructor(tag, constructor)
 
     def load(self):
         """Must be called after all default() calls have been made"""
         log.info(f'Load {self.filename}')
         try:
             with open(self.filename, 'r') as file:
-                self.user_cfg = yaml.safe_load(file)
+                self.user_cfg = yaml.load(file, Loader=self.loader_class)
             if self.user_cfg is None:
                 log.info(f'{self.filename} is empty. Defaulting to empty config.')
                 self.user_cfg = {}
@@ -52,7 +58,7 @@ class Config(object):
 
         tmp_fd, tmp_path = tempfile.mkstemp()
         with os.fdopen(tmp_fd, 'w') as file:
-            yaml.safe_dump(self.user_cfg, file)
+            yaml.dump(self.user_cfg, file, Dumper=self.dumper_class)
         shutil.move(tmp_path, self.filename)
         # Fixup ownership, if running as root
         if os.getuid() == 0:
@@ -77,7 +83,7 @@ class Config(object):
 
     def save_complete(self, filename):
         with open(filename, 'w') as file:
-            yaml.safe_dump(self.cfg, file)
+            yaml.dump(self.cfg, file, Dumper=self.dumper_class)
 
     def __overlay(self, node, overlay_node):
         if type(node) is dict:

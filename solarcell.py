@@ -25,30 +25,30 @@ from hdmi import Key
 # release is with a timeout.
 
 config.default('solarcell.keymap', {
-    0x02 : Key.POWER.value,
-    0x07 : Key.VOLUME_UP.value,
-    0x0B : Key.VOLUME_DOWN.value,
-    0x0F : Key.TOGGLE_MUTE.value,
-    0x10 : Key.CHANNEL_DOWN.value,
-    0x12 : Key.CHANNEL_UP.value,
-    0x4F : Key.GUIDE.value,
-    0x58 : Key.BACK.value,
-    0x60 : Key.UP.value,
-    0x61 : Key.DOWN.value,
-    0x62 : Key.RIGHT.value,
-    0x65 : Key.LEFT.value,
-    0x68 : Key.SELECT.value,
+    0x02 : Key.POWER,
+    0x07 : Key.VOLUME_UP,
+    0x0B : Key.VOLUME_DOWN,
+    0x0F : Key.TOGGLE_MUTE,
+    0x10 : Key.CHANNEL_DOWN,
+    0x12 : Key.CHANNEL_UP,
+    0x4F : Key.GUIDE,
+    0x58 : Key.BACK,
+    0x60 : Key.UP,
+    0x61 : Key.DOWN,
+    0x62 : Key.RIGHT,
+    0x65 : Key.LEFT,
+    0x68 : Key.SELECT,
     #0x6A : Key.???                 # Magic Button (recommendations)
-    0x79 : Key.ROOT_MENU.value,     # Home
-    0xA0 : Key.DISPLAY_INFO.value,  # Microphone
-    0xB4 : Key.F2.value,            # Activity Samsung TV Plus
-    0xB9 : Key.PAUSE_PLAY.value,    # Pause
-    0xD2 : Key.SETUP_MENU.value,    # Settings
-    0xDF : Key.F4.value,            # Activity Disney+
-    0xEF : Key.SUB_PICTURE.value,   # Picture-in-Picture
-    0xF3 : Key.F5.value,            # Activity Netflix
-    0xF4 : Key.F3.value,            # Activity Prime Video
-    0xFA : Key.F4.value,            # Activity YouTube
+    0x79 : Key.ROOT_MENU,           # Home
+    0xA0 : Key.DISPLAY_INFO,        # Microphone
+    0xB4 : Key.F2,                  # Activity Samsung TV Plus
+    0xB9 : Key.PAUSE_PLAY,          # Pause
+    0xD2 : Key.SETUP_MENU,          # Settings
+    0xDF : Key.F4,                  # Activity Disney+
+    0xEF : Key.SUB_PICTURE,         # Picture-in-Picture
+    0xF3 : Key.F5,                  # Activity Netflix
+    0xF4 : Key.F3,                  # Activity Prime Video
+    0xFA : Key.F4,                  # Activity YouTube
 })
 
 config.default('solarcell.repeat.timeout_sec', 0.15)
