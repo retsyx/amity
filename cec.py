@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -30,7 +30,7 @@ _IOC_WRITE = 1
 _IOC_READ = 2
 
 def _IOC(direction, tp, nr, size):
-    if type(tp) == str:
+    if type(tp) is str:
         tp = ord(tp) # XXX doesn't work for multi byte integers...
     if type(size) != int:
         size = sizeof(size)
