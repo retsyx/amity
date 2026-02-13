@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -158,7 +158,7 @@ class Handler(object):
                         battery_level = int(line.split(':')[1].strip().split(' ')[0][2:], 16)
                         log.info(f'Battery level {battery_level}')
                     except ValueError as e:
-                        log.info(f'Unable to parse batter level line {line}')
+                        log.info(f'Unable to parse battery level line {line}')
                         battery_level = None
                     if battery_level:
                         if self.pipe:
