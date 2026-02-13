@@ -28,7 +28,7 @@ class EvdevInput(object):
     def wait_on(self):
         tasks = set(self.taskit.tasks)
         for handler in self.handlers:
-            tasks.union(handler.wait_on())
+            tasks.update(handler.wait_on())
         return tasks
 
     def start_input_monitor(self):
