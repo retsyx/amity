@@ -59,7 +59,7 @@ class Handler(object):
         self.name = 'SolarCell'
         self.devices = []
         self.pipe = pipe
-        self.taskit = tools.Tasker('Keyboard')
+        self.taskit = tools.Tasker('SolarCell')
         self.taskit(self.repeat_monitor_task())
         self.last_key = Key.NO_KEY
         self.last_timestamp = 0
@@ -134,7 +134,8 @@ class Handler(object):
             while time.time() - self.last_timestamp < timeout_sec:
                 await asyncio.sleep(sleep_sec)
             # Events are done for now. Release the key, and start from the top...
-            self.pipe.key_release(self.last_key)
+            if self.pipe:
+                self.pipe.key_release(self.last_key)
             self.last_key = Key.NO_KEY
 
 
