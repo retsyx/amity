@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -11,7 +11,7 @@ log = tools.logger(__name__)
 from aconfig import config
 import pprint, time
 import cec
-from cec import Device, DeviceType, Key, Message, PowerStatus
+from cec import DeviceType, Key, Message, PowerStatus
 
 config.default('hdmi.quirks', {})
 # This address is a guess. We don't want to read EDID data from the TV, or provide EDID downstream.
