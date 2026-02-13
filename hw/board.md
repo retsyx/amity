@@ -33,7 +33,7 @@ Amity board requires 4 wires to the Raspberry Pi - GND, 3.3v, and two CEC GPIO p
 
 ### Wiring Harness
 
-A DuPont 2.54mm wiring harness is required to connect Amity board to the Rasperry Pi. There are two ways to create the wiring harness.
+A DuPont 2.54mm wiring harness is required to connect Amity board to the Raspberry Pi. There are two ways to create the wiring harness.
 
 The first way is by creating a dedicated harness with standard 1x4 and 3x6 DuPont connectors and crimping the wires with the required DuPont connector hardware.
 
@@ -71,4 +71,4 @@ A STEP file for the 3D printable 3x6L housing is available [here](cable/).
 
 After [initial installation](../README.md#initial-installation) of Amity, and before plugging in the HDMI connections, Amity must be configured to use the board.
 
-Select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
+In the Amity management UI, select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, the status line should read 'Configured for Amity Board'.

@@ -2,9 +2,13 @@
 
 Run everything from within the `build` directory.
 
+## GitHub Workflow
+
+The Amity image is automatically built on GitHub with a workflow action using the same method as described below.
+
 ## Build Environment
 
-The Amity image can be built on a Raspberry Pi but it will be very slow when compiling the required CEC_GPIO enabled Linux kernels. A beefy Ubuntu machine with as many cores as possible is recommended.
+The Amity image can be built on a Raspberry Pi but it will be very slow when compiling the required CEC_GPIO enabled Linux kernels. A beefy ARM64 Ubuntu machine with as many cores as possible is recommended.
 
 To setup the build environment run:
 

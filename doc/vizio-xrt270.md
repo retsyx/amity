@@ -10,7 +10,7 @@ This is an especially low cost remote that supports up to seven activities throu
 Activities are assigned to the usual directional buttons and to the streaming buttons (Sling, Netflix and Prime Video, etc.). The streaming buttons are always assigned to activity selection.
 
 #### Volume and Mute Button IR
-The remote always signals volume controls with infrared (IR) as well as over BLE. The IR signal can inadvertantly control TVs, including non-Vizio TVs. This is typically not a problem when only using a receiver for audio output but it can be confusing when the TV displays its volume slider. To stop the IR from reaching the TV, the remote's IR window on the front can be covered with a small piece of electrical tape.
+The remote always signals volume controls with infrared (IR) as well as over BLE. The IR signal can inadvertently control TVs, including non-Vizio TVs. This is typically not a problem when only using a receiver for audio output but it can be confusing when the TV displays its volume slider. To stop the IR from reaching the TV, the remote's IR window on the front can be covered with a small piece of electrical tape.
 
 #### No Multi-Button Actions
 The remote does not support multiple simultaneous button presses. So any Amity multi-button actions are not available when using this remote.

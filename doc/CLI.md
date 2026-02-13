@@ -133,6 +133,8 @@ To change configuration, or to pair a different remote, Amity must be stopped. T
 ./configure_amity disable
 ```
 
+## HomeKit
+
 ### Enabling HomeKit
 
 Enabling HomeKit (if not already enabled) will restart Amity.
@@ -166,6 +168,46 @@ This will reset Amity's HomeKit state, and restart Amity, if necessary. To re-ad
 ```
 
 If HomeKit support is still enabled, then the new QR code and setup code required to add Amity into your home will be displayed.
+
+## Home Assistant / MQTT
+
+### Testing MQTT Connection Parameters
+
+Test MQTT connection settings and credentials with the 'test' command.
+
+```
+./configure_mqtt test --username <user> --password <pass> --host <host>
+```
+
+### Configuring MQTT
+
+Configure MQTT credentials with the 'set-credentials' command. This will restart Amity.
+
+```
+./configure_mqtt set-credentials --username <user> --password <pass>
+```
+
+Configure MQTT broker connection settings (like host, and port) with the 'set-config' command. This will restart Amity.
+
+```
+./configure_mqtt set-config --host <host>
+```
+
+### Enabling MQTT
+
+Enabling MQTT (if not already enabled) will restart Amity.
+
+```
+./configure_mqtt enable
+```
+
+### Disabling MQTT
+
+Disabling MQTT (if not already disabled) will restart Amity.
+
+```
+./configure_mqtt disable
+```
 
 ## License
 

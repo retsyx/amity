@@ -4,7 +4,7 @@ Amity supports a few kinds of keyboards.
 
 ## BLE
 
-<img src="images/keyboard.png" alt="Siri Remote Gen 2" style="float: right; width: 100px">
+<img src="images/keyboard.png" alt="Keyboard" style="float: right; width: 100px">
 
 Standard BLE (not older Bluetooth) keyboards can be paired like any supported remote.
 

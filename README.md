@@ -1,36 +1,16 @@
 # Amity
 HDMI-CEC that works!
 
-## Introduction
+Control your home theater with a familiar remote, and integrate it with HomeKit or Home Assistant home automation systems.
 
-Use a Raspberry Pi, and a Siri Remote (or other readily available remote, see the [full list of supported remotes](doc/supported-remotes.md)) to control a home theater system over HDMI-CEC.
+Read the [rationale](doc/rationale.md), to know why Amity uses HDMI-CEC, and how it works.
 
-### Why?
+## Prerequisites
 
-Since the discontinuation of the Logitech Harmony universal remote, there are no good home theater remotes that are easy to setup, reliable, simple to use by everyone in the family, have a long battery life, and are reasonably priced.
-
-Amity came out of a need to replace an aging Logitech Harmony Hub Smart Control system.
-
-### How?
-
-Remotes like the Siri Remote, the Amazon Fire TV remote, the Samsung SolarCell remote, or the Vizio voice remote are high quality, and readily available. They are simple, robust, last a long time on a charge, are very easy to use by everyone in the family, and there is probably one laying unused in a drawer somewhere. So why not use one to control the home theater?
-
-Raspberry Pis are powerful, flexible, readily available, and cheap enough (especially the Pi Zero 2 W).
-
-Most modern home theater components support HDMI-CEC. HDMI-CEC promises easy home theater control but, due to how it is commonly implemented, fails to deliver on the promise. So let's make HDMI-CEC work the way it should (🤞).
-
-### Cost
-
-Amity can be extremely cheap to put together. An example breakdown of costs:
-
-- Raspberry Pi Zero 2 W with headers - $18
-- MicroSD card - $10
-- Raspberry Pi power adapter - $10
-- A remote - free if you already have a [supported remote](doc/supported-remotes.md) and don't mind losing features like voice commands. Otherwise, ~$20 - $60.
-- HDMI cable - $6
-- [Amity Fin](hw/README.md) - ~$16. Boards need to be ordered directly from a PCB manufacturer. PCB manufacturers typically have minimum order counts of a few boards. When ordering 5 boards, the cost per board is ~$16. With larger orders, the cost per board decreases substantially.
-
-The total cost can be less than $50, if using a stripped HDMI cable, or up to ~$65 with a low volume manufactured Amity Fin.
+* A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer, that can run 64-bit Linux; with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
+* A MicroSD card (4GB or larger).
+* A remote control. See the [list of supported remotes](doc/supported-remotes.md).
+* An [Amity Fin](hw/README.md) and an extra HDMI cable.
 
 ## Caveats
 
@@ -38,16 +18,15 @@ The total cost can be less than $50, if using a stripped HDMI cable, or up to ~$
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
-While Amity has been tested and has worked reliably with the HDMI equipment I have available, there may still be an unexpected risk of unknown bugs. Also, when hooking up the hardware, you may make a mistake - this may destroy your HDMI equipment and/or your Raspberry Pi.
+While Amity has been tested and has worked reliably with some HDMI equipment, there may still be a risk from unknown bugs. Also, when putting together Amity, you may make a mistake - this may destroy your HDMI equipment and/or your Raspberry Pi.
 
 !!! Using Amity may destroy your expensive HDMI equipment. Proceed at your own risk !!!
 
-### Amity is Not a Universal Remote Control
+### Amity is an HDMI-CEC Controller (Not a Universal Remote)
 
 Amity is designed for a traditional setup centered around an audio/video receiver (AVR). For example, a TV connected to a receiver output, and various playback devices (i.e. media streamers, blu-ray players, and game consoles, etc.) connected to the receiver's inputs. When changing the source, the input is changed on the receiver. The HDMI-CEC protocol only allows the designated TV to select sources or devices to declare themselves as active sources. TVs do not heed arbitrary source selection commands from other devices. As a result, Amity cannot select inputs on a TV, and cannot control sources connected directly to a TV, including built-in smart TV apps. Similarly, Amity does not support HDMI ARC/eARC. If you use smart TV apps or connect devices, other than a receiver, directly to the TV inputs, Amity is not for your system.
 
-Amity can only control devices that support HDMI-CEC! However, devices that don't support HDMI-CEC (old game consoles, for example) can still be facilitated in the home theater.
-
+Amity can only control devices that support HDMI-CEC! However, devices that don't support HDMI-CEC (old game consoles, for example) can still be facilitated.
 
 ### Amity is a Proof of Concept
 
@@ -63,20 +42,11 @@ Equipment that is known to be compatible with Amity:
 - Nintendo Switch (see [Strange Devices](#strange-devices))
 - Wii (see [Non-HDMI Sources](#non-hdmi-sources))
 
-## Prerequisites
-
-* A Raspberry Pi 3 Model B+, or Pi Zero 2 W, or newer, that can run 64-bit Linux; with an appropriate power supply. Network connectivity is required for initial setup but not when controlling your home theater.
-* A MicroSD card (4GB or larger).
-* A remote control. See the [list of supported remotes](doc/supported-remotes.md).
-* [Amity Fin](hw/README.md) and an extra HDMI cable.
-
 ## Setup
 
 ### HDMI Hardware
 
-Amity inserts itself into the HDMI-CEC bus between the TV, and the receiver. There are two methods to splice into the HDMI-CEC bus. The preferred method is to use [Amity Fin](hw/README.md).
-
-Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and break video display in an actual home theater.
+Amity inserts itself into the HDMI-CEC bus between the TV, and the receiver. The preferred method is to use Amity Fin.
 
 [Acquire Amity Fin before proceeding](hw/README.md).
 
@@ -96,11 +66,11 @@ Installation is performed with [Raspberry Pi Imager 2.0](https://www.raspberrypi
     3. Select the MicroSD.
     4. Set the hostname to something memorable, for example `amity`.
     5. Optionally, set localisation or leave as is.
-    6. Set the username and password. It **must** be `pi`.
+    6. Set the username and password. The username **must** be `pi`.
     7. If using WiFi, set WiFi network information.
     8. Optionally, enable SSH, and set credentials. It is recommended to enable SSH.
 6. Write the image to the MicroSD card.
-7. Insert the imaged MicroSD into the Raspberry Pi, and wait for it to to complete its initial boot sequence. This may take a few minutes, and a few reboots.
+7. Insert the imaged MicroSD into the Raspberry Pi, and wait for it to complete its initial boot sequence. This may take a few minutes, and a few reboots.
 8. In your web browser open the Amity administration page. For example, if the hostname in Raspberry Pi Imager was configured as `amity`, then browse to `https://amity.local` (on Mac) or `https://amity` (on Windows).
  * The web browser will prompt that the site may be unsafe. This is because Amity creates a self signed security certificate for encryption. It is safe. Click on the details, and accept that the site is safe.
 9. Create the Amity administration user by entering a username and password. These can be anything.
@@ -108,7 +78,7 @@ Installation is performed with [Raspberry Pi Imager 2.0](https://www.raspberrypi
 
 ### Amity Fin Configuration
 
-If using Amity Fin, select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
+If using Amity Fin, select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, the status line should read 'Configured for Amity Board'.
 
 ### HDMI Connections
 
@@ -185,7 +155,7 @@ Check if your remote has idiosyncrasies that may make operation a little differe
 
 ### Active
 
-When active, all the buttons should behave as expected for the selected activity. For example, when using a PlayStation, the directional buttons navigate the PlayStation interface, select selects, back/menu backs out, and volume controls control the audio device. On remotes equiped with a touchpad, swipes can also be used.
+When active, all the buttons should behave as expected for the selected activity. For example, when using a PlayStation, the directional buttons navigate the PlayStation interface, select selects, back/menu backs out, and volume controls control the audio device. On remotes equipped with a touchpad, swipes can also be used.
 
 A short press of the power button ends the activity and puts the system in standby. A long press of the power button refreshes the current activity to ensure all devices are as they should be. This is useful, if a device is not on when it should be.
 
@@ -209,13 +179,13 @@ As a result, the Switch will often not show up in device scans, or be auto-confi
 4. Enter `NintendoSwitch` in the `Source` device field.
 5. Press 'OK', and then press 'Save'.
 
-Then to play, turn on the Switch, and select the `Play Switch` activity on the Siri remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
+Then to play, turn on the Switch, and select the `Play Switch` activity on the remote. Amity will do the right thing when the Switch is woken up, and announces itself. To end the activity, press the power button on the Siri remote to place the entire system in standby, including the Switch, which will go dormant again.
 
 Sometimes, however, this may not be enough, and the Switch may still not announce its presence. For this case, the Switch can be configured similarly to a [non-HDMI source](#non-hdmi-sources).
 
 ## Non-HDMI Sources
 
-Non-HDMI sources can be minimally supported, if the receiver supports input selection over HDMI-CEC. An activity for a non-HDMI source can still control the display and receiver, including power and volume, but cannot control the power of the non-HDMI source or send it menu commands. This limited support is particulary useful for old game consoles that require the use of their own game controllers in any case so a universal remote to control them is of limited value.
+Non-HDMI sources can be minimally supported, if the receiver supports input selection over HDMI-CEC. An activity for a non-HDMI source can still control the display and receiver, including power and volume, but cannot control the power of the non-HDMI source or send it menu commands. This limited support is particularly useful for old game consoles that require the use of their own game controllers in any case so a universal remote to control them is of limited value.
 
 To support a non-HDMI source, Amity can be configured to select the input on the receiver. In the activity settings:
 
@@ -243,9 +213,19 @@ It is highly recommended to complete all activity configuration, and setup befor
 
 Select the 'HomeKit' tab, and press 'Enable'. Follow the instructions to pair Amity with HomeKit.
 
+## Home Assistant / MQTT
+
+Amity can be integrated with Home Assistant. This allows integrating Amity into Home Assistant automations.  In addition, if using a BLE remote that supports battery level reporting, the remote battery level and charge state is reported to Home Assistant.
+
+It is highly recommended to complete all activity configuration, and setup before adding Amity into Home Assistant.
+
+While Amity's MQTT implementation is tailored for seamless operation with Home Assistant, it can be used with any MQTT based system.
+
+Select the 'MQTT' tab, configure the required MQTT settings and press 'Enable'.
+
 ## Backup & Restore
 
-For backup, Amity configuration can be downloaded in the 'Configuration' section of the  'Advanced' tab. To restore a backup, use the upload feature.
+For backup, Amity configuration can be downloaded in the 'Configuration' section of the 'Advanced' tab. To restore a backup, use the upload feature in the same tab.
 
 ## CLI Management
 

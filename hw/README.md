@@ -8,6 +8,8 @@ Alternatively, [Amity Board](board.md) can be used with a wiring harness to conn
 
 It is also possible, but not recommended, to create a standalone wiring harness by stripping and cutting a standard [HDMI cable](cable.md).
 
+Note that all of the commonly available HDMI breakout boards advertised for sale are not designed to pass through high-speed A/V signals, and break video display in an actual home theater.
+
 ## Amity Fin
 
 Amity Fin is a 4 layer PCB that includes onboard 27K ohms pullup resistors to conform to the HDMI-CEC specification. When used with the board, Amity must be configured to disable the Raspberry Pi internal GPIO pullup resistors.
@@ -50,4 +52,4 @@ STEP files for a 3D printable case for a Raspberry Pi Zero with Amity Fin is ava
 
 After [initial installation](../README.md#initial-installation) of Amity, and before plugging in the HDMI connections, Amity must be configured to use Amity Fin.
 
-Select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, The status line should read 'Configured for Amity Board'.
+In the Amity management UI, select the 'Advanced' tab. In the 'HDMI Splice' section press the 'Use with Amity Board' button. When done, the status line should read 'Configured for Amity Board'.
