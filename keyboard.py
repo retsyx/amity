@@ -87,13 +87,6 @@ config.default('keyboard.keymap', {
 config.default('keyboard.battery.monitor.enable', True)
 config.default('keyboard.battery.monitor.period_sec', 3600)
 
-def isiterable(o):
-    try:
-        iter(o)
-        return True
-    except:
-        return False
-
 class Handler(object):
     def __init__(self, pipe):
         self.name = 'Keyboard'
@@ -112,7 +105,7 @@ class Handler(object):
         if not supported_keys:
             return False
         for keys in self.required_keys:
-            if isiterable(keys):
+            if tools.isiterable(keys):
                 # This is a list of alternative keys, of which at least one needs to be supported
                 if not any(key in supported_keys for key in keys):
                     return False

@@ -520,13 +520,6 @@ async def Device(adapter, address):
         await device.get_vendor_id()
     return device
 
-def isiterable(o):
-    try:
-        iter(o)
-        return True
-    except:
-        return False
-
 class AdapterInitException(Exception):
     pass
 
@@ -548,7 +541,7 @@ class Adapter(object):
             loop = asyncio.get_running_loop()
         self.loop = loop
         self.listen_callback_coro = listen_callback_coro
-        if not isiterable(device_types):
+        if not tools.isiterable(device_types):
             device_types = (device_types, )
         self.device_types = device_types
         self.osd_name = osd_name

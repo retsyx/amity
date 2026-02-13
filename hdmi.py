@@ -17,13 +17,6 @@ config.default('hdmi.quirks', {})
 # This address is a guess. We don't want to read EDID data from the TV, or provide EDID downstream.
 config.default('hdmi.front.physical_address', 0x1000)
 
-def isiterable(o):
-    try:
-        iter(o)
-        return True
-    except:
-        return False
-
 def pretty_physical_address(address):
     return '.'.join(list(f'{address:04X}'))
 

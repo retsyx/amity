@@ -434,7 +434,7 @@ async def main():
     try:
         await _main()
     except Exception as e:
-        s = f'Exiting because of exception {e}\n{traceback.print_exc()}'
+        s = f'Exiting because of exception {e}\n{traceback.format_exc()}'
         log.info(s)
         tools.die(s)
 
