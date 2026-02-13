@@ -10,7 +10,7 @@ import tools
 
 log = tools.logger('var/log/homekit_tool')
 
-import argparse, os, subprocess, time
+import argparse, os, time
 
 from aconfig import config
 import service
