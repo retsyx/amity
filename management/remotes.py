@@ -58,8 +58,8 @@ class Remotes(object):
             self.proc = await asyncio.create_subprocess_shell('./pair_remote',
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.DEVNULL,
-                        # setsid so that the process group kill below doesn't kill us, too
-                        preexec_fn=os.setsid)
+                        # start_new_session so that the process group kill below doesn't kill us, too
+                        start_new_session=True)
             self.top.taskit(self.read_stdout(event.client))
         else:
             try:
