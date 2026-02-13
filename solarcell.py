@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -75,7 +75,7 @@ class Handler(object):
         # 2. The product ID is 1...
         # 3. Device capabilities are strictly:
         #    {0: [0, 2], 2: [9]}
-        #    which translates to evedev.ecodes
+        #    which translates to evdev.ecodes
         #    EV_SYN : [SYN_REPORT, SYN_MT_REPORT],
         #    EV_REL : [REL_MISC]
 
