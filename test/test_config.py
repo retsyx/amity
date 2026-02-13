@@ -54,7 +54,7 @@ class TestConfig(unittest.TestCase):
         c.default('remote.mac', 0)
         c.default('remote.mac', 0)  # same value should not raise
         self.assertEqual(c['remote.mac'], 0)
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             c.default('remote.mac', 1)
 
     def test_default_after_load_raises(self):
@@ -62,7 +62,7 @@ class TestConfig(unittest.TestCase):
         c.default('key.value', 'default')
         c.load()  # file doesn't exist, loads empty
         self.assertEqual(c['key.value'], 'default')
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(RuntimeError):
             c.default('new.key', 'value')
 
     def test_list_path_default(self):

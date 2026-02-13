@@ -87,8 +87,8 @@ class Config(object):
 
     def __overlay(self, node, overlay_node):
         if type(node) is dict:
-            # User misconfiguration if this assert triggers
-            assert type(node) is type(overlay_node)
+            if type(overlay_node) is not dict:
+                raise TypeError(f'Config: expected dict but got {type(overlay_node).__name__} in user config')
             for name, value in overlay_node.items():
                 if name not in node:
                     node[name] = value
@@ -97,8 +97,8 @@ class Config(object):
                     if scalar:
                         node[name] = overlay_node[name]
         elif type(node) is list:
-            # User misconfiguration if this assert triggers
-            assert type(node) is type(overlay_node)
+            if type(overlay_node) is not list:
+                raise TypeError(f'Config: expected list but got {type(overlay_node).__name__} in user config')
             for i, value in enumerate(overlay_node):
                 if i >= len(node):
                     node.append(value)
@@ -111,10 +111,13 @@ class Config(object):
         return False
 
     def default(self, path, value):
-        assert not self.loaded
-        assert type(path) is str
+        if self.loaded:
+            raise RuntimeError('Config: default() called after load()')
+        if type(path) is not str:
+            raise TypeError(f'Config: path must be str, got {type(path).__name__}')
         if path in self.default_paths:
-            assert value == self.default_paths[path]
+            if value != self.default_paths[path]:
+                raise ValueError(f'Config: conflicting default for {path!r}: {value!r} vs {self.default_paths[path]!r}')
         else:
             self.default_paths[path] = value
             self.__apply(self.cfg, path, value)
@@ -128,7 +131,8 @@ class Config(object):
             next_elem = elems[i + 1]
             sep, name = elem
             if sep == '.': # dict
-                assert type(node) is dict
+                if type(node) is not dict:
+                    raise TypeError(f'Config: expected dict at {name!r} in path, got {type(node).__name__}')
                 if next_elem is end_elem:
                     # Set the default value
                     node[name] = value
@@ -144,7 +148,8 @@ class Config(object):
                     node[name] = next_node
                     node = next_node
             else: # sep == ',' # list
-                assert type(node) is list
+                if type(node) is not list:
+                    raise TypeError(f'Config: expected list at index {name!r} in path, got {type(node).__name__}')
                 index = int(name)
                 if index >= len(node):
                     node.extend([None] * (index - len(node) + 1))
@@ -167,21 +172,25 @@ class Config(object):
             elems.pop(0)
         else:
             elems.insert(0, '.')
-        assert len(elems) % 2 == 0
+        if len(elems) % 2 != 0:
+            raise ValueError(f'Config: malformed path {path!r}')
         return ((elems[i], elems[i+1]) for i in range(0, len(elems), 2))
 
     def __getitem__(self, path):
-        assert type(path) is str
+        if type(path) is not str:
+            raise TypeError(f'Config: path must be str, got {type(path).__name__}')
         elems = self.__elements(path)
         node = self.cfg
         for sep, name in elems:
             if sep == '.': # dict
-                assert type(node) is dict
+                if type(node) is not dict:
+                    raise TypeError(f'Config: expected dict at {name!r} in path, got {type(node).__name__}')
                 if name not in node:
                     return None
                 node = node[name]
             else: # sep == ',' # list
-                assert type(node) is list
+                if type(node) is not list:
+                    raise TypeError(f'Config: expected list at index {name!r} in path, got {type(node).__name__}')
                 index = int(name)
                 if index >= len(node):
                     return None
@@ -189,7 +198,8 @@ class Config(object):
         return node
 
     def __setitem__(self, path, value):
-        assert type(path) is str
+        if type(path) is not str:
+            raise TypeError(f'Config: path must be str, got {type(path).__name__}')
         if not path:
             self.cfg = value
             self.user_cfg = value
