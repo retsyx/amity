@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -201,6 +201,8 @@ class Config(object):
         if type(path) is not str:
             raise TypeError(f'Config: path must be str, got {type(path).__name__}')
         if not path:
+            if type(value) is not dict:
+                raise TypeError(f'Config: root value must dict, got {type(value).__name__}')
             self.cfg = value
             self.user_cfg = value
         else:
