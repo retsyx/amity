@@ -11,26 +11,27 @@ import tools
 log = tools.logger(__name__)
 
 import subprocess
+from collections.abc import Callable
 
-class Control(object):
-    def __init__(self, name):
+class Control:
+    def __init__(self, name: str) -> None:
         self.bin = '/usr/bin/systemctl'
         self.name = name
 
-    def is_active(self):
+    def is_active(self) -> bool:
         output = subprocess.run([self.bin, '--user', 'is-active', self.name], capture_output=True)
         log.info(f'Is active {output}')
         return output.stdout.decode('utf-8').strip() == 'active'
 
-    def stop(self):
+    def stop(self) -> None:
         log.info(f'Stopping {self.name}')
         subprocess.run([self.bin, '--user', 'stop', self.name], capture_output=True)
 
-    def start(self):
+    def start(self) -> None:
         log.info(f'Starting {self.name}')
         subprocess.run([self.bin, '--user', 'start', self.name], capture_output=True)
 
-    def safe_do(self, op):
+    def safe_do(self, op: Callable[[], None]) -> None:
         active = self.is_active()
         if active:
             self.stop()
