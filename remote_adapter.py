@@ -10,13 +10,13 @@ import tools
 
 log = tools.logger(__name__)
 
-import gestures, remote
-from remote import HwRevisions
+import gestures, messaging, remote
+from remote import HwRevisions, SiriRemote, Touch
 from hdmi import Key
 
 
 class Adapter(remote.RemoteListener):
-    def __init__(self, pipe):
+    def __init__(self, pipe: messaging.Pipe | None) -> None:
         self.pipe = pipe
         self.button_state = 0
         self.swipe_recognizer = gestures.SwipeRecognizer(self.swipe_callback)
@@ -25,7 +25,7 @@ class Adapter(remote.RemoteListener):
         self.battery_level = 100
         self.is_charging = False
 
-    def event_button(self, remote, buttons: int):
+    def event_button(self, remote: SiriRemote, buttons: int) -> None:
         btns = remote.profile.buttons
 
         keymap = {
@@ -66,7 +66,7 @@ class Adapter(remote.RemoteListener):
                 if self.pipe:
                     self.pipe.key_release(hkey)
 
-    def swipe_callback(self, recognizer, event):
+    def swipe_callback(self, recognizer: gestures.SwipeRecognizer, event: gestures.SwipeEvent) -> None:
         if not (event.type & gestures.EventType.Detected):
             return
         if self.button_state != 0:
@@ -88,7 +88,7 @@ class Adapter(remote.RemoteListener):
         if self.pipe:
             self.pipe.key_press(hkey, counter)
 
-    def multitap_callback(self, recognizer, event):
+    def multitap_callback(self, recognizer: gestures.MultiTapRecognizer, event: gestures.TapEvent) -> None:
         if not (event.type & gestures.EventType.Detected):
             return
         buttons = self.button_state | event.remote.profile.buttons.POWER
@@ -96,19 +96,19 @@ class Adapter(remote.RemoteListener):
         buttons = self.button_state & ~event.remote.profile.buttons.POWER
         self.event_button(event.remote, buttons)
 
-    def event_touches(self, remote, touches):
+    def event_touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         self.swipe_recognizer.touches(remote, touches)
         self.dpad_emulator.touches(remote, touches)
         if remote.profile.hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
             self.multitap_recognizer.touches(remote, touches)
 
-    def event_battery(self, remote, percent: int):
+    def event_battery(self, remote: SiriRemote, percent: int) -> None:
         log.info(f'Battery charge at {percent}%')
         self.battery_level = percent
         if self.pipe:
             self.pipe.battery_state(self.battery_level, self.is_charging)
 
-    def event_power(self, remote, charging: bool):
+    def event_power(self, remote: SiriRemote, charging: bool) -> None:
         if charging:
             log.info('Charging')
         else:
