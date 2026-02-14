@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -6,148 +6,152 @@
 #
 # This code is derived from code written by Yanndroid (https://github.com/Yanndroid)
 
+from __future__ import annotations
+
 import tools
 
 log = tools.logger(__name__)
 
-import subprocess, time
+import asyncio, subprocess, time
 from bluepy3.btle import AssignedNumbers, BTLEConnectError, BTLEException, DefaultDelegate, Peripheral
 
-class PnpInfo(object):
+class PnpInfo:
     @classmethod
-    def WithData(self, data):
+    def WithData(cls, data: bytes) -> PnpInfo:
         vendor_id_type = data[0]
         vendor_id = int.from_bytes(data[1:3], byteorder='little')
         product_id = int.from_bytes(data[3:5], byteorder='little')
         product_version = int.from_bytes(data[5:7], byteorder='little')
         return PnpInfo(vendor_id_type, vendor_id, product_id, product_version)
 
-    def __init__(self, vendor_id_type, vendor_id, product_id, product_version):
+    def __init__(self, vendor_id_type: int, vendor_id: int, product_id: int, product_version: int) -> None:
         self.vendor_id_type = vendor_id_type
         self.vendor_id = vendor_id
         self.product_id = product_id
         self.product_version = product_version
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PnpInfo):
+            return NotImplemented
         return (self.vendor_id_type == other.vendor_id_type and
                 self.vendor_id == other.vendor_id and
                 self.product_id == other.product_id and
                 self.product_version == other.product_version)
-    def __hash__(self):
+    def __hash__(self) -> int:
         return self.vendor_id_type + self.vendor_id + (self.product_id + self.product_version) * 65536
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Type {self.vendor_id_type:02X} Vendor {self.vendor_id:04X} Product ID {self.product_id:04X} Product version {self.product_version:04X}'
 
 
 class UnknownRemoteException(Exception):
-    def __init__(self, hw, fw, pnp_info):
+    def __init__(self, hw: str, fw: str | int, pnp_info: PnpInfo) -> None:
         self.hw = hw
         self.fw = fw
         self.pnp_info = pnp_info
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Unknown hw "{self.hw}" fw "{self.fw}" PNP {self.pnp_info}'
 
-class Vector(object):
-    def __init__(self, xyz):
+class Vector:
+    def __init__(self, xyz: tuple[int, int, int]) -> None:
         self.x, self.y, self.z = xyz
-    def __str__(self):
+    def __str__(self) -> str:
         return f'({self.x}, {self.y}, {self.z})'
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'({self.x}, {self.y}, {self.z})'
 
-class MotionEvent(object):
-    def __init__(self, gyro):
+class MotionEvent:
+    def __init__(self, gyro: Vector) -> None:
         self.gyro = gyro
-    def __str__(self):
+    def __str__(self) -> str:
         return f'gyro {self.gyro}'
 
-class Touch(object):
-    def __init__(self, remote, idtxyp):
+class Touch:
+    def __init__(self, remote: SiriRemote, idtxyp: tuple[int, int, int, int, int]) -> None:
         self.remote = remote
         self.id, self.timestamp, self.x, self.y, self.p = idtxyp
-    def axis_distances_from_touch(self, t): # in mm
+    def axis_distances_from_touch(self, t: Touch) -> tuple[float, float]: # in mm
         rtp = self.remote.profile.touchpad
         dx_mm = (self.x - t.x) / rtp.RESOLUTION[rtp.X_AXIS] * rtp.SIZE_MM
         dy_mm = (self.y - t.y) / rtp.RESOLUTION[rtp.Y_AXIS] * rtp.SIZE_MM
         return dx_mm, dy_mm
-    def distance_from_touch(self, t): # in mm
+    def distance_from_touch(self, t: Touch) -> float: # in mm
         dx_mm, dy_mm = self.axis_distances_from_touch(t)
         return (dx_mm**2 + dy_mm**2)**.5
-    def velocity_from_touch(self, t): # in mm/s
+    def velocity_from_touch(self, t: Touch) -> float: # in mm/s
         dt = self.time_from_touch(t)
-        if dt == 0: return self.remote.profile.touchpad.size_MM
+        if dt == 0: return self.remote.profile.touchpad.SIZE_MM
         return self.distance_from_touch(t) / dt
-    def axis_velocities_from_touch(self, t): # in mm/s
+    def axis_velocities_from_touch(self, t: Touch) -> tuple[float, float]: # in mm/s
         dt = self.time_from_touch(t)
         if dt == 0:
             rtp = self.remote.profile.touchpad
             return rtp.SIZE_MM, rtp.SIZE_MM
         dx_mm, dy_mm = self.axis_distances_from_touch(t)
         return dx_mm/dt, dy_mm/dt
-    def time_from_touch(self, t):
+    def time_from_touch(self, t: Touch) -> float:
         dt = self.timestamp - t.timestamp
         if dt < 0:
             dt += 65536
         return dt / self.remote.profile.touchpad.TIMESTAMP_HZ
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'({self.id}, {self.timestamp}, {self.x}, {self.y}, {self.p})'
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'({self.id}, {self.timestamp}, {self.x}, {self.y}, {self.p})'
 
-class RemoteListener(object):
-    def event_battery(self, remote, percent: int):
+class RemoteListener:
+    def event_battery(self, remote: SiriRemote, percent: int) -> None:
         pass
 
-    def event_power(self, remote, charging: bool):
+    def event_power(self, remote: SiriRemote, charging: bool) -> None:
         pass
 
-    def event_button(self, remote, button: int):
+    def event_button(self, remote: SiriRemote, button: int) -> None:
         pass
 
-    def event_touches(self, remote, touches):
+    def event_touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         pass
 
-    def event_motion(self, remote, motion: MotionEvent):
+    def event_motion(self, remote: SiriRemote, motion: MotionEvent) -> None:
         pass
 
-    def event_audio(self, remote, data: bytes):
+    def event_audio(self, remote: SiriRemote, data: bytes) -> None:
         pass
 
 class RemoteListenerAsyncWrapper(RemoteListener):
-    def __init__(self, loop, listener):
+    def __init__(self, loop: asyncio.AbstractEventLoop, listener: RemoteListener) -> None:
         self.loop = loop
         self.listener = listener
 
-    def event_battery(self, remote, percent: int):
+    def event_battery(self, remote: SiriRemote, percent: int) -> None:
         self.loop.call_soon_threadsafe(self.listener.event_battery, remote, percent)
 
-    def event_power(self, remote, charging: bool):
+    def event_power(self, remote: SiriRemote, charging: bool) -> None:
         self.loop.call_soon_threadsafe(self.listener.event_power, remote, charging)
 
-    def event_button(self, remote, button: int):
+    def event_button(self, remote: SiriRemote, button: int) -> None:
         self.loop.call_soon_threadsafe(self.listener.event_button, remote, button)
 
-    def event_touches(self, remote, touches):
+    def event_touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         self.loop.call_soon_threadsafe(self.listener.event_touches, remote, touches)
 
-    def event_motion(self, remote, motion: MotionEvent):
+    def event_motion(self, remote: SiriRemote, motion: MotionEvent) -> None:
         self.loop.call_soon_threadsafe(self.listener.event_motion, remote, motion)
 
-    def event_audio(self, remote, data: bytes):
+    def event_audio(self, remote: SiriRemote, data: bytes) -> None:
         self.loop.call_soon_threadsafe(self.listener.event_audio, remote, data)
 
-class HwRevisions(object):
+class HwRevisions:
     GEN_1   = 0x0266
     GEN_1_5 = 0x026D
     GEN_2   = 0x0314
     GEN_3   = 0x0315
 
-class FwRevisions(object):
+class FwRevisions:
     GEN_2_0x0083 = 0x0083
     GEN_1_0x257 = 0x257
 
-class ButtonCodes(object):
-    def __init__(self, hw_revision, fw_revision):
+class ButtonCodes:
+    def __init__(self, hw_revision: int, fw_revision: int) -> None:
         self.INVALID = 0x80000000
         self.RELEASED = 0x0000
         # These don't exist in gen 1. However, it's useful to always define them
@@ -177,11 +181,11 @@ class ButtonCodes(object):
             self.MUTE = 0x0080
             self.PLAY_PAUSE = 0x0100
 
-class TouchpadProfile(object):
+class TouchpadProfile:
     INVALID_AXIS = -1
     X_AXIS = 0
     Y_AXIS = 1
-    def __init__(self, hw_revision, fw_revision):
+    def __init__(self, hw_revision: int, fw_revision: int) -> None:
         if hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
             self.RESOLUTION = (26180, 106)
             self.SIZE_MM = 37 # Side of the square pad
@@ -191,8 +195,8 @@ class TouchpadProfile(object):
             self.SIZE_MM = 31 # Diameter of the circular pad
             self.TIMESTAMP_HZ = 2000
 
-class Handles(object):
-    def __init__(self, hw_revision, fw_revision):
+class Handles:
+    def __init__(self, hw_revision: int, fw_revision: int) -> None:
         self.INVALID = 0xffff
         self.BATTERY = self.INVALID
         self.BATTERY_CONFIG = self.INVALID
@@ -212,8 +216,8 @@ class Handles(object):
             self.TOUCH = 0x0032
             self.AUDIO = self.INVALID
 
-class PowerStates(object):
-    def __init__(self, hw_revision, fw_revision):
+class PowerStates:
+    def __init__(self, hw_revision: int, fw_revision: int) -> None:
         if hw_revision >= HwRevisions.GEN_2:
             if fw_revision >= FwRevisions.GEN_2_0x0083:
                 self.CHARGING = 0x3b
@@ -228,28 +232,28 @@ class PowerStates(object):
             self.DISCHARGING = 0xaf
             self.PLUGGED_IN = 0xbb
 
-class RemoteProfile(object):
-    def __init__(self, hw_revision, fw_revision):
+class RemoteProfile:
+    def __init__(self, hw_revision: int, fw_revision: int) -> None:
         self.hw_revision = hw_revision
         self.buttons = ButtonCodes(hw_revision, fw_revision)
         self.touchpad = TouchpadProfile(hw_revision, fw_revision)
 
 class SiriRemote(DefaultDelegate):
-    def __init__(self, mac, listener: RemoteListener):
+    def __init__(self, mac: str, listener: RemoteListener) -> None:
         self.mac = mac
         self.__ready = False
         self.__listener = listener
-        self.__device_name = None
-        self.__serial_number = None
-        self.__pnp_info = None
-        self.__hwr = None
-        self.__hw_revision = None
-        self.__fw_revision = None
-        self.__last_keepalive = None
+        self.__device_name: str | None = None
+        self.__serial_number: str | None = None
+        self.__pnp_info: PnpInfo | None = None
+        self.__hwr: str | None = None
+        self.__hw_revision: int | None = None
+        self.__fw_revision: int | None = None
+        self.__last_keepalive: float | None = None
         self.profile = RemoteProfile(HwRevisions.GEN_2, FwRevisions.GEN_2_0x0083)
         self.__setup()
 
-    def __setup(self):
+    def __setup(self) -> None:
         while True:
             try:
                 self.__ready = False
@@ -263,17 +267,17 @@ class SiriRemote(DefaultDelegate):
                 self.__device.getServices()
 
                 # Need to know HW/FW revisions to work with the different remotes
-                device_info_svc = self.__device.getServiceByUUID(AssignedNumbers.device_information)
+                device_info_svc = self.__device.getServiceByUUID(AssignedNumbers.device_information) # type: ignore[attr-defined]
                 for ch in device_info_svc.getCharacteristics():
-                    if ch.uuid == AssignedNumbers.device_name:
+                    if ch.uuid == AssignedNumbers.device_name: # type: ignore[attr-defined]
                         self.__device_name = self.read_characteristic(ch.getHandle()).decode()
-                    elif ch.uuid == AssignedNumbers.serial_number_string:
+                    elif ch.uuid == AssignedNumbers.serial_number_string: # type: ignore[attr-defined]
                         self.__serial_number = self.read_characteristic(ch.getHandle()).decode()
-                    elif ch.uuid == AssignedNumbers.hardware_revision_string:
+                    elif ch.uuid == AssignedNumbers.hardware_revision_string: # type: ignore[attr-defined]
                         hwr = self.read_characteristic(ch.getHandle()).decode()
-                    elif ch.uuid == AssignedNumbers.firmware_revision_string:
+                    elif ch.uuid == AssignedNumbers.firmware_revision_string: # type: ignore[attr-defined]
                         fwr = self.read_characteristic(ch.getHandle()).decode()
-                    elif ch.uuid == AssignedNumbers.pnp_id:
+                    elif ch.uuid == AssignedNumbers.pnp_id: # type: ignore[attr-defined]
                         pnp_data = self.read_characteristic(ch.getHandle())
 
                 pnp_info = PnpInfo.WithData(pnp_data)
@@ -288,16 +292,16 @@ class SiriRemote(DefaultDelegate):
                     # Some(?) gen 1/1.5 remotes have crazy long, meaningless looking, FW strings.
                     # ATV denotes those as version 0x257
                     if product_id in (HwRevisions.GEN_1, HwRevisions.GEN_1_5) and len(fwr) > 5:
-                        fwr = FwRevisions.GEN_1_0x257
+                        fwri = FwRevisions.GEN_1_0x257
                     else:
-                        fwr = int(fwr, 16)
+                        fwri = int(fwr, 16)
                 except ValueError:
                     raise UnknownRemoteException(hwr, fwr, pnp_info)
 
                 # hwr seems to be inconsistent compared to the PNP product id,
                 # so use the product id instead. We store hwr strictly for debug.
                 self.__hw_revision = product_id
-                self.__fw_revision = fwr
+                self.__fw_revision = fwri
                 self.__hwr = hwr
 
                 # Negotiate MTU
@@ -313,17 +317,17 @@ class SiriRemote(DefaultDelegate):
                 self.__power_states = PowerStates(self.__hw_revision, self.__fw_revision)
 
                 # Find handles for battery, and power state
-                battery_service = self.__device.getServiceByUUID(AssignedNumbers.battery_service)
+                battery_service = self.__device.getServiceByUUID(AssignedNumbers.battery_service) # type: ignore[attr-defined]
                 for ch in battery_service.getCharacteristics():
                     config_handle = self.__handles.INVALID
                     for desc in ch.getDescriptors():
-                        if desc.uuid == AssignedNumbers.client_characteristic_configuration:
+                        if desc.uuid == AssignedNumbers.client_characteristic_configuration: # type: ignore[attr-defined]
                             config_handle = desc.handle
                     log.info(f'Battery service characteristic {ch.uuid} {ch.uuid.getCommonName()} {ch.getHandle():02X} config {config_handle:02X}')
-                    if ch.uuid == AssignedNumbers.battery_level:
+                    if ch.uuid == AssignedNumbers.battery_level: # type: ignore[attr-defined]
                         self.__handles.BATTERY = ch.getHandle()
                         self.__handles.BATTERY_CONFIG = config_handle
-                    elif ch.uuid == AssignedNumbers.battery_level_status:
+                    elif ch.uuid == AssignedNumbers.battery_level_status: # type: ignore[attr-defined]
                         self.__handles.POWER = ch.getHandle()
                         self.__handles.POWER_CONFIG = config_handle
 
@@ -365,28 +369,28 @@ class SiriRemote(DefaultDelegate):
                 self.__listener.event_button(self, 0)  # release all keys
                 time.sleep(0.5)
 
-    def zero_touch(self):
+    def zero_touch(self) -> Touch:
         return Touch(self, (0, 0, 0, 0, 0))
 
-    def has_motion(self):
+    def has_motion(self) -> bool:
         return self.__hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5)
 
-    def enable_motion(self, enable):
+    def enable_motion(self, enable: bool):
         if not self.has_motion():
             return False
         self.__last_keepalive = time.time()
-        return self.write_characteristic(0x001d, b'\xA0\x01' if enable else b'\xA0\x00') is not None
+        self.write_characteristic(0x001d, b'\xA0\x01' if enable else b'\xA0\x00')
 
-    def read_characteristic(self, handle):
+    def read_characteristic(self, handle: int) -> bytes:
         return self.__device.readCharacteristic(handle)
 
-    def write_characteristic(self, handle, data):
-        return self.__device.writeCharacteristic(handle, data, withResponse=True)
+    def write_characteristic(self, handle: int, data: bytes):
+        self.__device.writeCharacteristic(handle, data, withResponse=True)
 
-    def enable_notifications(self, handle):
+    def enable_notifications(self, handle: int) -> None:
         self.write_characteristic(handle, b'\x01\x00')
 
-    def handleNotification(self, handle, data):
+    def handleNotification(self, handle: int, data: bytes) -> None:
         if not self.__ready: return
         if handle == self.__handles.BATTERY:
             self.__handle_battery(data)
@@ -422,23 +426,24 @@ class SiriRemote(DefaultDelegate):
         elif handle == self.__handles.AUDIO:
             self.__handle_audio(data)
 
-    def __handle_battery(self, data):
+    def __handle_battery(self, data: bytes) -> None:
         self.__listener.event_battery(self, data[0])
 
-    def __handle_power(self, data):
+    def __handle_power(self, data: bytes) -> None:
         #print(f'power {data[0]:02X}')
         if data[0] in (self.__power_states.CHARGING, self.__power_states.PLUGGED_IN):
             self.__listener.event_power(self, True)
         elif data[0] == self.__power_states.DISCHARGING:
             self.__listener.event_power(self, False)
 
-    def __handle_button(self, button):
+    def __handle_button(self, button: int) -> None:
         if button != self.__last_button:
             self.__last_button = button
             self.__listener.event_button(self, button)
 
-    def __handle_motion(self, data):
+    def __handle_motion(self, data: bytes) -> None:
         now = time.time()
+        assert self.__last_keepalive is not None
         if now - self.__last_keepalive > 50:
             self.write_characteristic(0x001d, b'\xf0\x7f')
             self.__last_keepalive = now
@@ -489,7 +494,7 @@ class SiriRemote(DefaultDelegate):
 
         self.__listener.event_motion(self, motion)
 
-    def __handle_touchpad(self, data):
+    def __handle_touchpad(self, data: bytes) -> None:
         # Gen 1/2
         # 0  - 1 byte  - Always 0x32
         # 1  - 2 bytes - timestamp
@@ -521,10 +526,10 @@ class SiriRemote(DefaultDelegate):
             touches.append(self.__decode_finger(timestamp, data[11:]))
         self.__listener.event_touches(self, touches)
 
-    def __handle_audio(self, data):
+    def __handle_audio(self, data: bytes) -> None:
         self.__listener.event_audio(self, data)
 
-    def __decode_finger(self, timestamp, data):
+    def __decode_finger(self, timestamp: int, data: bytes) -> Touch:
         x = ((data[1] & 0x0f) << 12) | (data[0] << 4) | ((data[1] & 0xf0) >> 4)
         if x & 0x8000:
             x -= 0x10000
