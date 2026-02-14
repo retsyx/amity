@@ -8,8 +8,10 @@ import tools
 
 log = tools.logger(__name__)
 
+from typing import Any
+
 from aconfig import config
-import pprint, time
+import asyncio, pprint, time
 import cec
 from cec import DeviceType, Key, Message, PowerStatus
 
@@ -17,45 +19,46 @@ config.default('hdmi.quirks', {})
 # This address is a guess. We don't want to read EDID data from the TV, or provide EDID downstream.
 config.default('hdmi.front.physical_address', 0x1000)
 
-def pretty_physical_address(address):
+def pretty_physical_address(address: int) -> str:
     return '.'.join(list(f'{address:04X}'))
 
-no_activity_descriptor = { 'name': 'No Activity',
+no_activity_descriptor: dict[str, Any] = {
+                'name': 'No Activity',
                 'display': None,
                 'source': None,
                 'audio': None,
                 }
 
-class Switch(object):
-    def __init__(self, d):
-        self.device = d['device']
-        self.input = d['input']
+class Switch:
+    def __init__(self, d: dict[str, Any]) -> None:
+        self.device: str = d['device']
+        self.input: int = d['input']
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         d = { 'device': self.device,
               'input': self.input
             }
         return pprint.pformat(d)
 
-class Activity(object):
-    def __init__(self, d=no_activity_descriptor):
-        self.name = d['name']
-        self.display = d['display']
-        self.source = d['source']
-        self.audio = d['audio']
+class Activity:
+    def __init__(self, d: dict[str, Any] = no_activity_descriptor) -> None:
+        self.name: str = d['name']
+        self.display: str | None = d['display']
+        self.source: str | None = d['source']
+        self.audio: str | None = d['audio']
         switch_d = d.get('switch')
         if switch_d is not None:
-            self.switch = Switch(switch_d)
+            self.switch: Switch | None = Switch(switch_d)
         else:
             self.switch = None
 
-    def devices(self):
+    def devices(self) -> list[str | None]:
         ds = [self.display, self.source, self.audio]
         if self.switch is not None:
             ds.append(self.switch.device)
         return ds
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         d = {
             'name': self.name,
             'display': self.display,
@@ -66,43 +69,44 @@ class Activity(object):
 
 no_activity = Activity()
 
-class Quirk(object):
-    def __init__(self, d):
-        self.data = [int(c, 16) for c in d['data'].split(':')]
+class Quirk:
+    def __init__(self, d: dict[str, Any]) -> None:
+        self.data: list[int] = [int(c, 16) for c in d['data'].split(':')]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ':'.join(f'{c:02X}' for c in self.data)
 
-class Device(object):
-    quirks = None
-    def __init__(self, dev):
+class Device:
+    quirks: dict[str, Any] | None = None
+    def __init__(self, dev: cec.DeviceImpl) -> None:
         if Device.quirks is None:
             Device.quirks = config['hdmi.quirks']
         self.dev = dev
 
     @property
-    def osd_name(self):
+    def osd_name(self) -> str:
         return self.dev.osd_name
 
-    async def get_osd_name(self):
+    async def get_osd_name(self) -> None:
         await self.dev.get_osd_name()
 
     @property
-    def address(self):
+    def address(self) -> int:
         return self.dev.address
 
     @property
-    def physical_address(self):
+    def physical_address(self) -> int:
         return self.dev.physical_address
 
-    def lookup_quirk(self, op):
+    def lookup_quirk(self, op: str) -> Quirk | None:
+        assert Device.quirks is not None
         v = Device.quirks.get(f'{self.dev.vendor_id:06X}')
         if v is None: return None
         q = v.get(op)
         if q is None: return None
         return Quirk(q)
 
-    async def be_quirky(self, op):
+    async def be_quirky(self, op: str) -> bool:
         quirk = self.lookup_quirk(op)
         if not quirk:
             return False
@@ -112,46 +116,46 @@ class Device(object):
             await self.dev.key_release()
         return True
 
-    async def power_on(self):
+    async def power_on(self) -> None:
         if await self.be_quirky('power_on'):
             return
         await self.dev.power_on()
 
-    async def power_off(self):
+    async def power_off(self) -> None:
         if await self.be_quirky('power_off'):
             return
         await self.standby()
 
-    async def standby(self):
+    async def standby(self) -> None:
         await self.dev.standby()
 
-    async def press_key(self, key, repeat=None):
+    async def press_key(self, key: Key | int, repeat: bool | None = None) -> None:
         if repeat is None: repeat = False
         await self.dev.key_press(key)
         if not repeat:
             await self.release_key()
 
-    async def release_key(self):
+    async def release_key(self) -> None:
         await self.dev.key_release()
 
-    async def set_stream_path(self):
+    async def set_stream_path(self) -> None:
         await self.dev.set_stream_path()
 
-    def handle_report_physical_address(self, msg):
+    def handle_report_physical_address(self, msg: Message) -> None:
         self.dev.parse_report_physical_address_message(msg)
 
-    async def set_input(self, index):
+    async def set_input(self, index: int) -> None:
         # Press the SET INPUT key with the input index
         await self.dev.transmit(bytes([Message.KEY_PRESS, Key.SET_INPUT, index]))
         # And then release the key
         await self.dev.key_release()
 
-class ControllerImpl(object):
-    def __init__(self, front_dev, back_dev, osd_name, loop, activities):
+class ControllerImpl:
+    def __init__(self, front_dev: str, back_dev: str, osd_name: str, loop: asyncio.AbstractEventLoop, activities: list[Activity]) -> None:
         self.inited = False
-        self.devices = {}
+        self.devices: dict[str, Device] = {}
         self.loop = loop
-        self.last_device_rescan_time = 0
+        self.last_device_rescan_time: float = 0
         self.rescan_wait_time_sec = 2 * 60
         self.activities = activities
         self.current_activity = no_activity
@@ -167,10 +171,10 @@ class ControllerImpl(object):
                                         device_types=DeviceType.TV,
                                         osd_name = osd_name)
 
-    def set_inited(self):
+    def set_inited(self) -> None:
         self.inited = True
 
-    async def handle_front_give_device_power_status(self, adapter, msg):
+    async def handle_front_give_device_power_status(self, adapter: cec.Adapter, msg: Message) -> None:
         log.info('Power status requested')
         msg = Message(adapter.address, msg.src)
         if self.current_activity == no_activity:
@@ -181,7 +185,7 @@ class ControllerImpl(object):
         msg.set_data((Message.REPORT_POWER_STATUS, status))
         await adapter.transmit(msg)
 
-    async def handle_back_give_device_power_status(self, adapter, msg):
+    async def handle_back_give_device_power_status(self, adapter: cec.Adapter, msg: Message) -> None:
         log.info('Power status requested')
         device_address = msg.src
         msg = Message(adapter.address, msg.src)
@@ -198,7 +202,7 @@ class ControllerImpl(object):
         msg.set_data((Message.REPORT_POWER_STATUS, status))
         await adapter.transmit(msg)
 
-    async def front_listen(self, msg):
+    async def front_listen(self, msg: Message) -> None:
         # LG TVs love spamming this message every 10 seconds.
         if msg.op == Message.VENDOR_ID and msg.dst == cec.BROADCAST_ADDRESS:
             return
@@ -209,7 +213,7 @@ class ControllerImpl(object):
             case Message.GIVE_DEVICE_POWER_STATUS:
                 await self.handle_front_give_device_power_status(self.front_adapter, msg)
 
-    async def handle_device_report_physical_address(self, adapter, msg):
+    async def handle_device_report_physical_address(self, adapter: cec.Adapter, msg: Message) -> None:
         new_device = True
 
         # Update an existing device if any...
@@ -243,7 +247,7 @@ class ControllerImpl(object):
                 log.info(f'Removing {other_osd_name} that previously had address {pa}')
                 self.devices.pop(other_osd_name)
 
-    async def back_listen(self, msg):
+    async def back_listen(self, msg: Message) -> None:
         log.info(f'Back RX {msg}')
         if not self.inited:
             return
@@ -257,7 +261,7 @@ class ControllerImpl(object):
             case Message.GIVE_DEVICE_POWER_STATUS:
                 await self.handle_back_give_device_power_status(self.back_adapter, msg)
 
-    async def stop_source_thief(self, msg):
+    async def stop_source_thief(self, msg: Message) -> None:
         log.info(f'Device address {msg.src} wants source')
         if self.current_activity == no_activity:
             log.info('No current activity, so forcing standby')
@@ -287,7 +291,7 @@ class ControllerImpl(object):
             log.info('Taking back source')
             await self.set_activity_input(ca)
 
-    async def scan_devices(self):
+    async def scan_devices(self) -> dict[str, Device]:
         log.info('Scanning devices...')
         devices = {}
         for adapter in (self.back_adapter, self.front_adapter):
@@ -300,7 +304,7 @@ class ControllerImpl(object):
             log.info(f'{name:15s} {device.address:6X}   {pretty_physical_address(device.physical_address):10}')
         return devices
 
-    async def rescan_devices(self):
+    async def rescan_devices(self) -> None:
         now = time.time()
         delta = now - self.last_device_rescan_time
         if delta < self.rescan_wait_time_sec:
@@ -310,7 +314,7 @@ class ControllerImpl(object):
         self.last_device_rescan_time = now
         self.devices = await self.scan_devices()
 
-    async def get_device(self, name, op=None):
+    async def get_device(self, name: str | None, op: str | None = None) -> Device | None:
         if name is None:
             return None
         device = self.devices.get(name)
@@ -325,7 +329,7 @@ class ControllerImpl(object):
                     log.info(f'Device {name} not found')
         return device
 
-    async def set_activity(self, index):
+    async def set_activity(self, index: int) -> bool:
         if index < -1 or index >= len(self.activities):
             log.info(f'Activity index {index} is out of bounds')
             return False
@@ -363,7 +367,7 @@ class ControllerImpl(object):
         self.current_activity = na
         return True
 
-    async def fix_current_activity(self):
+    async def fix_current_activity(self) -> None:
         ca = self.current_activity
         log.info(f'Fixing activity {ca.name}')
         current_devices = ca.devices()
@@ -375,7 +379,7 @@ class ControllerImpl(object):
             await device.power_on()
         await self.set_activity_input(ca)
 
-    async def set_activity_input(self, activity):
+    async def set_activity_input(self, activity: Activity) -> None:
         # Setting the stream path is the better way...
         device = await self.get_device(activity.source, 'SET STREAM PATH')
         if device is not None:
@@ -393,14 +397,14 @@ class ControllerImpl(object):
         # Also, remind the TV that we are the source
         await self.front_adapter.active_source()
 
-    async def standby(self):
+    async def standby(self) -> None:
         await self.set_activity(-1)
 
-    async def force_standby(self):
+    async def force_standby(self) -> None:
         await self.front_adapter.broadcast().standby()
         await self.back_adapter.broadcast().standby()
 
-    async def press_key(self, key, repeat=None):
+    async def press_key(self, key: int, repeat: bool | None = None) -> bool:
         if key in (Key.VOLUME_UP, Key.VOLUME_DOWN, Key.TOGGLE_MUTE):
             device_name = self.current_activity.audio
         else:
@@ -412,7 +416,7 @@ class ControllerImpl(object):
         await device.press_key(key, repeat)
         return True
 
-    async def release_key(self):
+    async def release_key(self) -> None:
         cs = self.current_activity.source
         device = await self.get_device(cs, 'RELEASE KEY')
         if device is None:
@@ -420,7 +424,7 @@ class ControllerImpl(object):
         log.info(f'Device {cs} RELEASE KEY')
         await device.release_key()
 
-async def Controller(front_dev, back_dev, osd_name, loop, activities):
+async def Controller(front_dev: str, back_dev: str, osd_name: str, loop: asyncio.AbstractEventLoop, activities: list[Activity]) -> ControllerImpl:
     ctrl = ControllerImpl(front_dev, back_dev, osd_name, loop, activities)
     await ctrl.rescan_devices() # sets self.devices dict()
     ctrl.set_inited()
