@@ -12,9 +12,7 @@ log = tools.logger('var/log/mqtt_tool')
 
 import argparse
 import asyncio
-import os
 import ssl
-import subprocess
 import aiomqtt
 import yaml
 

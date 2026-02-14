@@ -6,7 +6,6 @@
 
 from aconfig import config
 
-# MQTT configuration defaults
 config.default('mqtt.enable', False)
 config.default('mqtt.broker.host', 'homeassistant')
 config.default('mqtt.broker.port', 1883)

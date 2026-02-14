@@ -12,7 +12,6 @@ from aconfig import config
 
 import asyncio
 import json
-import os
 import ssl
 import yaml
 
