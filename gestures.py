@@ -4,41 +4,45 @@
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 
-import math, time
+from __future__ import annotations
 
-from remote import HwRevisions
+import math, time
+from collections.abc import Callable
+from typing import Any
+
+from remote import HwRevisions, SiriRemote, Touch
 from aconfig import config
 
 config.default('remote.touchpad.pressure_threshold', 20)
 config.default('remote.touchpad.swipe.distance_thresholds_mm', (7.0, 7.0))
 config.default('remote.touchpad.swipe.deceleration', -250)
 
-class EventType(object):
-    Inactive = 0
-    Running = 1
-    Begin = 2
-    Detected = 4
-    End = 8
-    Cancelled = 16
+class EventType:
+    Inactive: int = 0
+    Running: int = 1
+    Begin: int = 2
+    Detected: int = 4
+    End: int = 8
+    Cancelled: int = 16
 
-class TouchState(object):
-    def __init__(self, start_touch):
+class TouchState:
+    def __init__(self, start_touch: Touch) -> None:
         self.start_touch = start_touch
         self.last_active_touch = start_touch
-    def is_begin_touch(self, touch):
+    def is_begin_touch(self, touch: Touch) -> bool:
         return self.start_touch.timestamp == touch.timestamp
 
-class GestureRecognizer(object):
-    def __init__(self, max_touches, callback):
-        self.touch_states = {}
+class GestureRecognizer:
+    def __init__(self, max_touches: int, callback: Callable[..., Any] | None) -> None:
+        self.touch_states: dict[int, TouchState] = {}
         self.max_touches = max_touches
         self.callback = callback
-        self.pressure_threshold = config['remote.touchpad.pressure_threshold']
+        self.pressure_threshold: int = config['remote.touchpad.pressure_threshold']
 
-    def reset(self):
+    def reset(self) -> None:
         self.touch_states = {}
 
-    def state_for_touch(self, touch):
+    def state_for_touch(self, touch: Touch) -> tuple[TouchState | None, int]:
         et = EventType.Inactive
         touch_state = self.touch_states.get(touch.id)
         if touch_state is None:
@@ -56,27 +60,27 @@ class GestureRecognizer(object):
             et |= EventType.End
         return touch_state, et
 
-    def last_active_touches(self):
+    def last_active_touches(self) -> list[Touch]:
         return [ts.last_active_touch for ts in self.touch_states.values()]
 
-    def touches(self, remote, event):
+    def touches(self, remote: SiriRemote, event: list[Touch]) -> None:
         return None
 
-class SwipeEvent(object):
-    def __init__(self, type, xy):
+class SwipeEvent:
+    def __init__(self, type: int, xy: tuple[int, int]) -> None:
         self.type = type
         self.x, self.y = xy
-    def __str__(self):
+    def __str__(self) -> str:
         return f'0x{self.type:02X} ({self.x}, {self.y})'
 
 class OneAxisSwipeRecognizer(GestureRecognizer):
-    def __init__(self, axis, distance_threshold_mm, callback):
+    def __init__(self, axis: int, distance_threshold_mm: float, callback: Callable[..., Any] | None) -> None:
         super().__init__(1, callback) # No multitouch
         self.axis = axis
         self.distance_threshold_mm = distance_threshold_mm
-        self.deceleration = config['remote.touchpad.swipe.deceleration']
+        self.deceleration: float = config['remote.touchpad.swipe.deceleration']
 
-    def touches_internal(self, remote, touches):
+    def touches_internal(self, remote: SiriRemote, touches: list[Touch]) -> SwipeEvent:
         event_type = EventType.Running
         counter = 0
         for touch in touches:
@@ -115,26 +119,27 @@ class OneAxisSwipeRecognizer(GestureRecognizer):
 
         xy = [0, 0]
         xy[self.axis] = counter
-        return SwipeEvent(event_type, tuple(xy))
+        return SwipeEvent(event_type, tuple(xy)) # type: ignore[arg-type]
 
-    def touches(self, remote, touches):
+    def touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         event = self.touches_internal(remote, touches)
         if event is not None:
+            assert self.callback is not None
             self.callback(self, event)
 
 
-class SwipeRecognizer(object):
-    def __init__(self, callback):
+class SwipeRecognizer:
+    def __init__(self, callback: Callable[..., Any]) -> None:
         self.callback = callback
-        self.rs = []
-        self.primary_axis = None
+        self.rs: list[OneAxisSwipeRecognizer] = []
+        self.primary_axis: int | None = None
         thresholds_mm = config['remote.touchpad.swipe.distance_thresholds_mm']
         for i in range(2):
             self.rs.append(OneAxisSwipeRecognizer(i, thresholds_mm[i], None))
-    def reset(self):
+    def reset(self) -> None:
         for r in self.rs:
             r.reset()
-    def touches(self, remote, touches):
+    def touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         # Initially, either axis can generate an event.
         # Once one of the axes generates an event, all further event generation is locked
         # to that axis.
@@ -158,28 +163,28 @@ class SwipeRecognizer(object):
             event_type = EventType.Running
         self.callback(self, SwipeEvent(event_type, (0, 0)))
 
-class TapEvent(object):
-    def __init__(self, type, remote, x, y):
+class TapEvent:
+    def __init__(self, type: int, remote: SiriRemote, x: int, y: int) -> None:
         self.type = type
         self.remote = remote
         self.x = x
         self.y = y
 
 class TapRecognizer(GestureRecognizer):
-    def __init__(self, num_fingers, callback):
+    def __init__(self, num_fingers: int, callback: Callable[..., Any]) -> None:
         super().__init__(num_fingers, callback)
         self.num_fingers = num_fingers
         self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         super().reset()
-        self.num_active_touches = 0
-        self.have_all_touches = False
-        self.end_touches = []
-        self.begin_touch_timestamp = None
-        self.begin_xy = None
+        self.num_active_touches: int = 0
+        self.have_all_touches: bool = False
+        self.end_touches: list[Touch] = []
+        self.begin_touch_timestamp: float | None = None
+        self.begin_xy: tuple[int, int] | None = None
 
-    def midpoint_of_touches(self, touches):
+    def midpoint_of_touches(self, touches: list[Touch]) -> tuple[int, int]:
         x = y = 0
         if not touches:
             return x, y
@@ -190,14 +195,15 @@ class TapRecognizer(GestureRecognizer):
         y = int(y / len(touches))
         return x, y
 
-    def touches(self, remote, touches):
+    def touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         event_type = EventType.Inactive
         for touch in touches:
             touch_state, et = self.state_for_touch(touch)
             if touch_state is None:
                 # Too many touches! Reset our state.
                 self.reset()
-                self.callback(self, TapEvent(EventType.Cancelled, remote, 0, 0))
+                if self.callback is not None:
+                    self.callback(self, TapEvent(EventType.Cancelled, remote, 0, 0))
                 return
             touch_state.last_active_touch = touch
             event_type |= EventType.Running
@@ -217,20 +223,24 @@ class TapRecognizer(GestureRecognizer):
                 if self.num_active_touches == 0:
                     if self.have_all_touches:
                         # Was this more of a long press than a tap?
+                        assert self.begin_touch_timestamp is not None
                         td = time.time() - self.begin_touch_timestamp
                         if td > .4 or td < .05:
                             self.reset()
-                            self.callback(self, TapEvent(EventType.Cancelled, remote, 0, 0))
+                            if self.callback is not None:
+                                self.callback(self, TapEvent(EventType.Cancelled, remote, 0, 0))
                             return
                         # Is this more a of swipe than a tap?
                         end_xy = self.midpoint_of_touches(self.end_touches)
                         rtp = remote.profile.touchpad
+                        assert self.begin_xy is not None
                         dx_mm = (end_xy[0] - self.begin_xy[0]) / rtp.RESOLUTION[0] * rtp.SIZE_MM
                         dy_mm = (end_xy[1] - self.begin_xy[1]) / rtp.RESOLUTION[1] * rtp.SIZE_MM
                         distance_mm_2 = dx_mm*dx_mm + dy_mm*dy_mm
                         if distance_mm_2 > 25:
                             self.reset()
-                            self.callback(self, TapEvent(EventType.Cancelled, remote, 0, 0))
+                            if self.callback is not None:
+                                self.callback(self, TapEvent(EventType.Cancelled, remote, 0, 0))
                             return
 
                         event_type &= ~EventType.Running
@@ -243,22 +253,23 @@ class TapRecognizer(GestureRecognizer):
         x, y = self.midpoint_of_touches(xy_touches)
         if event_type & EventType.End:
             self.reset()
-        self.callback(self, TapEvent(event_type, remote, x, y))
+        if self.callback is not None:
+            self.callback(self, TapEvent(event_type, remote, x, y))
 
-class MultiTapRecognizer(object):
-    def __init__(self, num_fingers, num_taps, callback):
+class MultiTapRecognizer:
+    def __init__(self, num_fingers: int, num_taps: int, callback: Callable[..., Any]) -> None:
         self.num_fingers = num_fingers
         self.num_taps = num_taps
         self.callback = callback
         self.tap_recognizer = TapRecognizer(self.num_fingers, self.tap_event)
         self.reset()
 
-    def reset(self):
-        self.last_tap_time = time.time()
+    def reset(self) -> None:
+        self.last_tap_time: float = time.time()
         self.tap_recognizer.reset()
-        self.tap_count = 0
+        self.tap_count: int = 0
 
-    def tap_event(self, recognizer, event):
+    def tap_event(self, recognizer: TapRecognizer, event: TapEvent) -> None:
         if event.type & EventType.Detected:
             now = time.time()
             if now - self.last_tap_time > .4:
@@ -278,19 +289,19 @@ class MultiTapRecognizer(object):
                 self.callback(self, event)
                 self.tap_count = 0
 
-    def touches(self, remote, touches):
+    def touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         self.tap_recognizer.touches(remote, touches)
 
 # This tweaks button values, in lieu of an event callback
-class DPadEmulator(object):
-    def __init__(self):
-        self.last_touch = None
-        self.last_buttons = 0
+class DPadEmulator:
+    def __init__(self) -> None:
+        self.last_touch: Touch | None = None
+        self.last_buttons: int = 0
 
-    def touches(self, remote, touches):
+    def touches(self, remote: SiriRemote, touches: list[Touch]) -> None:
         self.last_touch = touches[0]
 
-    def buttons(self, remote, buttons):
+    def buttons(self, remote: SiriRemote, buttons: int) -> int:
         if remote.profile.hw_revision not in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
             return buttons
         if self.last_touch is None:
