@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -9,17 +9,18 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, linecache, tracemalloc
+from typing import Any
 
-class Monitor(object):
-    def __init__(self, period=None):
-        self.last_snapshot = None
+class Monitor:
+    def __init__(self, period: int | None = None) -> None:
+        self.last_snapshot: tracemalloc.Snapshot | None = None
         if period is None:
             period = 60*60
         self.period = period
         self.taskit = tools.Tasker('Memory Monitor')
         self.done = False
 
-    def log_top(self, snapshot, key_type='lineno', limit=10):
+    def log_top(self, snapshot: tracemalloc.Snapshot, key_type: str = 'lineno', limit: int = 10) -> None:
         snapshot = snapshot.filter_traces((
             tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
             tracemalloc.Filter(False, "<unknown>"),
@@ -41,7 +42,7 @@ class Monitor(object):
         total = sum(stat.size for stat in top_stats)
         log.info('Total allocated size: %.1f KiB' % (total / 1024))
 
-    def checkpoint(self):
+    def checkpoint(self) -> None:
         snapshot = tracemalloc.take_snapshot()
         self.log_top(snapshot)
         if self.last_snapshot is not None:
@@ -51,20 +52,20 @@ class Monitor(object):
                 log.info(stat)
         self.last_snapshot = snapshot
 
-    async def task(self):
+    async def task(self) -> None:
         while not self.done:
             self.checkpoint()
             await asyncio.sleep(self.period)
 
-    def stop(self):
+    def stop(self) -> None:
         self.done = True
         tracemalloc.stop()
 
-    def start(self):
+    def start(self) -> None:
         tracemalloc.start()
         self.done = False
         self.taskit(self.task())
 
-    def wait_on(self):
+    def wait_on(self) -> set[asyncio.Task[Any]]:
         return self.taskit.tasks
 
