@@ -8,11 +8,16 @@ import tools
 
 log = tools.logger(__name__)
 
+import evdev
 import evdev.ecodes as e
 
 import asyncio, time
+from typing import Any
+
 from aconfig import config
+from evdev import InputDevice
 from hdmi import Key
+from messaging import Pipe
 
 # SolarCell is very odd. It is exposed as 3 devices in Linux, named:
 # 'bluez-hog-device Keyboard'
@@ -54,21 +59,21 @@ config.default('solarcell.keymap', {
 config.default('solarcell.repeat.timeout_sec', 0.15)
 config.default('solarcell.repeat.sleep_sec', 0.075)
 
-class Handler(object):
-    def __init__(self, pipe):
+class Handler:
+    def __init__(self, pipe: Pipe | None) -> None:
         self.name = 'SolarCell'
-        self.devices = []
+        self.devices: list[InputDevice] = []
         self.pipe = pipe
         self.taskit = tools.Tasker('SolarCell')
         self.taskit(self.repeat_monitor_task())
-        self.last_key = Key.NO_KEY
-        self.last_timestamp = 0
+        self.last_key: Key = Key.NO_KEY
+        self.last_timestamp: float = 0
         self.key_event = asyncio.Event()
 
-    def wait_on(self):
+    def wait_on(self) -> set[asyncio.Task[Any]]:
         return set()
 
-    def probe(self, dev):
+    def probe(self, dev: InputDevice) -> bool:
         # It's not clear how to definitively identify the SolarCell device of interest.
         # For now the conditions are:
         # 1. The vendor ID is 0x5D
@@ -97,7 +102,7 @@ class Handler(object):
 
     keymap = config['solarcell.keymap']
 
-    async def dispatch_input_event(self, event):
+    async def dispatch_input_event(self, event: evdev.InputEvent) -> None:
         if event.type != e.EV_REL:
             return
         if event.code != e.REL_MISC:
@@ -123,7 +128,7 @@ class Handler(object):
             if self.pipe:
                 self.pipe.key_press(hkey)
 
-    async def repeat_monitor_task(self):
+    async def repeat_monitor_task(self) -> None:
         timeout_sec = config['solarcell.repeat.timeout_sec']
         sleep_sec = config['solarcell.repeat.sleep_sec']
         while True:
@@ -139,7 +144,7 @@ class Handler(object):
             self.last_key = Key.NO_KEY
 
 
-async def main():
+async def main() -> None:
     import evdev_input
     h = Handler(None)
     loop = asyncio.get_event_loop()
