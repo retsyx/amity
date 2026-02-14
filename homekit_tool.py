@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -20,7 +20,7 @@ homekit_state_path = 'var/homekit/state'
 homekit_code_path = 'var/homekit/code'
 homekit_code_img_path = 'var/homekit/code.png'
 
-def enable(control):
+def enable(control: service.Control) -> None:
     log.info('Enable')
     try:
         stat = os.stat(homekit_code_path)
@@ -28,7 +28,7 @@ def enable(control):
     except FileNotFoundError:
         mtime = 0
     if config[config_homekit_enable_path] != True:
-        def op():
+        def op() -> None:
             config[config_homekit_enable_path] = True
             config.save(True)
         control.safe_do(op)
@@ -48,7 +48,7 @@ def enable(control):
         time.sleep(.5)
     code(control)
 
-def read_code_file():
+def read_code_file() -> str:
     try:
         with open(homekit_code_path, 'r') as file:
             s = file.read()
@@ -56,7 +56,7 @@ def read_code_file():
         s = 'No code. Is HomeKit enabled?'
     return s
 
-def code(control):
+def code(control: service.Control) -> None:
     log.info('Code')
     if not config[config_homekit_enable_path]:
         s = 'HomeKit is disabled'
@@ -67,18 +67,18 @@ def code(control):
     log.info(s)
     print(s)
 
-def disable(control):
+def disable(control: service.Control) -> None:
     log.info('Disable')
     if config[config_homekit_enable_path] == False:
         return
-    def op():
+    def op() -> None:
         config[config_homekit_enable_path] = False
         config.save(True)
     control.safe_do(op)
 
-def reset(control):
+def reset(control: service.Control) -> None:
     log.info('Reset')
-    def op():
+    def op() -> None:
         try:
             os.unlink(homekit_state_path)
         except FileNotFoundError:
@@ -104,7 +104,7 @@ def reset(control):
         time.sleep(.5)
     code(control)
 
-def main():
+def main() -> None:
     actions = ('enable', 'code', 'disable', 'reset')
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('action', default='', choices=actions, help='action to perform')
