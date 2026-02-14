@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -10,28 +10,36 @@ log = tools.logger(__name__)
 
 import asyncio, evdev, time
 import evdev.ecodes as e
-from evdev import KeyEvent
+from evdev import InputDevice
+from typing import Any, Protocol
+from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 from aconfig import config
 from hdmi import Key
 
-class EvdevInput(object):
-    def __init__(self, handlers, loop):
-        self.devices = []
+class InputHandler(Protocol):
+    name: str
+    def wait_on(self) -> set[asyncio.Task[Any]]: ...
+    def probe(self, dev: InputDevice) -> bool: ...
+    async def dispatch_input_event(self, event: evdev.InputEvent) -> None: ...
+
+class EvdevInput(FileSystemEventHandler):
+    def __init__(self, handlers: list[InputHandler], loop: asyncio.AbstractEventLoop) -> None:
+        self.devices: list[InputDevice] = []
         self.handlers = handlers
         self.loop = loop
         self.taskit = tools.Tasker('EvdevInput')
         self.listen_to_all_devices()
         self.start_input_monitor()
 
-    def wait_on(self):
+    def wait_on(self) -> set[asyncio.Task[Any]]:
         tasks = set(self.taskit.tasks)
         for handler in self.handlers:
             tasks.update(handler.wait_on())
         return tasks
 
-    def start_input_monitor(self):
+    def start_input_monitor(self) -> None:
         path = '/dev/input/'
         log.info(f'Monitoring {path} for new input devices')
         self.observer = Observer()
@@ -39,7 +47,7 @@ class EvdevInput(object):
         self.observer.start()
 
     # Watchdog handler must be called dispatch()
-    def dispatch(self, event):
+    def dispatch(self, event: Any) -> None:
         if event.event_type == 'created' and not event.is_directory:
             log.info(f'New input event source {event.src_path}')
 
@@ -54,7 +62,7 @@ class EvdevInput(object):
         elif event.event_type == 'deleted' and not event.is_directory:
             log.info(f'Input event source delete {event.src_path}')
 
-    async def listen_device_task(self, device, handler):
+    async def listen_device_task(self, device: InputDevice, handler: InputHandler) -> None:
         path = device.path
         log.info(f'{handler.name}: Listening to device {path}')
         try:
@@ -63,17 +71,17 @@ class EvdevInput(object):
         except OSError as exc:
             log.info(f'{handler.name}: Stopped listening to device {path}')
 
-    def listen_to_all_devices(self):
+    def listen_to_all_devices(self) -> None:
         for path in evdev.list_devices():
             self.listen_device_at_path(path)
 
-    def listen_device_at_path(self, path):
+    def listen_device_at_path(self, path: str) -> None:
         device = evdev.InputDevice(path)
         for handler in self.handlers:
             if handler.probe(device):
                 self.taskit(self.listen_device_task(device, handler))
 
-async def main():
+async def main() -> None:
     loop = asyncio.get_event_loop()
     inp = EvdevInput([], loop)
     while True:
