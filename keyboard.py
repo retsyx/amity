@@ -9,11 +9,15 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio
+from typing import Any
+
+import evdev
 import evdev.ecodes as e
-from evdev import KeyEvent
+from evdev import InputDevice, KeyEvent
 
 from aconfig import config
 from hdmi import Key
+from messaging import Pipe
 
 config.default('keyboard.required_keys', ((e.KEY_ENTER, e.KEY_SELECT), e.KEY_UP,
                                           e.KEY_RIGHT, e.KEY_DOWN,
@@ -87,19 +91,19 @@ config.default('keyboard.keymap', {
 config.default('keyboard.battery.monitor.enable', True)
 config.default('keyboard.battery.monitor.period_sec', 3600)
 
-class Handler(object):
-    def __init__(self, pipe):
+class Handler:
+    def __init__(self, pipe: Pipe | None) -> None:
         self.name = 'Keyboard'
         self.pipe = pipe
         self.taskit = tools.Tasker('Keyboard')
         self.taskit(self.battery_monitor_task())
 
-    def wait_on(self):
+    def wait_on(self) -> set[asyncio.Task[Any]]:
         return self.taskit.tasks
 
     required_keys = config['keyboard.required_keys']
 
-    def probe(self, dev):
+    def probe(self, dev: InputDevice) -> bool:
         caps = dev.capabilities()
         supported_keys = caps.get(e.EV_KEY)
         if not supported_keys:
@@ -117,7 +121,7 @@ class Handler(object):
 
     keymap = config['keyboard.keymap']
 
-    async def dispatch_input_event(self, event):
+    async def dispatch_input_event(self, event: evdev.InputEvent) -> None:
         if event.type != e.EV_KEY:
             return
         hkey = self.keymap.get(event.code, None)
@@ -133,7 +137,7 @@ class Handler(object):
             if self.pipe:
                 self.pipe.key_release(hkey)
 
-    async def battery_monitor_task(self):
+    async def battery_monitor_task(self) -> None:
         if not config['keyboard.battery.monitor.enable']:
             log.info('Keyboard battery monitoring disabled')
             return
@@ -166,7 +170,7 @@ class Handler(object):
                     break
             await asyncio.sleep(period_sec)
 
-async def main():
+async def main() -> None:
     import evdev_input
     h = Handler(None)
     loop = asyncio.get_event_loop()
