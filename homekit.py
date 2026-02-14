@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -9,6 +9,7 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, io, qrcode, signal
+from typing import Any
 
 from PIL import Image
 from pyhap.accessory import Accessory
@@ -16,6 +17,7 @@ from pyhap.accessory_driver import AccessoryDriver
 from pyhap.const import CATEGORY_TELEVISION
 
 from hdmi import Key
+from messaging import Pipe
 
 from aconfig import config
 
@@ -45,9 +47,9 @@ class TV(Accessory):
 
     NAME = 'Amity'
 
-    def __init__(self, *args, **kwargs):
-        self.activity_names = kwargs.pop('activity_names', None)
-        self.pipe = kwargs.pop('pipe', None)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.activity_names: list[str] | None = kwargs.pop('activity_names', None)
+        self.pipe: Pipe | None = kwargs.pop('pipe', None)
         super(TV, self).__init__(*args, **kwargs)
 
         self.keymap = config['homekit.keymap']
@@ -129,25 +131,27 @@ class TV(Accessory):
         if self.pipe is not None:
             self.pipe.start_client_task(self)
 
-    async def server_notify_set_activity(self, index):
+    async def server_notify_set_activity(self, index: int) -> None:
         if index == -1: # Off
             log.info('Notified of standby')
             self._active.set_value(0)
         else:
+            assert self.activity_names is not None
             log.info(f'Notified of activity {self.activity_names[index]}')
             self._active.set_value(1)
             self._active_identifier.set_value(index)
 
-    async def server_notify_battery_state(self, level, is_charging, is_low):
+    async def server_notify_battery_state(self, level: int, is_charging: bool, is_low: bool) -> None:
         log.info(f'Notified of battery state {level} {is_charging} {is_low}')
         self._battery_level.set_value(level)
         self._charging_state.set_value(1 if is_charging else 0)
         self._status_low_battery.set_value(1 if is_low else 0)
 
-    def _on_active_changed(self, value):
+    def _on_active_changed(self, value: int) -> None:
         log.info(f'Active {value}')
         if value:
             i = self._active_identifier.get_value()
+            assert self.activity_names is not None
             log.info(f'Setting activity {self.activity_names[i]}')
         else:
             log.info('Standby')
@@ -157,16 +161,17 @@ class TV(Accessory):
             return
         self.pipe.set_activity(i)
 
-    def _on_active_identifier_changed(self, value):
+    def _on_active_identifier_changed(self, value: int) -> None:
         log.info(f'Active identifier {value}')
         i = value
+        assert self.activity_names is not None
         log.info(f'Setting activity {self.activity_names[i]}')
         if self.pipe is None:
             log.info('No pipe')
             return
         self.pipe.set_activity(i)
 
-    def _on_remote_key(self, value):
+    def _on_remote_key(self, value: int) -> None:
         key = self.keymap.get(value, None)
         if key is None:
             log.info(f'Unknown remote key {value}')
@@ -174,18 +179,18 @@ class TV(Accessory):
         log.info(f'Remote key {value} {key}')
         self.key_press(key)
 
-    def _on_mute(self, value):
+    def _on_mute(self, value: int) -> None:
         log.info(f'Mute {value}')
         self.key_press(Key.TOGGLE_MUTE)
 
-    def _on_volume_selector(self, value):
+    def _on_volume_selector(self, value: int) -> None:
         log.info(f'Volume {value}')
         if value == 0:
             self.key_press(Key.VOLUME_UP)
         else:
             self.key_press(Key.VOLUME_DOWN)
 
-    def key_press(self, key):
+    def key_press(self, key: Key) -> None:
         log.info(f'Press key {key}')
         if self.pipe is None:
             log.info('No pipe')
@@ -193,15 +198,15 @@ class TV(Accessory):
         self.pipe.key_press(key, 1)
 
 
-class HomeKit(object):
-    def __init__(self, activity_names, loop, pipe):
+class HomeKit:
+    def __init__(self, activity_names: list[str], loop: asyncio.AbstractEventLoop, pipe: Pipe | None) -> None:
         self.driver = AccessoryDriver(port=51826,
                     persist_file='var/homekit/state',
                     loop=loop)
         self.accessory = TV(self.driver, 'Amity', activity_names=activity_names, pipe=pipe)
         self.driver.add_accessory(accessory=self.accessory)
 
-    async def start(self):
+    async def start(self) -> None:
         log.info('Starting')
         await self.driver.async_start()
         if self.driver.state.paired:
@@ -217,7 +222,7 @@ class HomeKit(object):
         with open('var/homekit/code', 'wb') as file:
             file.write(s.encode('utf-8'))
 
-    def setup_info(self):
+    def setup_info(self) -> tuple[str, Any]:
         """Generate setup message string
         """
         pincode = self.driver.state.pincode.decode()
@@ -234,8 +239,8 @@ class HomeKit(object):
         img = qr.make_image()
         return message, img
 
-async def main():
-    activity_names = ('Watch TV', 'Play PS5', 'Play Switch', 'Play Music')
+async def main() -> None:
+    activity_names = ['Watch TV', 'Play PS5', 'Play Switch', 'Play Music']
     hk = HomeKit(activity_names, asyncio.get_running_loop(), None)
     signal.signal(signal.SIGTERM, hk.driver.signal_handler)
     await hk.start()
