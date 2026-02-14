@@ -9,6 +9,7 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio
+from typing import Any, Protocol, runtime_checkable
 
 from enum import Enum, auto
 
@@ -18,78 +19,90 @@ class Type(Enum):
     KeyRelease = auto()
     BatteryState = auto()
 
-class Message(object):
-    def __init__(self, type, *values):
+class Message:
+    def __init__(self, type: Type, *values: Any) -> None:
         self.type = type
         self.values = values
 
+@runtime_checkable
+class ServerHandler(Protocol):
+    async def client_set_activity(self, index: int) -> None: ...
+    async def client_press_key(self, key: int, count: int = 0) -> None: ...
+    async def client_release_key(self, key: int) -> None: ...
+    async def client_battery_state(self, level: int, is_charging: bool) -> None: ...
+
+@runtime_checkable
+class ClientHandler(Protocol):
+    async def server_notify_set_activity(self, index: int) -> None: ...
+    async def server_notify_battery_state(self, level: int, is_charging: bool, is_low: bool) -> None: ...
+
 # A trivial object for connecting the Hub and UI indirectly with duck typing.
-class Pipe(object):
-    def __init__(self):
-        self.server_q = asyncio.Queue()
-        self.client_q = asyncio.Queue()
-        self.server_t = None
-        self.client_t = None
+class Pipe:
+    def __init__(self) -> None:
+        self.server_q: asyncio.Queue[Message] = asyncio.Queue()
+        self.client_q: asyncio.Queue[Message] = asyncio.Queue()
+        self.server_t: asyncio.Task[None] | None = None
+        self.client_t: asyncio.Task[None] | None = None
         self.taskit = tools.Tasker('Messaging')
 
     # Server calls
-    def notify_set_activity(self, index):
+    def notify_set_activity(self, index: int) -> None:
         if self.client_t:
             self.taskit(self.client_q.put(Message(Type.SetActivity, index)))
 
-    def notify_battery_state(self, level, is_charging, is_low):
+    def notify_battery_state(self, level: int, is_charging: bool, is_low: bool) -> None:
         if self.client_t:
             self.taskit(self.client_q.put(Message(Type.BatteryState, level, is_charging, is_low)))
 
-    def start_server_task(self, handler):
+    def start_server_task(self, handler: ServerHandler) -> None:
         self.server_t = self.taskit(self.server_task(handler))
 
     # Server handler
-    async def server_task(self, handler):
+    async def server_task(self, handler: ServerHandler) -> None:
         while True:
             try:
                 msg = await self.server_q.get()
                 match msg.type:
                     case Type.SetActivity:
-                        await handler.client_set_activity(*msg.values)
+                        await handler.client_set_activity(*msg.values)  # type: ignore[arg-type]
                     case Type.KeyPress:
-                        await handler.client_press_key(*msg.values)
+                        await handler.client_press_key(*msg.values)  # type: ignore[arg-type]
                     case Type.KeyRelease:
-                        await handler.client_release_key(*msg.values)
+                        await handler.client_release_key(*msg.values)  # type: ignore[arg-type]
                     case Type.BatteryState:
-                        await handler.client_battery_state(*msg.values)
+                        await handler.client_battery_state(*msg.values)  # type: ignore[arg-type]
             except AttributeError as e:
                 log.debug(e)
 
     # Client calls
-    def set_activity(self, index):
+    def set_activity(self, index: int) -> None:
         if self.server_t:
             self.taskit(self.server_q.put(Message(Type.SetActivity, index)))
 
-    def key_press(self, key, count=0):
+    def key_press(self, key: int, count: int = 0) -> None:
         if self.server_t:
             self.taskit(self.server_q.put(Message(Type.KeyPress, key, count)))
 
-    def key_release(self, key):
+    def key_release(self, key: int) -> None:
         if self.server_t:
             self.taskit(self.server_q.put(Message(Type.KeyRelease, key)))
 
-    def battery_state(self, level, is_charging):
+    def battery_state(self, level: int, is_charging: bool) -> None:
         if self.server_t:
             self.taskit(self.server_q.put(Message(Type.BatteryState, level, is_charging)))
 
     # Client handler
-    def start_client_task(self, handler):
+    def start_client_task(self, handler: ClientHandler) -> None:
         self.client_t = self.taskit(self.client_task(handler))
 
-    async def client_task(self, handler):
+    async def client_task(self, handler: ClientHandler) -> None:
         while True:
             try:
                 msg = await self.client_q.get()
                 match msg.type:
                     case Type.SetActivity:
-                        await handler.server_notify_set_activity(*msg.values)
+                        await handler.server_notify_set_activity(*msg.values)  # type: ignore[arg-type]
                     case Type.BatteryState:
-                        await handler.server_notify_battery_state(*msg.values)
+                        await handler.server_notify_battery_state(*msg.values)  # type: ignore[arg-type]
             except AttributeError as e:
                 log.debug(e)
