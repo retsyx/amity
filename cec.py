@@ -4,12 +4,16 @@
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 
+from __future__ import annotations
+
 import tools
 
 log = tools.logger(__name__)
 
+from collections.abc import Callable, Coroutine, Sequence
 from ctypes import Structure, Union, c_char, c_uint8, c_uint16, c_uint32, c_uint64, sizeof
 from enum import IntEnum
+from typing import Any, IO
 import asyncio
 import errno
 import fcntl
@@ -29,27 +33,31 @@ _IOC_NONE = 0
 _IOC_WRITE = 1
 _IOC_READ = 2
 
-def _IOC(direction, tp, nr, size):
+def _IOC(direction: int, tp: int | str, nr: int, size: int | type) -> int:
     if type(tp) is str:
-        tp = ord(tp) # XXX doesn't work for multi byte integers...
-    if type(size) != int:
-        size = sizeof(size)
+        tpi = ord(tp) # XXX doesn't work for multi byte integers...
+    else:
+        assert type(tp) is int
+        tpi = tp
+
+    if type(size) is not int:
+        size = sizeof(size) # type: ignore[arg-type]
 
     return (((direction)  << _IOC_DIRSHIFT) |
-        ((tp) << _IOC_TYPESHIFT) |
+        ((tpi) << _IOC_TYPESHIFT) |
         ((nr)   << _IOC_NRSHIFT) |
         ((size) << _IOC_SIZESHIFT))
 
-def _IO(type, nr):
+def _IO(type: int | str, nr: int) -> int:
     return _IOC(0, type, nr, 0)
 
-def _IOR(type, nr, size):
+def _IOR(type: int | str, nr: int, size: int | type) -> int:
     return _IOC(_IOC_READ, type, nr, size)
 
-def _IOW(type, nr, size):
+def _IOW(type: int | str, nr: int, size: int | type) -> int:
     return _IOC(_IOC_WRITE, type, nr, size)
 
-def _IOWR(type, nr, size):
+def _IOWR(type: int | str, nr: int, size: int | type) -> int:
     return _IOC(_IOC_READ|_IOC_WRITE, type, nr, size)
 
 INVALID_PHYSICAL_ADDRESS = 0xffff
@@ -206,32 +214,32 @@ class Message(Structure):
         ('tx_low_drive_cnt', c_uint8),
         ('tx_error_cnt', c_uint8)]
 
-    def __init__(self, src: int, dst: int):
+    def __init__(self, src: int, dst: int) -> None:
         self.len = 1
         self.msg[0] = (src << 4) | dst
 
     @property
-    def op(self):
+    def op(self) -> int:
         return self.msg[1]
 
     @op.setter
-    def op(self, cmd):
+    def op(self, cmd: int) -> None:
         self.msg[1] = cmd
 
     @property
-    def src(self):
+    def src(self) -> int:
         return self.msg[0] >> 4
 
     @property
-    def dst(self):
+    def dst(self) -> int:
         return self.msg[0] & 0x0f
 
-    def set_data(self, data):
+    def set_data(self, data: Sequence[int]) -> None:
         self.len = len(data) + 1
         for i, d in enumerate(data):
             self.msg[1 + i] = d
 
-    def ok(self):
+    def ok(self) -> bool:
         if self.tx_status and not (self.tx_status & self.TX_STATUS_OK):
             return False
         if self.rx_status and not (self.rx_status & self.RX_STATUS_OK):
@@ -240,10 +248,10 @@ class Message(Structure):
             return False
         return not (self.rx_status & self.RX_STATUS_FEATURE_ABORT)
 
-    def did_rx(self):
+    def did_rx(self) -> bool:
         return (self.rx_status & self.RX_STATUS_OK) != 0
 
-    def tx_status_text(self):
+    def tx_status_text(self) -> str:
         s = self.tx_status
         a = ['Tx']
         if s & self.TX_STATUS_OK:
@@ -264,7 +272,7 @@ class Message(Structure):
             a.append('Max Retries')
         return ', '.join(a)
 
-    def rx_status_text(self):
+    def rx_status_text(self) -> str:
         s = self.rx_status
         a = ['Rx']
         if s & self.RX_STATUS_OK:
@@ -277,7 +285,7 @@ class Message(Structure):
             a.append('Aborted')
         return ', '.join(a)
 
-    def status_text(self):
+    def status_text(self) -> str:
         s = []
         if self.tx_status:
             s.append(self.tx_status_text())
@@ -285,7 +293,7 @@ class Message(Structure):
             s.append(self.rx_status_text())
         return ', '.join(s)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join(f'{c:02X}' for c in self.msg[:self.len])
 
 
@@ -361,7 +369,7 @@ class Capability(IntEnum):
     MONITOR_PIN = (1 << 7) # Hardware can monitor CEC pin transitions
     CONNECTOR_INFO = (1 << 8) # CEC_ADAP_G_CONNECTOR_INFO is available
 
-class DeviceType(object):
+class DeviceType:
     TV = 0
     RECORDING = 1
     TUNER = 3
@@ -400,8 +408,8 @@ class DeviceType(object):
         PROCESSOR : 'Processor',
         INVALID : 'Invalid'}
 
-class DeviceImpl(object):
-    def __init__(self, adapter, address):
+class DeviceImpl:
+    def __init__(self, adapter: Adapter, address: int) -> None:
         self.adapter = adapter
         self.address = address
         self.physical_address = INVALID_PHYSICAL_ADDRESS
@@ -412,13 +420,13 @@ class DeviceImpl(object):
             self.osd_name = '<BROADCAST>'
             return
 
-    def is_broadcast(self):
+    def is_broadcast(self) -> bool:
         return self.address == BROADCAST_ADDRESS
 
-    def new_msg(self):
+    def new_msg(self) -> Message:
         return Message(self.adapter.address, self.address)
 
-    def parse_report_physical_address_message(self, msg):
+    def parse_report_physical_address_message(self, msg: Message) -> None:
         if msg.ok():
             self.physical_address = (msg.msg[2] << 8) | msg.msg[3]
             self.primary_device_type = msg.msg[4]
@@ -431,14 +439,14 @@ class DeviceImpl(object):
                 self.physical_address = INVALID_PHYSICAL_ADDRESS
                 self.primary_device_type = DeviceType.INVALID
 
-    async def get_physical_address_and_primary_device_type(self):
+    async def get_physical_address_and_primary_device_type(self) -> None:
         msg = self.new_msg()
         msg.set_data([Message.GIVE_PHYSICAL_ADDR])
         msg.reply = Message.REPORT_PHYSICAL_ADDR
         msg = await self.adapter.transmit(msg)
         self.parse_report_physical_address_message(msg)
 
-    async def get_osd_name(self):
+    async def get_osd_name(self) -> None:
         msg = self.new_msg()
         msg.set_data([Message.GIVE_OSD_NAME])
         msg.reply = Message.SET_OSD_NAME
@@ -452,12 +460,12 @@ class DeviceImpl(object):
             else:
                 self.osd_name = ''
 
-    async def send_osd_name(self, osd_name):
+    async def send_osd_name(self, osd_name: str) -> None:
         data = [Message.SET_OSD_NAME]
         data.extend([ord(x) for x in osd_name[:Message.MAX_MSG_SIZE - 2]])
         await self.transmit(data)
 
-    async def get_vendor_id(self):
+    async def get_vendor_id(self) -> None:
         msg = self.new_msg()
         msg.set_data([Message.GIVE_VENDOR_ID])
         msg.reply = Message.VENDOR_ID
@@ -470,19 +478,19 @@ class DeviceImpl(object):
         else:
             self.vendor_id = 0
 
-    async def standby(self):
+    async def standby(self) -> None:
         await self.transmit([Message.STANDBY])
 
-    async def key_press(self, key: Key):
+    async def key_press(self, key: Key | int) -> None:
         await self.transmit([Message.KEY_PRESS, key])
 
-    async def key_release(self):
+    async def key_release(self) -> None:
         await self.transmit([Message.KEY_RELEASE])
 
-    async def image_view_on(self):
+    async def image_view_on(self) -> None:
         await self.transmit([Message.IMAGE_VIEW_ON])
 
-    async def power_on(self):
+    async def power_on(self) -> None:
         if self.primary_device_type == DeviceType.TV:
             await self.image_view_on()
         else:
@@ -490,29 +498,29 @@ class DeviceImpl(object):
             await self.key_press(Key.POWER_ON)
             await self.key_release()
 
-    async def set_stream_path(self):
+    async def set_stream_path(self) -> None:
         msg = Message(self.adapter.address, BROADCAST_ADDRESS)
         msg.set_data([Message.SET_STREAM_PATH,
                     self.physical_address >> 8,
                     self.physical_address & 0xff])
         await self.adapter.transmit(msg)
 
-    async def active_source(self):
+    async def active_source(self) -> None:
         msg = Message(self.adapter.address, BROADCAST_ADDRESS)
         msg.set_data([Message.ACTIVE_SOURCE,
                 self.physical_address >> 8,
                 self.physical_address & 0xff])
         await self.adapter.transmit(msg)
 
-    async def transmit(self, data):
+    async def transmit(self, data: Sequence[int]) -> None:
         msg = self.new_msg()
         msg.set_data(data)
         await self.adapter.transmit(msg)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Device({self.address}) "{self.osd_name}"'
 
-async def Device(adapter, address):
+async def Device(adapter: Adapter, address: int) -> DeviceImpl:
     device = DeviceImpl(adapter, address)
     if address != BROADCAST_ADDRESS:
         await device.get_physical_address_and_primary_device_type()
@@ -523,30 +531,32 @@ async def Device(adapter, address):
 class AdapterInitException(Exception):
     pass
 
-class AsyncState(object):
-    def __init__(self, msg, event):
+class AsyncState:
+    def __init__(self, msg: Message, event: asyncio.Event) -> None:
         self.msg = msg
         self.event = event
 
-class Adapter(object):
+class Adapter:
     MODE_INITIATOR = (1 << 0)
     MODE_FOLLOWER = (1 << 4)
 
-    def __init__(self, devname, loop=None, listen_callback_coro=None,
-                 device_types=(), osd_name='default', vendor_id=0, physical_address_override=None):
-        self.taskit = tools.Tasker('Adapter')
-        self.states = {}
+    def __init__(self, devname: str, loop: asyncio.AbstractEventLoop | None = None,
+                 listen_callback_coro: Callable[[Message], Coroutine[Any, Any, Any]] | None = None,
+                 device_types: tuple[int, ...] | int = (), osd_name: str = 'default',
+                 vendor_id: int = 0, physical_address_override: int | None = None) -> None:
+        self.taskit = tools.Tasker(f'Adapter {devname}')
+        self.states: dict[int, AsyncState] = {}
         self.devname = devname
         if loop is None:
             loop = asyncio.get_running_loop()
         self.loop = loop
         self.listen_callback_coro = listen_callback_coro
-        if not tools.isiterable(device_types):
+        if isinstance(device_types, int):
             device_types = (device_types, )
         self.device_types = device_types
         self.osd_name = osd_name
         self.vendor_id = vendor_id
-        self.dev = open(devname, 'wb', buffering=0)
+        self.dev: IO[bytes] | None = open(devname, 'wb', buffering=0)
         self.caps = self.capabilities()
         self.laddrs = LogAddrs()
         mode = c_uint32(self.MODE_INITIATOR | self.MODE_FOLLOWER)
@@ -558,44 +568,48 @@ class Adapter(object):
         os.set_blocking(self.dev.fileno(), False)
         self.loop.add_reader(self.dev.fileno(), self.reader)
 
-    def close(self):
+    def close(self) -> None:
+        assert self.dev is not None
         self.loop.remove_reader(self.dev.fileno())
         self.dev.close()
         self.dev = None
 
-    def ioctl(self, op, data):
+    def ioctl(self, op: int, data: Any) -> Any:
+        assert self.dev is not None
         return fcntl.ioctl(self.dev, op, data)
 
-    def capabilities(self, caps=None):
+    def capabilities(self, caps: Capabilities | None = None) -> Capabilities:
         if caps is None:
             caps = Capabilities()
         b = self.ioctl(Ioctl.ADAP_G_CAPS, bytes(bytearray(caps)))
         return Capabilities.from_buffer(bytearray(b))
 
     @property
-    def address(self):
+    def address(self) -> int:
         return self.laddrs.log_addr[0]
 
     @property
-    def physical_address(self):
+    def physical_address(self) -> int:
         address = bytes(2)
         address = self.ioctl(Ioctl.ADAP_G_PHYS_ADDR, address)
         return int.from_bytes(address, byteorder='little')
 
     @physical_address.setter
-    def physical_address(self, address):
+    def physical_address(self, address: int) -> None:
         self.ioctl(Ioctl.ADAP_S_PHYS_ADDR, address.to_bytes(2, byteorder='little'))
 
-    def setup(self, physical_address_override):
+    def setup(self, physical_address_override: int | None) -> LogAddrs:
         # Clear the current logical address configuration
         laddrs = LogAddrs()
         self.ioctl(Ioctl.ADAP_S_LOG_ADDRS, laddrs)
 
         if not self.device_types:
-            device_types = (DeviceType.PLAYBACK, )
+            device_types : tuple[int, ...] = (DeviceType.PLAYBACK, )
+            self.device_types = device_types
         else:
+            assert isinstance(self.device_types, tuple)
             device_types = self.device_types
-        self.device_types = device_types
+
         if len(device_types) > self.caps.available_log_addrs:
             raise AdapterInitException('Too many logical addresses')
 
@@ -609,7 +623,7 @@ class Adapter(object):
         # functionality.
         if (self.caps.capabilities & Capabilities.PHYS_ADDR and
             (self.physical_address == INVALID_PHYSICAL_ADDRESS)):
-            if self.device_types[0] == DeviceType.TV:
+            if device_types[0] == DeviceType.TV:
                 self.physical_address = 0x0000
             else:
                 if physical_address_override is not None:
@@ -652,7 +666,7 @@ class Adapter(object):
 
         return self.laddrs
 
-    async def transmit(self, msg: Message):
+    async def transmit(self, msg: Message) -> Message:
         state = AsyncState(msg, asyncio.Event())
         try:
             ret = self.ioctl(Ioctl.TRANSMIT, msg)
@@ -668,14 +682,14 @@ class Adapter(object):
         msg = state.msg
         return msg
 
-    async def active_source(self):
+    async def active_source(self) -> None:
         msg = Message(self.address, BROADCAST_ADDRESS)
         msg.set_data([Message.ACTIVE_SOURCE,
                       self.physical_address >> 8,
                       self.physical_address & 0xff])
         await self.transmit(msg)
 
-    async def poll_device(self, i):
+    async def poll_device(self, i: int) -> DeviceImpl | None:
         msg = Message(self.address, i)
         msg = await self.transmit(msg)
         if msg.ok():
@@ -684,7 +698,7 @@ class Adapter(object):
             log.info(f'{msg.status_text()} for addr {i}')
         return None
 
-    async def list_devices(self):
+    async def list_devices(self) -> list[DeviceImpl]:
         devices = []
         for i in range(0xf):
             if i == self.address:
@@ -695,10 +709,10 @@ class Adapter(object):
             devices.append(device)
         return devices
 
-    def broadcast(self):
+    def broadcast(self) -> DeviceImpl:
         return DeviceImpl(self, BROADCAST_ADDRESS)
 
-    def reader(self):
+    def reader(self) -> None:
         msg = Message(0, 0)
 
         # Events should be dequed in response to file handle exceptions. Not clear how to do that
