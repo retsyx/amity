@@ -8,24 +8,28 @@ import tools
 log = tools.logger(__name__)
 
 import os, re, shutil, tempfile, time, yaml
+from collections.abc import Callable, Generator
+from typing import Any
 
-class Config(object):
-    def __init__(self, filename):
-        self.default_paths = {}
-        self.user_cfg = {}
-        self.cfg = {}
+class Config:
+    def __init__(self, filename: str) -> None:
+        self.default_paths: dict[str, Any] = {}
+        self.user_cfg: dict[str, Any] = {}
+        self.cfg: dict[str, Any] = {}
         self.loaded = False
         self.filename = filename
-        self.loader_class = type('Loader', (yaml.SafeLoader,), {})
-        self.dumper_class = type('Dumper', (yaml.SafeDumper,), {})
+        self.loader_class: type[yaml.SafeLoader] = type('Loader', (yaml.SafeLoader,), {})
+        self.dumper_class: type[yaml.SafeDumper] = type('Dumper', (yaml.SafeDumper,), {})
         self.default('config.max_backups', 10)
         log.info(f'filename {self.filename}')
 
-    def register_yaml_handler(self, tag, data_type, representer, constructor):
+    def register_yaml_handler(self, tag: str, data_type: type,
+                              representer: Callable[..., Any],
+                              constructor: Callable[..., Any]) -> None:
         self.dumper_class.add_representer(data_type, representer)
         self.loader_class.add_constructor(tag, constructor)
 
-    def load(self):
+    def load(self) -> None:
         """Must be called after all default() calls have been made"""
         log.info(f'Load {self.filename}')
         try:
@@ -39,7 +43,7 @@ class Config(object):
         self.__overlay(self.cfg, self.user_cfg)
         self.loaded = True
 
-    def save(self, backup=False):
+    def save(self, backup: bool = False) -> None:
         log.info(f'Save {self.filename}')
         if backup:
             # Make a backup of the config file
@@ -65,12 +69,12 @@ class Config(object):
             stat = os.stat('.')
             shutil.chown(self.filename, stat.st_uid, stat.st_gid)
 
-    def clean_backups(self):
+    def clean_backups(self) -> None:
         path = os.path.dirname(self.filename)
         if path == '':
             path = '.'
         basename = os.path.basename(self.filename)
-        entries = []
+        entries: list[os.DirEntry[str]] = []
         m = re.compile(basename + r'-(\d{8}-\d{6})')
         for entry in os.scandir(path):
             if m.match(entry.name):
@@ -81,11 +85,11 @@ class Config(object):
             log.info(f'Deleting backup {entry.name}')
             os.unlink(os.path.join(path, entry.name))
 
-    def save_complete(self, filename):
+    def save_complete(self, filename: str) -> None:
         with open(filename, 'w') as file:
             yaml.dump(self.cfg, file, Dumper=self.dumper_class)
 
-    def __overlay(self, node, overlay_node):
+    def __overlay(self, node: Any, overlay_node: Any) -> bool:
         if type(node) is dict:
             if type(overlay_node) is not dict:
                 raise TypeError(f'Config: expected dict but got {type(overlay_node).__name__} in user config')
@@ -110,7 +114,7 @@ class Config(object):
             return True
         return False
 
-    def default(self, path, value):
+    def default(self, path: str, value: Any) -> None:
         if self.loaded:
             raise RuntimeError('Config: default() called after load()')
         if type(path) is not str:
@@ -123,13 +127,14 @@ class Config(object):
             self.__apply(self.cfg, path, value)
             log.info(f"Default '{path}' = '{value}'")
 
-    def __apply(self, node, path, value):
+    def __apply(self, node: Any, path: str, value: Any) -> None:
         elems = list(self.__elements(path))
         end_elem = (None, None)
         elems.append(end_elem)
         for i, elem in enumerate(elems[:-1]):
             next_elem = elems[i + 1]
             sep, name = elem
+            assert name is not None
             if sep == '.': # dict
                 if type(node) is not dict:
                     raise TypeError(f'Config: expected dict at {name!r} in path, got {type(node).__name__}')
@@ -142,7 +147,7 @@ class Config(object):
                 else:
                     next_sep, _ = next_elem
                     if next_sep == '.':
-                        next_node = {}
+                        next_node: dict | list = {}
                     else:
                         next_node = []
                     node[name] = next_node
@@ -166,7 +171,7 @@ class Config(object):
                     node[index] = next_node
                 node = node[index]
 
-    def __elements(self, path):
+    def __elements(self, path: str) -> Generator[tuple[str, str] | tuple[None, None]]:
         elems = re.split(r'(\.|,)', path)
         if elems[0] == '':
             elems.pop(0)
@@ -176,7 +181,7 @@ class Config(object):
             raise ValueError(f'Config: malformed path {path!r}')
         return ((elems[i], elems[i+1]) for i in range(0, len(elems), 2))
 
-    def __getitem__(self, path):
+    def __getitem__(self, path: str) -> Any:
         if type(path) is not str:
             raise TypeError(f'Config: path must be str, got {type(path).__name__}')
         elems = self.__elements(path)
@@ -197,7 +202,7 @@ class Config(object):
                 node = node[index]
         return node
 
-    def __setitem__(self, path, value):
+    def __setitem__(self, path: str, value: Any) -> None:
         if type(path) is not str:
             raise TypeError(f'Config: path must be str, got {type(path).__name__}')
         if not path:
@@ -209,7 +214,7 @@ class Config(object):
             self.__apply(self.user_cfg, path, value)
             self.__apply(self.cfg, path, value)
 
-    def replace_user_root(self, value):
+    def replace_user_root(self, value: dict[str, Any]) -> None:
         """ Replace all user settings while maintaining defaults """
         self.cfg = {}
         for path, default_value in self.default_paths.items():
