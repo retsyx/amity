@@ -13,11 +13,14 @@ from aconfig import config
 import asyncio
 import json
 import ssl
+from typing import Any
+
 import yaml
 
 import aiomqtt
 
 from hdmi import Key
+from messaging import Pipe
 import mqtt_defaults
 
 # MQTT certificate paths
@@ -46,33 +49,33 @@ BUTTON_KEY_MAP = {
 }
 
 
-class MQTT(object):
-    def __init__(self, activity_names, loop, pipe):
+class MQTT:
+    def __init__(self, activity_names: list[str], loop: asyncio.AbstractEventLoop, pipe: Pipe | None) -> None:
         self.activity_names = activity_names
         self.loop = loop
         self.pipe = pipe
-        self.client = None
+        self.client: aiomqtt.Client | None = None
         self.taskit = tools.Tasker('MQTT')
 
         # State tracking
-        self.current_activity = -1  # -1 = standby
-        self.battery_level = 100
-        self.battery_charging = False
-        self.battery_low = False
+        self.current_activity: int = -1  # -1 = standby
+        self.battery_level: int = 100
+        self.battery_charging: bool = False
+        self.battery_low: bool = False
 
         # MQTT configuration
-        self.broker_host = config['mqtt.broker.host']
-        self.broker_port = config['mqtt.broker.port']
+        self.broker_host: str = config['mqtt.broker.host']
+        self.broker_port: int = config['mqtt.broker.port']
 
-        credentials = {}
+        credentials: dict[str, Any] = {}
         try:
             with open(MQTT_CREDENTIALS_FILE, 'r') as f:
                 credentials = yaml.safe_load(f)
         except Exception:
             pass
 
-        self.broker_username = credentials.get('username')
-        self.broker_password = credentials.get('password')
+        self.broker_username: str | None = credentials.get('username')
+        self.broker_password: str | None = credentials.get('password')
 
         self.tls_enabled = config['mqtt.broker.tls.enabled']
         self.tls_verify_cert = config['mqtt.broker.tls.verify_cert']
@@ -111,12 +114,12 @@ class MQTT(object):
         if self.pipe is not None:
             self.pipe.start_client_task(self)
 
-    async def start(self):
+    async def start(self) -> None:
         """Start MQTT client with reconnection handling"""
         log.info('Starting MQTT')
         self.taskit(self._connection_handler())
 
-    async def _connection_handler(self):
+    async def _connection_handler(self) -> None:
         """Handle MQTT connection with automatic reconnection"""
         reconnect_interval = self.reconnect_min_interval
 
@@ -167,10 +170,10 @@ class MQTT(object):
                 await asyncio.sleep(reconnect_interval)
                 reconnect_interval = min(reconnect_interval * 2, self.reconnect_max_interval)
 
-    def wait_on(self):
+    def wait_on(self) -> set[asyncio.Task[Any]]:
         return self.taskit.tasks
 
-    async def _create_tls_context(self):
+    async def _create_tls_context(self) -> ssl.SSLContext:
         """Create TLS context from certificate content and files"""
         tls_context = ssl.create_default_context()
 
@@ -184,7 +187,7 @@ class MQTT(object):
 
         return tls_context
 
-    async def _publish_discovery(self):
+    async def _publish_discovery(self) -> None:
         """Publish Home Assistant MQTT Discovery messages"""
         log.info('Publishing discovery messages')
 
@@ -196,6 +199,8 @@ class MQTT(object):
             'model': 'Amity HDMI-CEC Hub',
             'sw_version': '1.0'
         }
+
+        assert self.client is not None
 
         # Switch for power on/off
         switch_config = {
@@ -294,7 +299,7 @@ class MQTT(object):
             retain=True
         )
 
-    def _get_button_icon(self, button_name):
+    def _get_button_icon(self, button_name: str) -> str:
         """Get Material Design Icon for button"""
         icon_map = {
             'play': 'mdi:play',
@@ -317,7 +322,7 @@ class MQTT(object):
         }
         return icon_map.get(button_name, 'mdi:gesture-tap-button')
 
-    async def _publish_state(self):
+    async def _publish_state(self) -> None:
         """Publish current state to Home Assistant"""
         if not self.client:
             return
@@ -352,7 +357,7 @@ class MQTT(object):
             payload='ON' if self.battery_charging else 'OFF'
         )
 
-    async def _handle_command(self, message):
+    async def _handle_command(self, message: aiomqtt.Message) -> None:
         """Handle commands from Home Assistant"""
         topic = message.topic.value
         payload = message.payload.decode('utf-8')
@@ -404,13 +409,13 @@ class MQTT(object):
             log.error(f'Error processing command: {e}')
 
     # Server notification handlers (called by Hub via pipe)
-    async def server_notify_set_activity(self, index):
+    async def server_notify_set_activity(self, index: int) -> None:
         """Called when activity changes"""
         log.info(f'Activity changed to index {index}')
         self.current_activity = index
         await self._publish_state()
 
-    async def server_notify_battery_state(self, level, is_charging, is_low):
+    async def server_notify_battery_state(self, level: int, is_charging: bool, is_low: bool) -> None:
         """Called when battery state changes"""
         log.info(f'Notifying battery state {level} {is_charging} {is_low}')
         self.battery_level = level
