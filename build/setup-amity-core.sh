@@ -125,7 +125,7 @@ pip install .
 
 # Build the bluepy3 helper against BlueZ version 5.82
 cd "$APP_DIR"
-echo -e 'import bluepy3.helpermaker as X\nX.make_helper(build="5.82")' | python
+echo -e 'import bluepy3.helpermaker as X\nX.build(bluez_version="5.82")' | python
 
 # Setup .bashrc
 if ! grep -q "# Amity" "$ROOT_DIR/.bashrc"; then
