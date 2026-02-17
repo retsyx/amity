@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2024.
+# Copyright 2024-2025.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -11,6 +11,8 @@ import tools
 log = tools.logger('var/log/management.log')
 
 import asyncio, os
+
+os.environ['NICEGUI_STORAGE_PATH'] = 'var/gui/nicegui'
 
 from nicegui import app, ui
 
@@ -69,7 +71,6 @@ class Management(object):
             page.update()
 
 def main():
-    os.environ['NICEGUI_STORAGE_PATH'] = 'var/nicegui'
     mgmt = Management()
     app.add_middleware(authentication.AuthMiddleware)
     app.on_startup(mgmt.async_env_start)
