@@ -50,9 +50,9 @@ class MQTT(object):
                                                 precision=0, on_change=self.check_for_changes).classes('w-32')
 
                 with ui.row().classes('w-full'):
-                    self.username_input = ui.input('Username (optional)',
+                    self.username_input = ui.input('Username',
                                                    value=self.saved_broker_username, on_change=self.check_for_changes).classes('flex-grow')
-                    self.password_input = ui.input('Password (optional)',
+                    self.password_input = ui.input('Password',
                                                    value=self.saved_broker_password,
                                                    password=True, password_toggle_button=True, on_change=self.check_for_changes).classes('flex-grow')
 
@@ -74,20 +74,16 @@ class MQTT(object):
 
                 # Action buttons - different layout based on enabled state
                 # When disabled: Test and Enable
-                # When enabled: Test, Save (if changes), and Disable
-                with ui.row().classes('w-full gap-2') as self.buttons_row_disabled:
+                # When enabled: Test, Discard (if changes), Save (if changes), and Disable
+                with ui.row().classes('w-full gap-2'):
                     ui.button('Test Connection', on_click=self.test_connection).classes('flex-grow')
-                    self.enable_btn = ui.button('Enable MQTT', on_click=self.enable_mqtt).classes('flex-grow')
-
-                with ui.row().classes('w-full gap-2') as self.buttons_row_enabled:
-                    ui.button('Test Connection', on_click=self.test_connection).classes('flex-grow')
-                    self.save_btn = ui.button('Save Configuration', on_click=self.save_config).classes('flex-grow')
-                    self.disable_btn = ui.button('Disable MQTT', on_click=self.disable_mqtt).classes('flex-grow')
-
-                # Bind visibility based on enabled state
-                self.buttons_row_disabled.bind_visibility_from(self, 'show_disabled_buttons')
-                self.buttons_row_enabled.bind_visibility_from(self, 'show_enabled_buttons')
-                self.save_btn.bind_visibility_from(self, 'has_unsaved_changes')
+                    btn = ui.button('Discard Changes', color='negative', on_click=self.discard_changes).classes('flex-grow')
+                    btn.bind_visibility_from(self, 'has_unsaved_changes')
+                    btn = ui.button('Enable', on_click=self.toggle_enabled).classes('flex-grow')
+                    btn.bind_visibility_from(self, 'amity_is_active')
+                    b = lambda enabled: 'Disable' if enabled else 'Enable'
+                    btn.bind_text_from(self, 'enabled', backward=b)
+                    self.toggle_btn = btn
 
     def update(self):
         self.enabled = not not config['mqtt.enable']
@@ -129,16 +125,12 @@ class MQTT(object):
         else:
             self.amity_is_active = self.top.control.is_active()
 
-        # Button visibility based on enabled state and Amity active
-        self.show_disabled_buttons = not self.enabled and self.amity_is_active
-        self.show_enabled_buttons = self.enabled and self.amity_is_active
-
         # Update status string
         if self.amity_is_active:
             if self.enabled:
-                self.status_str = 'MQTT is enabled.'
+                self.status_str = 'Enabled.'
             else:
-                self.status_str = 'MQTT is disabled.'
+                self.status_str = 'Disabled.'
         else:
             self.status_str = 'Amity is not ready. Scan HDMI, and save in the Activities tab.'
 
@@ -182,10 +174,8 @@ class MQTT(object):
 
         # Save credentials
         cmd_parts = ['./configure_mqtt', 'set-credentials']
-        if self.username_input.value:
-            cmd_parts.extend(['--username', self.username_input.value])
-        if self.password_input.value:
-            cmd_parts.extend(['--password', self.password_input.value])
+        cmd_parts.extend(['--username', self.username_input.value])
+        cmd_parts.extend(['--password', self.password_input.value])
         proc = await asyncio.create_subprocess_shell(' '.join(cmd_parts))
         await proc.wait()
 
@@ -205,36 +195,28 @@ class MQTT(object):
         ]
         proc = await asyncio.create_subprocess_shell(' '.join(cmd_parts))
         await proc.wait()
+        self.update()
         return True
 
-    async def enable_mqtt(self, event):
-        """Save configuration and enable MQTT"""
+    async def toggle_enabled(self, event):
         with event.client:
+            self.toggle_btn.enabled = False
             self.top.spinner.open()
-
-            if not await self._save_settings():
-                self.top.spinner.close()
-                return
-
-            log.info('Enabling MQTT')
-            proc = await asyncio.create_subprocess_shell('./configure_mqtt enable')
-            await proc.wait()
-
-            self.top.spinner.close()
-
-    async def disable_mqtt(self, event):
-        """Disable MQTT"""
-        with event.client:
-            self.top.spinner.open()
-
-            self.disable_dialog.open()
-            confirm = await self.disable_dialog
-            if confirm:
-                log.info('Disabling MQTT')
-                proc = await asyncio.create_subprocess_shell('./configure_mqtt disable')
-                await proc.wait()
+            if self.enabled:
+                self.disable_dialog.open()
+                confirm = await self.disable_dialog
+                if confirm:
+                    log.info('Disabling MQTT')
+                    proc = await asyncio.create_subprocess_shell('./configure_mqtt disable')
+                    await proc.wait()
+            else:
+                log.info('Enabling MQTT')
+                if await self._save_settings():
+                    proc = await asyncio.create_subprocess_shell('./configure_mqtt enable')
+                    await proc.wait()
 
             self.update()
+            self.toggle_btn.enabled = True
             self.top.spinner.close()
 
     async def test_connection(self, event):
@@ -284,6 +266,20 @@ class MQTT(object):
                 ui.notify(message, type='negative')
 
             self.top.spinner.close()
+
+    async def discard_changes(self, event):
+        with event.client:
+            self.host_input.value = self.saved_broker_host
+            self.port_input.value = self.saved_broker_port
+            self.username_input.value = self.saved_broker_username
+            self.password_input.value = self.saved_broker_password
+            self.tls_enabled_input.value = self.saved_tls_enabled
+            self.tls_verify_cert_input.value = self.saved_tls_verify_cert
+            self.ca_cert_input.value = self.saved_tls_ca_cert_content
+            self.device_id_input.value = self.saved_device_id
+            self.device_name_input.value = self.saved_device_name
+            self.discovery_prefix_input.value = self.saved_discovery_prefix
+            self.check_for_changes()
 
     async def save_config(self, event):
         with event.client:
