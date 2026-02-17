@@ -18,6 +18,6 @@ AGENT_PIDS=`jobs -l | awk 'match($0, /[[:space:]][0-9]+[[:space:]]/) { print sub
 
 trap "kill -HUP $AGENT_PIDS" 2
 
-sudo `which python` ./pair_tool.py $1 $2 $3
+sudo `which python` ./pair_tool.py $@
 
 kill -HUP $AGENT_PIDS 2>&1 > /dev/null
