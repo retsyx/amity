@@ -20,6 +20,8 @@ else:
 log = tools.logger(log_name)
 
 import asyncio, pprint, signal, time, traceback
+from types import FrameType
+from typing import Any
 
 from aconfig import config, ConfigWatcher
 import remote, remote_adapter
@@ -31,10 +33,10 @@ import evdev_input, keyboard, solarcell
 import memory
 import messaging
 
-def _key_representer(dumper, data):
+def _key_representer(dumper: Any, data: Key) -> Any:
     return dumper.represent_scalar('!Key', data.name)
 
-def _key_constructor(loader, node):
+def _key_constructor(loader: Any, node: Any) -> Key:
     return Key[loader.construct_scalar(node)]
 
 config.register_yaml_handler('!Key', Key, _key_representer, _key_constructor)
@@ -95,51 +97,51 @@ config.default('memory.monitor.enable', False)
 config.default('memory.monitor.period_sec', 5*60)
 config.default('remote.battery.low_threshold', 10)
 
-class KeyState(object):
-    def __init__(self, count):
-        self.timestamp = time.time()
-        self.repeat_count = count
+class KeyState:
+    def __init__(self, count: int) -> None:
+        self.timestamp: float = time.time()
+        self.repeat_count: int = count
 
 class Hub(remote.RemoteListener):
     # Used to ensure that repeat counted keys use a different KeyState than non-repeat counted
     # keys.
     REPEAT_COUNT_FLAG = 0x8000
 
-    def __init__(self, controller):
-        self.activity_map = config['hub.activity_map']
-        self.macros = config['hub.macros']
-        self.long_press_keymap = config['hub.long_press.keymap']
-        self.long_press_duration_sec = config['hub.long_press.duration_sec']
-        self.short_press_keymap = config['hub.short_press.keymap']
-        self.play_pause_mode = config['hub.play_pause.mode']
-        self.taskit = tools.Tasker('Hub')
-        self.controller = controller
-        self.key_state = {}
-        self.wait_for_release = False
-        self.pipes = []
-        self.in_macro = False
-        self.macro_index = None
-        self.macro_executed = False
-        self.play_pause_is_playing = False
+    def __init__(self, controller: hdmi.ControllerImpl) -> None:
+        self.activity_map: dict[int, int] = config['hub.activity_map']
+        self.macros: list[tuple[Key]] = config['hub.macros']
+        self.long_press_keymap: dict[int, int] = config['hub.long_press.keymap']
+        self.long_press_duration_sec: float = config['hub.long_press.duration_sec']
+        self.short_press_keymap: dict[int, int] = config['hub.short_press.keymap']
+        self.play_pause_mode: str = config['hub.play_pause.mode']
+        self.taskit: tools.Tasker = tools.Tasker('Hub')
+        self.controller: hdmi.ControllerImpl = controller
+        self.key_state: dict[int, KeyState] = {}
+        self.wait_for_release: bool = False
+        self.pipes: list[messaging.Pipe] = []
+        self.in_macro: bool = False
+        self.macro_index: int | None = None
+        self.macro_executed: bool = False
+        self.play_pause_is_playing: bool = False
         self.set_wait_for_release()
 
-    def set_wait_for_release(self):
+    def set_wait_for_release(self) -> None:
         self.wait_for_release = True
         loop = asyncio.get_running_loop()
         loop.call_later(1, self.auto_clear_wait_for_release)
 
-    def auto_clear_wait_for_release(self):
+    def auto_clear_wait_for_release(self) -> None:
         self.wait_for_release = False
 
-    def add_pipe(self, pipe):
+    def add_pipe(self, pipe: messaging.Pipe) -> None:
         self.pipes.append(pipe)
         pipe.start_server_task(self)
 
     # Duck typed methods for messaging
-    async def client_set_activity(self, index):
+    async def client_set_activity(self, index: int) -> None:
         await self.set_activity(index)
 
-    async def client_press_key(self, key, count):
+    async def client_press_key(self, key: int, count: int = 0) -> None:
         # unwrap enums, and use ints consistently
         if type(key) is Key:
             key = key.value
@@ -188,7 +190,7 @@ class Hub(remote.RemoteListener):
 
         self.taskit(self.press_key(key))
 
-    def map_key_press(self, key, time_pressed_sec):
+    def map_key_press(self, key: int, time_pressed_sec: float) -> int:
         if time_pressed_sec >= self.long_press_duration_sec:
             key = self.long_press_keymap.get(key, key)
             log.info(f'Long press key {key:02X}')
@@ -197,7 +199,7 @@ class Hub(remote.RemoteListener):
             log.info(f'Short press key {key:02X}')
         return key
 
-    async def client_release_key(self, key):
+    async def client_release_key(self, key: int) -> None:
         # unwrap enums, and use ints consistently
         if type(key) is Key:
             key = key.value
@@ -219,6 +221,7 @@ class Hub(remote.RemoteListener):
                         await self.set_activity(index)
         else:
             if self.in_macro and not self.macro_executed:
+                assert self.macro_index is not None
                 skip = False
                 now = time.time()
                 fn_key = self.macros[self.macro_index][-1]
@@ -255,13 +258,13 @@ class Hub(remote.RemoteListener):
             self.macro_index = None
             self.macro_executed = False
 
-    async def client_battery_state(self, level, is_charging):
+    async def client_battery_state(self, level: int, is_charging: bool) -> None:
         is_low = level <= config['remote.battery.low_threshold'] and not is_charging
         log.info(f'Notifying battery state {level} {is_charging} {is_low}')
         for pipe in self.pipes:
             pipe.notify_battery_state(level, is_charging, is_low)
 
-    async def standby(self):
+    async def standby(self) -> None:
         if self.controller.current_activity is hdmi.no_activity:
             log.info('Forcing standby')
             await self.controller.force_standby()
@@ -272,7 +275,7 @@ class Hub(remote.RemoteListener):
         for pipe in self.pipes:
             pipe.notify_set_activity(-1)
 
-    async def set_activity(self, index):
+    async def set_activity(self, index: int) -> bool:
         if not await self.controller.set_activity(index):
             return False
         self.set_wait_for_release()
@@ -280,13 +283,13 @@ class Hub(remote.RemoteListener):
             pipe.notify_set_activity(index)
         return True
 
-    async def check_release_all_keys(self):
+    async def check_release_all_keys(self) -> None:
         if self.controller.current_activity is not hdmi.no_activity:
             if (not self.key_state or
                 (len(self.key_state) == 1 and Key.POWER in self.key_state)):
                 await self.controller.release_key()
 
-    async def press_key(self, key):
+    async def press_key(self, key: int) -> None:
         hkey = key & ~self.REPEAT_COUNT_FLAG
         log.info(f'Pressing key {hkey:02X}')
         if hkey == Key.PAUSE_PLAY:
@@ -316,11 +319,11 @@ class Hub(remote.RemoteListener):
         self.key_state.pop(key, None)
         await self.check_release_all_keys()
 
-def config_update():
+def config_update() -> None:
     log.info('Config was updated. Exiting.')
     tools.die('Config update')
 
-async def _main():
+async def _main() -> None:
     watcher = ConfigWatcher(config, config_update)
     watcher.start()
     global args
@@ -415,7 +418,7 @@ async def _main():
         siri = None
 
     while True:
-        futures = []
+        futures: list[Any] = []
         if siri is not None:
             futures.append(siri)
         if inp is not None:
@@ -430,7 +433,7 @@ async def _main():
 # asyncio.run() swallows, and disappears exceptions on the main thread if there are other
 # threads running. So... use a catchall try/except to actively kill the entire process in case of
 # an exception on the main thread.
-async def main():
+async def main() -> None:
     try:
         await _main()
     except Exception as e:
@@ -438,7 +441,7 @@ async def main():
         log.info(s)
         tools.die(s)
 
-def handle_sigterm(signum, frame):
+def handle_sigterm(signum: int, frame: FrameType | None) -> None:
     tools.die('SIGTERM')
 
 if __name__ == '__main__':
