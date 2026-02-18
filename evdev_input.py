@@ -9,14 +9,10 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, evdev, time
-import evdev.ecodes as e
 from evdev import InputDevice
 from typing import Any, Protocol
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
-
-from aconfig import config
-from hdmi import Key
 
 class InputHandler(Protocol):
     name: str
