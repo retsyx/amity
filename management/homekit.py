@@ -9,19 +9,32 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, os, re
+from typing import TYPE_CHECKING
 
 from nicegui import ui
+from nicegui.events import ClickEventArguments
 
 from aconfig import config
 
-class HomeKit(object):
-    def __init__(self, top):
-        self.name = 'HomeKit'
-        self.top = top
-        self.code_img_column = None
+if TYPE_CHECKING:
+    from main import Management
+
+class HomeKit:
+    def __init__(self, top: 'Management') -> None:
+        self.name: str = 'HomeKit'
+        self.top: 'Management' = top
+        self.code_img_column: ui.column | None = None
+        self.dialog: ui.dialog
+        self.toggle_btn: ui.button
+        self.enabled: bool
+        self.pin: str
+        self.paired: bool
+        self.amity_is_active: bool
+        self.status_str: str
+        self.have_code: bool
         self.update()
 
-    def ui(self):
+    def ui(self) -> None:
         with ui.dialog() as dialog, ui.card():
             dialog.classes('items-center')
             self.dialog = dialog
@@ -47,7 +60,7 @@ class HomeKit(object):
             lbl.bind_visibility_from(self, 'have_code')
             lbl.bind_text_from(self, 'pin', backward=b)
 
-    def create_code_image(self):
+    def create_code_image(self) -> None:
         # ui.image() has a force_reload() function. However, if the image doesn't exist when
         # when the ui.image() is created, then force_reload() won't reload the image that was
         # created later. The HomeKit pairing code image doesn't exist if HomeKit is initially off.
@@ -61,7 +74,7 @@ class HomeKit(object):
             img.bind_visibility_from(self, 'have_code')
             img.force_reload()
 
-    def update(self):
+    def update(self) -> None:
         self.enabled = not not config['homekit.enable']
         self.pin = ''
         self.paired = True
@@ -72,10 +85,11 @@ class HomeKit(object):
 
         try:
             with open('var/homekit/code', 'r') as f:
-                pair_instructions = f.read()
+                pair_instructions: str = f.read()
             if pair_instructions != 'Paired':
                 self.paired = False
                 match = re.search('[0-9]+-[0-9]+-[0-9]+', pair_instructions)
+                assert match is not None
                 self.pin = match.group()
         except FileNotFoundError:
             self.paired = False
@@ -99,10 +113,10 @@ class HomeKit(object):
 
         self.create_code_image()
 
-    def will_show(self):
+    def will_show(self) -> None:
         self.update()
 
-    async def toggle_enabled(self, event):
+    async def toggle_enabled(self, event: ClickEventArguments) -> None:
         with event.client:
             self.toggle_btn.enabled = False
             self.top.spinner_show()
