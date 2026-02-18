@@ -26,12 +26,16 @@ mqtt_credentials_file: str = f'{mqtt_dir}/credentials.yaml'
 
 def enable(control: service.Control) -> None:
     log.info('Enable')
-    if config[config_mqtt_enable_path]:
-        return
-    def op() -> None:
-        config[config_mqtt_enable_path] = True
-        config.save(True)
-    control.safe_do(op)
+    if config[config_mqtt_enable_path] != True:
+        def op() -> None:
+            config[config_mqtt_enable_path] = True
+            config.save(True)
+        control.safe_do(op)
+    if not control.is_active():
+        s = 'Amity not running'
+        log.info(s)
+        print(s)
+
 
 def status(control: service.Control) -> None:
     log.info('Status')
