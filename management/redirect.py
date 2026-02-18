@@ -14,7 +14,7 @@ from contextlib import redirect_stdout, redirect_stderr
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-class StreamLogger(object):
+class StreamLogger:
     def write(self, buf):
         log.info(buf)
     def flush(self):
