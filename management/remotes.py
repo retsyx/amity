@@ -9,18 +9,26 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, os, signal
+from typing import TYPE_CHECKING
+
 from nicegui import ui, Client
+from nicegui.events import ClickEventArguments
 
 from aconfig import config
 
-class Remotes(object):
-    def __init__(self, top):
-        self.name = 'Remotes'
-        self.top = top
-        self.proc = None
+if TYPE_CHECKING:
+    from main import Management
+
+class Remotes:
+    def __init__(self, top: 'Management') -> None:
+        self.name: str = 'Remotes'
+        self.top: 'Management' = top
+        self.proc: asyncio.subprocess.Process | None = None
+        self.remote_status: str
+        self.keyboard_status: str
         self.update()
 
-    def ui(self):
+    def ui(self) -> None:
         with ui.column().classes('w-full items-center'):
             ui.label('Pair an Apple Siri Remote, or a Bluetooth Low Energy (BLE) remote, or keyboard.')
             lbl = ui.label('').bind_text_from(self, 'remote_status')
@@ -32,7 +40,7 @@ class Remotes(object):
                         on_click=self.toggle_pair).bind_text_from(self, 'proc',
                                     backward=b)
 
-    def update(self):
+    def update(self) -> None:
         if config['remote.mac']:
             name = config['remote.name']
             if not name:
@@ -48,10 +56,10 @@ class Remotes(object):
         else:
             self.keyboard_status = ''
 
-    def will_show(self):
+    def will_show(self) -> None:
         pass
 
-    async def toggle_pair(self, event):
+    async def toggle_pair(self, event: ClickEventArguments) -> None:
         if self.proc is None:
             log.info('Started')
             self.top.control().stop()
@@ -66,20 +74,23 @@ class Remotes(object):
                 log.info('Stopped')
                 ui.notify('Stopped')
                 # Stop the read loop in read_stdout()
+                assert self.proc.stdout is not None
                 self.proc.stdout.feed_eof()
                 # Kill the entire process group
                 os.killpg(os.getpgid(self.proc.pid), signal.SIGINT)
             except Exception as e:
                 print(e)
 
-    async def read_stdout(self, client: Client):
+    async def read_stdout(self, client: Client) -> None:
         log.info('Reading pair_remote stdout')
+        assert self.proc is not None
+        assert self.proc.stdout is not None
         with client:
             while True:
                 try:
-                    line = await self.proc.stdout.readline()
-                    if not line: break # EOF
-                    line = line.decode().strip()
+                    line_bytes: bytes = await self.proc.stdout.readline()
+                    if not line_bytes: break # EOF
+                    line: str = line_bytes.decode().strip()
                     if not line: continue # Empty line
                     log.info(f'Message "{line}"')
                     if 'Paired with' in line:
