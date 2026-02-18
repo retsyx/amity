@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -9,21 +9,25 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, yaml
+from typing import Any, TYPE_CHECKING
 
 from nicegui import ui
 
 from aconfig import config
 
-class Device(object):
-    def __init__(self, d):
-        self.osd_name = d['osd_name']
-        self.role = d['role']
-    def __str__(self):
+if TYPE_CHECKING:
+    from main import Management
+
+class Device:
+    def __init__(self, d: dict[str, str]) -> None:
+        self.osd_name: str = d['osd_name']
+        self.role: str = d['role']
+    def __str__(self) -> str:
         return self.osd_name
 
-class Activity(object):
+class Activity:
     @classmethod
-    def New(self):
+    def New(cls) -> 'Activity':
         return Activity(
             {'name' : None,
              'display' : None,
@@ -32,19 +36,19 @@ class Activity(object):
              'switch' : { 'device' : None, 'input' : None },
             })
 
-    def __init__(self, d):
-        self.name = d['name']
-        self.display = d['display']
-        self.audio = d['audio']
-        self.source = d['source']
-        self.switch = d.get('switch', {}).get('device')
-        self.input = d.get('switch', {}).get('input')
+    def __init__(self, d: dict[str, Any]) -> None:
+        self.name: str | None = d['name']
+        self.display: str | None = d['display']
+        self.audio: str | None = d['audio']
+        self.source: str | None = d['source']
+        self.switch: str | None = d.get('switch', {}).get('device')
+        self.input: int | None = d.get('switch', {}).get('input')
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return self.__dict__[key]
 
-    def to_dict(self):
-        d = { 'name' : self.name,
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = { 'name' : self.name,
             'display' : self.display,
             'audio' : self.audio,
             'source' : self.source
@@ -54,20 +58,20 @@ class Activity(object):
                            'input' : self.input }
         return d
 
-    def __str__(self):
-        return self.name
+    def __str__(self) -> str:
+        return self.name or ''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.to_dict())
 
-class EditActivity(object):
-    def __init__(self, devices: list[Device], activity: Activity):
-        self.name = 'Edit Activity'
-        self.devices = devices
-        self.activity : Activity = activity
+class EditActivity:
+    def __init__(self, devices: list[Device], activity: Activity) -> None:
+        self.name: str = 'Edit Activity'
+        self.devices: list[Device] = devices
+        self.activity: Activity = activity
 
-        def make_list(role):
-            l = [device.osd_name for device in devices if device.role == role]
+        def make_list(role: str) -> list[str | None]:
+            l: list[str | None] = [device.osd_name for device in devices if device.role == role]
             c = activity[role]
             if c not in l:
                 l.insert(0, c)
@@ -75,16 +79,16 @@ class EditActivity(object):
                 l.insert(0, None)
             return l
 
-        self.display_devices = make_list('display')
-        self.source_devices = make_list('source')
-        self.audio_devices = make_list('audio')
-        self.switch_devices = self.audio_devices[:]
+        self.display_devices: list[str | None] = make_list('display')
+        self.source_devices: list[str | None] = make_list('source')
+        self.audio_devices: list[str | None] = make_list('audio')
+        self.switch_devices: list[str | None] = self.audio_devices[:]
         i = activity.input
         if i is None:
             i = 0
-        self.switch_inputs = list(range(max(11, i + 1)))
+        self.switch_inputs: list[int] = list(range(max(11, i + 1)))
 
-    def ui(self):
+    def ui(self) -> None:
         with ui.column().classes('w-full items-center'):
             ui.label('Edit Activity').style('text-align: center').style("font-weight: bold; font-size: 1.25em;")
             with ui.row().classes('w-full items-center'):
@@ -104,13 +108,13 @@ class EditActivity(object):
                 ui.select(self.switch_devices, new_value_mode='add').bind_value(self.activity, 'switch')
             with ui.row().classes('w-full items-center').bind_visibility_from(self.activity, 'switch', backward=lambda x: not not x):
                 ui.label('Input').style('width: 100px; text-align: left;')
-                def f(event):
+                def f(event: Any) -> None:
                     try:
                         i = int(event.value)
                     except:
                         i = 0
                     self.activity.input = i
-                def v(value):
+                def v(value: Any) -> str | None:
                     try:
                         i = int(value)
                         if i < 0:
@@ -123,27 +127,27 @@ class EditActivity(object):
                 ui.select(self.switch_inputs, new_value_mode='add',
                         value=self.activity.input, on_change=f, validation=v)
 
-class Activities(object):
-    def __init__(self, top):
-        self.name = 'Activities'
-        self.top = top
-        self.hdmi_scan_info = {}
-        self.devices = []
+class Activities:
+    def __init__(self, top: 'Management') -> None:
+        self.name: str = 'Activities'
+        self.top: 'Management' = top
+        self.hdmi_scan_info: dict[str, Any] = {}
+        self.devices: list[Device] = []
         # None has a special meaning for activities (unlike an empty list). When it is None,
         # it means the user hasn't set or changed anything (at initial display), and therefore
         # the activities are to be taken from the config. On the other hand, an empty activities
         # list (e.g. []) can only occur if the user deleted all activities.
-        self.activities = None
-        self.recommended_activities = []
-        self.discovered_devices = []
-        self.discovered_device_table = None
-        self.activity_table = None
-        self.recommended_activity_table = None
-        self.is_edited = False
+        self.activities: list[Activity] | None = None
+        self.recommended_activities: list[Activity] = []
+        self.discovered_devices: list[Device] = []
+        self.discovered_device_table: ui.column | None = None
+        self.activity_table: ui.column | None = None
+        self.recommended_activity_table: ui.column | None = None
+        self.is_edited: bool = False
         self.update()
 
-    def ui(self):
-        self.edit_activity_dialog = ui.dialog()
+    def ui(self) -> None:
+        self.edit_activity_dialog: ui.dialog = ui.dialog()
         with ui.column().classes('items-stretch'):
             with ui.row().style('align-items: center;'):
                 self.scan_btn = ui.button('Scan HDMI', on_click=self.on_scan_hdmi)
@@ -167,7 +171,7 @@ class Activities(object):
                                          backward=lambda x: not not x)
                 self.discovered_device_table = ui.column()
 
-    def update_activity_table(self):
+    def update_activity_table(self) -> None:
         if self.activity_table is None: return
         self.activity_table.clear()
         log.info(f'Showing activities {self.activities}')
@@ -184,7 +188,7 @@ class Activities(object):
                 for activity in self.activities:
                     self.ui_activity_row(activity)
 
-    def update_recommended_activity_table(self):
+    def update_recommended_activity_table(self) -> None:
         if self.recommended_activity_table is None: return
         self.recommended_activity_table.clear()
         log.info(f'Showing recommended activities {self.recommended_activities}')
@@ -192,8 +196,8 @@ class Activities(object):
             for activity in self.recommended_activities:
                 self.ui_recommended_activity_row(activity)
 
-    def update(self):
-        def is_equivalent(act1, act2):
+    def update(self) -> None:
+        def is_equivalent(act1: Activity, act2: Activity) -> bool:
             # Ignore the name of the activity because it is not important, and the switch
             # configuration because switch configuration is manual.
             for role in ('display', 'source', 'audio'):
@@ -246,15 +250,15 @@ class Activities(object):
         discovered_devices = [Device(d) for d in self.hdmi_scan_info.get('devices', [])]
         self.discovered_devices = sorted(discovered_devices, key=lambda x: x.osd_name)
 
-        devices = {}
+        device_map: dict[str, Device] = {}
         for device in discovered_devices:
-            devices[device.osd_name] = device
+            device_map[device.osd_name] = device
         if self.activities is not None:
             for activity in self.activities:
-                def add_device_with_role(role):
+                def add_device_with_role(role: str) -> None:
                     osd_name = activity[role]
-                    if osd_name and osd_name not in devices:
-                        devices[osd_name] = Device({
+                    if osd_name and osd_name not in device_map:
+                        device_map[osd_name] = Device({
                             'osd_name' : osd_name,
                             'role' : role
                         })
@@ -263,9 +267,7 @@ class Activities(object):
                 add_device_with_role('audio')
                 add_device_with_role('switch')
 
-        devices = list(devices.values())
-        devices.sort(key=lambda x: x.osd_name)
-        self.devices = devices
+        self.devices = sorted(device_map.values(), key=lambda x: x.osd_name)
 
         if self.discovered_device_table is not None:
             with self.discovered_device_table as table:
@@ -282,13 +284,13 @@ class Activities(object):
         self.update_activity_table()
         self.update_recommended_activity_table()
 
-    def will_show(self):
+    def will_show(self) -> None:
         pass
 
-    def edit_activity(self, activity):
+    def edit_activity(self, activity: Activity) -> None:
         ed = EditActivity(self.devices, activity)
         with self.edit_activity_dialog as dialog:
-            def on_ok():
+            def on_ok() -> None:
                 dialog.close()
                 self.update()
 
@@ -300,12 +302,13 @@ class Activities(object):
                         ui.button('OK', on_click=on_ok)
             dialog.open()
 
-    def discard_changes(self):
+    def discard_changes(self) -> None:
         log.info('Discard changes')
         self.activities = None
         self.update()
 
-    def save_activities(self):
+    def save_activities(self) -> None:
+        assert self.activities is not None
         self.top.spinner.open()
         activities = [activity.to_dict() for activity in self.activities]
         log.info(f'Saving activities {activities}')
@@ -317,19 +320,24 @@ class Activities(object):
         self.top.control.safe_do(lambda: config.save(True))
         self.top.spinner.close()
 
-    def add_new_activity(self):
+    def add_new_activity(self) -> None:
+        if self.activities is None:
+            self.activities = []
         activity = Activity.New()
         self.activities.append(activity)
         self.update()
         self.edit_activity(activity)
 
-    def ui_activity_row(self, activity):
-        def remove_activity():
+    def ui_activity_row(self, activity: Activity) -> None:
+        assert self.activities is not None
+        def remove_activity() -> None:
+            assert self.activities is not None
             log.info(f'Removing activity {activity}')
             self.activities.remove(activity)
             log.info(f'Activities {self.activities}')
             self.update()
-        def move_activity(up_or_down):
+        def move_activity(up_or_down: int) -> None:
+            assert self.activities is not None
             log.info(f'Moving activity {activity} {up_or_down}')
             index1 = self.activities.index(activity)
             index2 = index1 + up_or_down
@@ -338,9 +346,11 @@ class Activities(object):
             a = self.activities
             a[index1], a[index2] = a[index2], a[index1]
             self.update()
-        def is_first_activity():
+        def is_first_activity() -> bool:
+            assert self.activities is not None
             return activity == self.activities[0]
-        def is_last_activity():
+        def is_last_activity() -> bool:
+            assert self.activities is not None
             return activity == self.activities[-1]
 
         icons = [
@@ -390,8 +400,9 @@ class Activities(object):
             else:
                 ui.space()
 
-    def ui_recommended_activity_row(self, activity):
-        def add_recommended_activity(activity):
+    def ui_recommended_activity_row(self, activity: Activity) -> None:
+        def add_recommended_activity(activity: Activity) -> None:
+            assert self.activities is not None
             self.activities.append(activity)
             self.update()
         with ui.row().classes('w-full'):
@@ -400,10 +411,11 @@ class Activities(object):
             ui.button('', icon='edit_note', on_click=lambda: self.edit_activity(activity))
             ui.button('', icon='add', on_click=lambda: add_recommended_activity(activity))
 
-    async def scan_hdmi(self):
+    async def scan_hdmi(self) -> None:
         log.info('Scanning HDMI')
         proc = await asyncio.create_subprocess_shell('./configure_hdmi -y -n recommend',
                                                          stdout=asyncio.subprocess.PIPE)
+        assert proc.stdout is not None
         output = await proc.stdout.read()
         self.hdmi_scan_info = yaml.safe_load(output)
         log.info(f'Scanned info {self.hdmi_scan_info}')
@@ -412,7 +424,7 @@ class Activities(object):
         await proc.wait()
         self.update()
 
-    async def on_scan_hdmi(self, event):
+    async def on_scan_hdmi(self, event: Any) -> None:
         with event.client:
             self.scan_btn.enabled = False
             self.top.spinner.open()
