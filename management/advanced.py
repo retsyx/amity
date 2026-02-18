@@ -14,21 +14,26 @@ log = tools.logger(__name__)
 # log download
 
 import asyncio, os, tempfile, yaml, zipfile
+from typing import cast, TYPE_CHECKING
 
 from nicegui import ui
+from nicegui.events import UploadEventArguments, ClickEventArguments
 
 from aconfig import config
-from service import Control
 
-class Advanced(object):
-    def __init__(self, top):
-        self.taskit = tools.Tasker('Advanced')
-        self.name = 'Advanced'
-        self.top = top
-        self.gpio_status = None
+if TYPE_CHECKING:
+    from main import Management
+
+class Advanced:
+    def __init__(self, top: 'Management') -> None:
+        self.taskit: tools.Tasker = tools.Tasker('Advanced')
+        self.name: str = 'Advanced'
+        self.top: 'Management' = top
+        self.gpio_status: str | None = None
+        self.dialog: ui.dialog
         self.update()
 
-    def ui(self):
+    def ui(self) -> None:
         with ui.dialog() as dialog, ui.card():
             self.dialog = dialog
             ui.label('Change Splice Configuration?').style("font-weight: bold; font-size: 1.5em;")
@@ -80,22 +85,22 @@ class Advanced(object):
                 ui.link('Logout', '/logout')
                 ui.link('Change Password', '/enroll')
 
-    def download_logs(self):
+    def download_logs(self) -> None:
         log.info('Downloading log files')
         # Compress var/log into an archive and offer it up for download
         zip_path = compress_directory_to_zip('var/log')
         ui.download(zip_path, 'logs.zip', 'application/zip')
 
-    def download_config(self):
+    def download_config(self) -> None:
         log.info('Downloading config.yaml')
         ui.download(config.filename, 'config.yaml', 'text/html; charset=utf-8')
 
-    def download_all_configs(self):
+    def download_all_configs(self) -> None:
         log.info('Downloading config and backups')
         zip_path = compress_directory_to_zip('var/config')
         ui.download(zip_path, 'configs.zip', 'application/zip')
 
-    async def upload_config(self, event):
+    async def upload_config(self, event: UploadEventArguments) -> None:
         text = await event.file.text()
         try:
             new_config = yaml.safe_load(text)
@@ -107,8 +112,9 @@ class Advanced(object):
         config.replace_user_root(new_config)
         config.save(True)
 
-    async def toggle_gpio(self, event):
-        event.sender.enabled = False
+    async def toggle_gpio(self, event: ClickEventArguments) -> None:
+        button = cast(ui.button, event.sender)
+        button.enabled = False
         self.top.spinner_show()
         self.dialog.open()
         confirm = await self.dialog
@@ -121,24 +127,25 @@ class Advanced(object):
             proc = await asyncio.create_subprocess_shell(f'./configure_gpio {cmd}')
             await proc.wait()
             self.update()
-        event.sender.enabled = True
+        button.enabled = True
         self.top.spinner_hide()
 
-    def update(self):
+    def update(self) -> None:
         if asyncio.get_event_loop().is_running():
             self.taskit(self.update_gpio_status())
 
-    def will_show(self):
+    def will_show(self) -> None:
         self.update()
 
-    async def update_gpio_status(self):
+    async def update_gpio_status(self) -> None:
         proc = await asyncio.create_subprocess_shell('./configure_gpio status', stdout=asyncio.subprocess.PIPE)
+        assert proc.stdout is not None
         output = await proc.stdout.read()
         self.gpio_status = output.decode('utf-8').strip()
         log.info(f'GPIO status {self.gpio_status}')
         await proc.wait()
 
-def compress_directory_to_zip(source_dir):
+def compress_directory_to_zip(source_dir: str) -> str:
     """
     Compresses the contents of a directory into a unique temporary zip file.
 
