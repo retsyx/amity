@@ -10,23 +10,53 @@ log = tools.logger(__name__)
 
 import asyncio
 import yaml
+from typing import Any, TYPE_CHECKING
 
 from nicegui import ui
+from nicegui.events import ClickEventArguments
 
 from aconfig import config
 import mqtt_defaults
 
-mqtt_credentials_file = 'var/mqtt/credentials.yaml'
+if TYPE_CHECKING:
+    from main import Management
+
+mqtt_credentials_file: str = 'var/mqtt/credentials.yaml'
 
 
-class MQTT(object):
-    def __init__(self, top):
-        self.name = 'MQTT'
-        self.top = top
-        self.has_unsaved_changes = False
+class MQTT:
+    def __init__(self, top: 'Management') -> None:
+        self.name: str = 'MQTT'
+        self.top: 'Management' = top
+        self.has_unsaved_changes: bool = False
+        self.disable_dialog: ui.dialog
+        self.toggle_btn: ui.button
+        self.host_input: ui.input
+        self.port_input: ui.number
+        self.username_input: ui.input
+        self.password_input: ui.input
+        self.tls_enabled_input: ui.checkbox
+        self.tls_verify_cert_input: ui.checkbox
+        self.ca_cert_input: ui.textarea
+        self.device_id_input: ui.input
+        self.device_name_input: ui.input
+        self.discovery_prefix_input: ui.input
+        self.enabled: bool
+        self.amity_is_active: bool
+        self.status_str: str
+        self.saved_broker_host: str
+        self.saved_broker_port: int
+        self.saved_broker_username: str
+        self.saved_broker_password: str
+        self.saved_tls_enabled: bool
+        self.saved_tls_verify_cert: bool
+        self.saved_tls_ca_cert_content: str
+        self.saved_discovery_prefix: str
+        self.saved_device_id: str
+        self.saved_device_name: str
         self.update()
 
-    def ui(self):
+    def ui(self) -> None:
         with ui.dialog() as disable_dialog, ui.card():
             disable_dialog.classes('items-center')
             self.disable_dialog = disable_dialog
@@ -85,10 +115,10 @@ class MQTT(object):
                     btn.bind_text_from(self, 'enabled', backward=b)
                     self.toggle_btn = btn
 
-    def update(self):
+    def update(self) -> None:
         self.enabled = not not config['mqtt.enable']
 
-        credentials = {}
+        credentials: dict[str, Any] = {}
         try:
             with open(mqtt_credentials_file, 'r') as f:
                 credentials = yaml.safe_load(f)
@@ -98,8 +128,8 @@ class MQTT(object):
         # Store saved config values for change tracking
         self.saved_broker_host = config['mqtt.broker.host']
         self.saved_broker_port = config['mqtt.broker.port']
-        self.saved_broker_username = credentials.get('username')
-        self.saved_broker_password = credentials.get('password')
+        self.saved_broker_username = credentials.get('username', '')
+        self.saved_broker_password = credentials.get('password', '')
         self.saved_tls_enabled = config['mqtt.broker.tls.enabled']
         self.saved_tls_verify_cert = config['mqtt.broker.tls.verify_cert']
         self.saved_tls_ca_cert_content = config['mqtt.broker.tls.ca_cert_content']
@@ -137,10 +167,10 @@ class MQTT(object):
         # Check for unsaved changes
         self.check_for_changes()
 
-    def will_show(self):
+    def will_show(self) -> None:
         self.update()
 
-    def check_for_changes(self):
+    def check_for_changes(self) -> None:
         """Check if current UI values differ from saved config"""
         if not hasattr(self, 'host_input'):
             return
@@ -158,7 +188,7 @@ class MQTT(object):
             self.discovery_prefix_input.value != self.saved_discovery_prefix
         )
 
-    async def _save_settings(self):
+    async def _save_settings(self) -> bool:
         """Save current UI values via configure_mqtt set-config and set-credentials."""
 
         # Validate inputs
@@ -173,7 +203,7 @@ class MQTT(object):
         log.info('Saving MQTT credentials')
 
         # Save credentials
-        cmd_parts = ['./configure_mqtt', 'set-credentials']
+        cmd_parts: list[str] = ['./configure_mqtt', 'set-credentials']
         cmd_parts.extend(['--username', self.username_input.value])
         cmd_parts.extend(['--password', self.password_input.value])
         proc = await asyncio.create_subprocess_shell(' '.join(cmd_parts))
@@ -198,7 +228,7 @@ class MQTT(object):
         self.update()
         return True
 
-    async def toggle_enabled(self, event):
+    async def toggle_enabled(self, event: ClickEventArguments) -> None:
         with event.client:
             self.toggle_btn.enabled = False
             self.top.spinner_show()
@@ -219,7 +249,7 @@ class MQTT(object):
             self.toggle_btn.enabled = True
             self.top.spinner_hide()
 
-    async def test_connection(self, event):
+    async def test_connection(self, event: ClickEventArguments) -> None:
         with event.client:
             self.top.spinner_show()
 
@@ -267,7 +297,7 @@ class MQTT(object):
 
             self.top.spinner_hide()
 
-    async def discard_changes(self, event):
+    async def discard_changes(self, event: ClickEventArguments) -> None:
         with event.client:
             self.host_input.value = self.saved_broker_host
             self.port_input.value = self.saved_broker_port
@@ -281,7 +311,7 @@ class MQTT(object):
             self.discovery_prefix_input.value = self.saved_discovery_prefix
             self.check_for_changes()
 
-    async def save_config(self, event):
+    async def save_config(self, event: ClickEventArguments) -> None:
         with event.client:
             self.top.spinner_show()
             if not await self._save_settings():
