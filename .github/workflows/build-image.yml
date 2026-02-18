@@ -1,0 +1,52 @@
+name: Build Amity Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup build environment
+        working-directory: build
+        run: |
+          ./setup-build-env.sh
+
+      - name: Cache compiled kernels
+        id: kernel-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/linux-build/out
+          key: kernels-${{ hashFiles('build/kernel-commitid') }}
+
+      - name: Build image with kernel compilation
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        working-directory: build
+        run: |
+          ./build-image.sh
+
+      - name: Build image without kernel compilation
+        if: steps.kernel-cache.outputs.cache-hit == 'true'
+        working-directory: build
+        run: |
+          ./build-image.sh -n
+
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: amity.img.xz
+          path: ~/amity-build/amity.img.xz
+
+      - name: Upload metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: amity-os.json
+          path: ~/amity-build/amity-os.json

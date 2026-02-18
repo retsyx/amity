@@ -17,7 +17,7 @@ fi
 
 cd lg-magic/kernel
 
-make clean
+make -C ${KERNEL_SRC_DIR} M=${PWD} clean
 make -C ${KERNEL_SRC_DIR} M=${PWD} modules
 
 xz --force lg_magic.ko
