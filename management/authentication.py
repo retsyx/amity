@@ -9,42 +9,44 @@ import tools
 log = tools.logger(__name__)
 
 import os, re
+from typing import Any
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response
 
 from nicegui import app, ui
 
-import scrypt
+import scrypt  # type: ignore[import-untyped]
 
 from config import Config
 from aconfig import config
 
-max_user_storage_path = 'management.authentication.max_user_storage'
+max_user_storage_path: str = 'management.authentication.max_user_storage'
 config.default(max_user_storage_path, 10)
 
-auth_db = Config('var/gui/auth_db.yaml')
-credential_path = 'credentials'
+auth_db: Config = Config('var/gui/auth_db.yaml')
+credential_path: str = 'credentials'
 auth_db.default(credential_path, {})
 auth_db.load()
 
-def hash_password(password, maxtime=1.0, salt_bytes=16):
+def hash_password(password: str, maxtime: float = 1.0, salt_bytes: int = 16) -> bytes:
     return scrypt.encrypt(os.urandom(salt_bytes), password, maxtime=maxtime)
 
-def verify_password(hash, password, maxtime=1.0):
+def verify_password(hash: bytes, password: str, maxtime: float = 1.0) -> bool:
     try:
         scrypt.decrypt(hash, password, maxtime, encoding=None)
         return True
     except scrypt.error:
         return False
 
-def have_any_credentials():
+def have_any_credentials() -> bool:
     return not not auth_db[credential_path]
 
-def create(username, password):
+def create(username: str, password: str) -> bool:
     username = username.lower()
-    credentials = auth_db[credential_path]
+    credentials: dict[str, Any] = auth_db[credential_path]
     hash = credentials.get(username)
     if hash:
         return False
@@ -55,9 +57,9 @@ def create(username, password):
     log.info(f'Created user {username}')
     return True
 
-def change(username, old_password, new_password):
+def change(username: str, old_password: str, new_password: str) -> bool:
     username = username.lower()
-    credentials = auth_db[credential_path]
+    credentials: dict[str, Any] = auth_db[credential_path]
     hash = credentials.get(username)
     if not hash:
         return False
@@ -70,9 +72,9 @@ def change(username, old_password, new_password):
     log.info(f'Changed password for user {username}')
     return True
 
-def verify(username, password):
+def verify(username: str, password: str) -> bool:
     username = username.lower()
-    credentials = auth_db[credential_path]
+    credentials: dict[str, Any] = auth_db[credential_path]
     hash = credentials.get(username)
     if not hash:
         return False
@@ -81,20 +83,20 @@ def verify(username, password):
     log.info(f'Verified password for {username}')
     return True
 
-def cleanup_user_storage():
+def cleanup_user_storage() -> None:
     # Allow only the max configured youngest storages
-    m = re.compile(r'storage-user.*\.json')
-    entries = []
+    m: re.Pattern[str] = re.compile(r'storage-user.*\.json')
+    entries: list[os.DirEntry[str]] = []
     for entry in os.scandir('var/gui/nicegui'):
         if m.match(entry.name):
             entries.append(entry)
     entries.sort(reverse=True, key=lambda entry: entry.stat().st_ctime)
-    max_user_storages = config[max_user_storage_path]
+    max_user_storages: int = config[max_user_storage_path]
     for entry in entries[max_user_storages:]:
         log.info(f'Deleting old user storage {entry.name}')
         os.unlink(entry.path)
 
-def get_storage_secret():
+def get_storage_secret() -> Any:
     secret = auth_db['storage_secret']
     if not secret:
         auth_db['storage_secret'] = os.urandom(16)
@@ -102,13 +104,13 @@ def get_storage_secret():
         secret = auth_db['storage_secret']
     return secret
 
-unrestricted_page_paths = { '/login', '/enroll' }
+unrestricted_page_paths: set[str] = { '/login', '/enroll' }
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """This middleware restricts access to all pages.
         It redirects the user to the login page if they are not authenticated.
     """
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not app.storage.user.get('authenticated', False):
             if not request.url.path.startswith('/_nicegui') and request.url.path not in unrestricted_page_paths:
                 log.info(f'dispatch {request.url} deny')
@@ -119,8 +121,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 @ui.page('/login')
-async def login():
-    def try_login():
+async def login() -> RedirectResponse | None:
+    def try_login() -> None:
         if not verify(username.value, password.value):
             ui.notify('Wrong username or password', color='negative')
             return
@@ -146,8 +148,8 @@ async def login():
 
 # Set initial password, or change password
 @ui.page('/enroll')
-async def enroll():
-    def try_enroll():
+async def enroll() -> None:
+    def try_enroll() -> None:
         if password.value != confirm_password.value:
             ui.notify('Password mismatch', color='negative')
             return
@@ -162,7 +164,7 @@ async def enroll():
         ui.navigate.to('/')
 
     ui.dark_mode(value = None)
-    have_creds = have_any_credentials()
+    have_creds: bool = have_any_credentials()
     with ui.card().classes('absolute-center'):
         if have_creds:
             title = 'Change Password'
@@ -180,7 +182,7 @@ async def enroll():
 
 # Logout current user
 @ui.page('/logout')
-async def logout():
+async def logout() -> None:
     username = app.storage.user.get('username')
     if username:
         log.info(f'Logout {username}')
