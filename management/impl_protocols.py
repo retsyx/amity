@@ -1,0 +1,23 @@
+# Copyright 2026.
+# This file is part of Amity.
+# Amity is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+import asyncio
+from collections.abc import Coroutine
+from typing import Any, Protocol
+
+from service import Control
+
+class Page(Protocol):
+    name: str
+    def ui(self) -> None: ...
+    def update(self) -> None: ...
+    def will_show(self) -> None: ...
+
+class ManagementInterface(Protocol):
+    def taskit(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]: ...
+    def control(self) -> Control: ...
+    def spinner_show(self) -> None: ...
+    def spinner_hide(self) -> None: ...

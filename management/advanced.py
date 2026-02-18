@@ -14,21 +14,18 @@ log = tools.logger(__name__)
 # log download
 
 import asyncio, os, tempfile, yaml, zipfile
-from typing import cast, TYPE_CHECKING
+from typing import cast
 
 from nicegui import ui
 from nicegui.events import UploadEventArguments, ClickEventArguments
 
 from aconfig import config
-
-if TYPE_CHECKING:
-    from main import Management
+from impl_protocols import ManagementInterface
 
 class Advanced:
-    def __init__(self, top: 'Management') -> None:
-        self.taskit: tools.Tasker = tools.Tasker('Advanced')
+    def __init__(self, top: ManagementInterface) -> None:
         self.name: str = 'Advanced'
-        self.top: 'Management' = top
+        self.top: ManagementInterface = top
         self.gpio_status: str | None = None
         self.dialog: ui.dialog
         self.update()
@@ -132,7 +129,7 @@ class Advanced:
 
     def update(self) -> None:
         if asyncio.get_event_loop().is_running():
-            self.taskit(self.update_gpio_status())
+            self.top.taskit(self.update_gpio_status())
 
     def will_show(self) -> None:
         self.update()

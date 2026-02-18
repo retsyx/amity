@@ -9,20 +9,16 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, os, re
-from typing import TYPE_CHECKING
-
 from nicegui import ui
 from nicegui.events import ClickEventArguments
 
 from aconfig import config
-
-if TYPE_CHECKING:
-    from main import Management
+from impl_protocols import ManagementInterface
 
 class HomeKit:
-    def __init__(self, top: 'Management') -> None:
+    def __init__(self, top: ManagementInterface) -> None:
         self.name: str = 'HomeKit'
-        self.top: 'Management' = top
+        self.top: ManagementInterface = top
         self.code_img_column: ui.column | None = None
         self.dialog: ui.dialog
         self.toggle_btn: ui.button

@@ -9,20 +9,16 @@ import tools
 log = tools.logger(__name__)
 
 import asyncio, os, signal
-from typing import TYPE_CHECKING
-
 from nicegui import ui, Client
 from nicegui.events import ClickEventArguments
 
 from aconfig import config
-
-if TYPE_CHECKING:
-    from main import Management
+from impl_protocols import ManagementInterface
 
 class Remotes:
-    def __init__(self, top: 'Management') -> None:
+    def __init__(self, top: ManagementInterface) -> None:
         self.name: str = 'Remotes'
-        self.top: 'Management' = top
+        self.top: ManagementInterface = top
         self.proc: asyncio.subprocess.Process | None = None
         self.remote_status: str
         self.keyboard_status: str

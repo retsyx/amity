@@ -4,19 +4,19 @@
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 
+from __future__ import annotations
+
 import tools
 
 log = tools.logger(__name__)
 
 import asyncio, yaml
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from nicegui import ui
 
 from aconfig import config
-
-if TYPE_CHECKING:
-    from main import Management
+from impl_protocols import ManagementInterface
 
 class Device:
     def __init__(self, d: dict[str, str]) -> None:
@@ -27,7 +27,7 @@ class Device:
 
 class Activity:
     @classmethod
-    def New(cls) -> 'Activity':
+    def New(cls) -> Activity:
         return Activity(
             {'name' : None,
              'display' : None,
@@ -128,9 +128,9 @@ class EditActivity:
                         value=self.activity.input, on_change=f, validation=v)
 
 class Activities:
-    def __init__(self, top: 'Management') -> None:
+    def __init__(self, top: ManagementInterface) -> None:
         self.name: str = 'Activities'
-        self.top: 'Management' = top
+        self.top: ManagementInterface = top
         self.hdmi_scan_info: dict[str, Any] = {}
         self.devices: list[Device] = []
         # None has a special meaning for activities (unlike an empty list). When it is None,

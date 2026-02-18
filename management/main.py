@@ -10,8 +10,10 @@ import tools
 
 log = tools.logger('var/log/management.log')
 
-import os
-from typing import Protocol
+import asyncio, os
+from collections.abc import Coroutine
+from typing import Any
+from impl_protocols import Page
 
 os.environ['NICEGUI_STORAGE_PATH'] = 'var/gui/nicegui'
 
@@ -30,16 +32,10 @@ from homekit import HomeKit
 from mqtt import MQTT
 from advanced import Advanced
 
-class Page(Protocol):
-    name: str
-    def ui(self) -> None: ...
-    def update(self) -> None: ...
-    def will_show(self) -> None: ...
-
 class Management:
     def __init__(self) -> None:
         self.watcher: ConfigWatcher = ConfigWatcher(config, self.update)
-        self.taskit: tools.Tasker = tools.Tasker('Management')
+        self._taskit: tools.Tasker = tools.Tasker('Management')
         self._control: Control = Control('amity-hub')
         self.current_tab: str | None = None
         self.pages: list[Page] = [cls(self) for cls in (Activities, Remotes, HomeKit, MQTT, Advanced)]
@@ -77,6 +73,9 @@ class Management:
         config.load()
         for page in self.pages:
             page.update()
+
+    def taskit(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        return self._taskit(coro)
 
     def control(self) -> Control:
         return self._control

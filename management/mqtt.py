@@ -10,24 +10,22 @@ log = tools.logger(__name__)
 
 import asyncio
 import yaml
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from nicegui import ui
 from nicegui.events import ClickEventArguments
 
 from aconfig import config
 import mqtt_defaults
-
-if TYPE_CHECKING:
-    from main import Management
+from impl_protocols import ManagementInterface
 
 mqtt_credentials_file: str = 'var/mqtt/credentials.yaml'
 
 
 class MQTT:
-    def __init__(self, top: 'Management') -> None:
+    def __init__(self, top: ManagementInterface) -> None:
         self.name: str = 'MQTT'
-        self.top: 'Management' = top
+        self.top: ManagementInterface = top
         self.has_unsaved_changes: bool = False
         self.disable_dialog: ui.dialog
         self.toggle_btn: ui.button
