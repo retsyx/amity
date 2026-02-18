@@ -11,7 +11,7 @@ done
 INSTALL amity.tar.gz "/tmp/"
 RUN sudo -u pi tar xvzf /tmp/amity.tar.gz
 WORKDIR /home/pi/amity
-RUN sudo -u pi python -m venv /home/pi/amity
+RUN sudo -u pi python -m venv --without-scm-ignore-files /home/pi/amity
 RUN sudo -u pi bash build/setup-amity-core.sh
 
 # Cleanup
