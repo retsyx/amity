@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2024-2025.
+# Copyright 2024-2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
