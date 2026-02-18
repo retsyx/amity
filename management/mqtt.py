@@ -123,7 +123,7 @@ class MQTT(object):
         if not config['adapters.front'] or not config['adapters.back']:
             self.amity_is_active = False
         else:
-            self.amity_is_active = self.top.control.is_active()
+            self.amity_is_active = self.top.control().is_active()
 
         # Update status string
         if self.amity_is_active:
@@ -201,7 +201,7 @@ class MQTT(object):
     async def toggle_enabled(self, event):
         with event.client:
             self.toggle_btn.enabled = False
-            self.top.spinner.open()
+            self.top.spinner_show()
             if self.enabled:
                 self.disable_dialog.open()
                 confirm = await self.disable_dialog
@@ -217,16 +217,16 @@ class MQTT(object):
 
             self.update()
             self.toggle_btn.enabled = True
-            self.top.spinner.close()
+            self.top.spinner_hide()
 
     async def test_connection(self, event):
         with event.client:
-            self.top.spinner.open()
+            self.top.spinner_show()
 
             # Validate inputs
             if not self.host_input.value:
                 ui.notify('Broker host is required', type='negative')
-                self.top.spinner.close()
+                self.top.spinner_hide()
                 return
 
             # Build command with parameters - don't modify config
@@ -265,7 +265,7 @@ class MQTT(object):
                 message = output if output else (error if error else 'Connection failed')
                 ui.notify(message, type='negative')
 
-            self.top.spinner.close()
+            self.top.spinner_hide()
 
     async def discard_changes(self, event):
         with event.client:
@@ -283,9 +283,9 @@ class MQTT(object):
 
     async def save_config(self, event):
         with event.client:
-            self.top.spinner.open()
+            self.top.spinner_show()
             if not await self._save_settings():
-                self.top.spinner.close()
+                self.top.spinner_hide()
                 return
             self.update()
-            self.top.spinner.close()
+            self.top.spinner_hide()

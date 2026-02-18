@@ -309,7 +309,7 @@ class Activities:
 
     def save_activities(self) -> None:
         assert self.activities is not None
-        self.top.spinner.open()
+        self.top.spinner_show()
         activities = [activity.to_dict() for activity in self.activities]
         log.info(f'Saving activities {activities}')
         config['activities'] = activities
@@ -317,8 +317,8 @@ class Activities:
         if adapters:
             log.info(f'Saving adapters {adapters}')
             config['adapters'] = adapters
-        self.top.control.safe_do(lambda: config.save(True))
-        self.top.spinner.close()
+        self.top.control().safe_do(lambda: config.save(True))
+        self.top.spinner_hide()
 
     def add_new_activity(self) -> None:
         if self.activities is None:
@@ -427,12 +427,12 @@ class Activities:
     async def on_scan_hdmi(self, event: Any) -> None:
         with event.client:
             self.scan_btn.enabled = False
-            self.top.spinner.open()
+            self.top.spinner_show()
             await self.scan_hdmi()
             status = self.hdmi_scan_info.get('status', 'OK')
             if status != 'OK':
                 ui.notify(status, color='negative')
             elif not self.hdmi_scan_info.get('adapters'):
                 ui.notify('No HDMI devices found. Check HDMI connections!', color='negative')
-            self.top.spinner.close()
+            self.top.spinner_hide()
             self.scan_btn.enabled = True

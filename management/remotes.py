@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -54,7 +54,7 @@ class Remotes(object):
     async def toggle_pair(self, event):
         if self.proc is None:
             log.info('Started')
-            self.top.control.stop()
+            self.top.control().stop()
             self.proc = await asyncio.create_subprocess_shell('./pair_remote',
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.DEVNULL,
@@ -91,4 +91,4 @@ class Remotes(object):
         await self.proc.wait()
         self.proc = None
         log.info('Reading pair_remote stdout done')
-        self.top.control.start()
+        self.top.control().start()

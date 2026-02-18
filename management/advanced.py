@@ -109,7 +109,7 @@ class Advanced(object):
 
     async def toggle_gpio(self, event):
         event.sender.enabled = False
-        self.top.spinner.open()
+        self.top.spinner_show()
         self.dialog.open()
         confirm = await self.dialog
         if confirm:
@@ -122,7 +122,7 @@ class Advanced(object):
             await proc.wait()
             self.update()
         event.sender.enabled = True
-        self.top.spinner.close()
+        self.top.spinner_hide()
 
     def update(self):
         if asyncio.get_event_loop().is_running():

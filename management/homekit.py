@@ -1,4 +1,4 @@
-# Copyright 2024.
+# Copyright 2024-2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -68,7 +68,7 @@ class HomeKit(object):
         if not config['adapters.front'] or not config['adapters.back']:
             self.amity_is_active = False
         else:
-            self.amity_is_active = self.top.control.is_active()
+            self.amity_is_active = self.top.control().is_active()
 
         try:
             with open('var/homekit/code', 'r') as f:
@@ -105,7 +105,7 @@ class HomeKit(object):
     async def toggle_enabled(self, event):
         with event.client:
             self.toggle_btn.enabled = False
-            self.top.spinner.open()
+            self.top.spinner_show()
             if self.enabled:
                 self.dialog.open()
                 confirm = await self.dialog
@@ -121,4 +121,4 @@ class HomeKit(object):
                 await proc.wait()
             self.update()
             self.toggle_btn.enabled = True
-            self.top.spinner.close()
+            self.top.spinner_hide()

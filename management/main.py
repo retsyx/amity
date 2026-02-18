@@ -33,10 +33,11 @@ class Management(object):
     def __init__(self):
         self.watcher = ConfigWatcher(config, self.update)
         self.taskit = tools.Tasker('Management')
-        self.control = Control('amity-hub')
+        self._control = Control('amity-hub')
         self.current_tab = None
         self.pages = [cls(self) for cls in (Activities, Remotes, HomeKit, MQTT, Advanced)]
         self.tabs = []
+        self.spinner = None
 
         @ui.page('/')
         async def root():
@@ -69,6 +70,15 @@ class Management(object):
         config.load()
         for page in self.pages:
             page.update()
+
+    def control(self):
+        return self._control
+
+    def spinner_show(self):
+        self.spinner.open()
+
+    def spinner_hide(self):
+        self.spinner.close()
 
 def main():
     mgmt = Management()
