@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2024.
+# Copyright 2024-2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -11,29 +11,32 @@ import tools
 log = tools.logger('var/log/hdmi_tool')
 
 import argparse, asyncio, glob, logging, sys, yaml
+from collections.abc import Iterator, Sequence
+from typing import Any
+
 import cec, hdmi
 from aconfig import config
 
-def all_adapter_devices():
+def all_adapter_devices() -> Iterator[str]:
     return glob.iglob('/dev/cec*')
 
-tv_address = 0
-source_device_addresses = (1, 2, 3, 4, 6, 7, 8, 9, 10, 11)
-audio_system_address = 5
+tv_address: int = 0
+source_device_addresses: Sequence[int] = (1, 2, 3, 4, 6, 7, 8, 9, 10, 11)
+audio_system_address: int = 5
 
-class MockAdapter(object):
-    def __init__(self, devname):
-        self.devname = devname
+class MockAdapter:
+    def __init__(self, devname: str) -> None:
+        self.devname: str = devname
 
-class MockDevice(object):
-    def __init__(self, adapters, d):
-        self.osd_name = d['osd_name']
-        self.address = d['address']
-        self.vendor_id = d['vendor_id']
-        self.physical_address = d['physical_address']
-        self.adapter = adapters[d['adapter']]
+class MockDevice:
+    def __init__(self, adapters: dict[str, MockAdapter], d: dict[str, Any]) -> None:
+        self.osd_name: str = d['osd_name']
+        self.address: int = d['address']
+        self.vendor_id: int = d['vendor_id']
+        self.physical_address: int = d['physical_address']
+        self.adapter: MockAdapter = adapters[d['adapter']]
 
-def mock_devices():
+def mock_devices() -> list[MockDevice] | None:
     try:
         with open('mock_hdmi_devices.yaml', 'r') as file:
             log.info('Using mock devices')
@@ -44,10 +47,10 @@ def mock_devices():
         return None
     return devices
 
-async def scan(args):
-    devices = mock_devices()
-    if devices is None:
-        devices = []
+async def scan(args: argparse.Namespace) -> list[Any]:
+    mock = mock_devices()
+    devices: list[Any] = mock if mock is not None else []
+    if mock is None:
         for devname in all_adapter_devices():
             try:
                 adapter = cec.Adapter(devname=devname)
@@ -68,7 +71,7 @@ async def scan(args):
         log.info(f'{device.osd_name:10s}\t{device.vendor_id:10}\t{device.address:10}\t{pa}\t\t\t{device.adapter.devname}')
 
     if args.yaml:
-        entries = []
+        entries: list[dict[str, Any]] = []
         for device in devices:
             if device.address == tv_address:
                 role = 'display'
@@ -90,7 +93,7 @@ async def scan(args):
 
     return devices
 
-async def recommend(args):
+async def recommend(args: argparse.Namespace) -> None:
     devices = await scan(args)
     if devices is None:
         return None
@@ -160,7 +163,7 @@ async def recommend(args):
         print(s)
 
 
-async def main():
+async def main() -> None:
     actions = ('scan', 'recommend')
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('action', default='', choices=actions, help='action to perform')
