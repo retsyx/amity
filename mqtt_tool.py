@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2025.
+# Copyright 2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -20,20 +20,20 @@ from aconfig import config
 import mqtt_defaults
 import service
 
-config_mqtt_enable_path = 'mqtt.enable'
-mqtt_dir = 'var/mqtt'
-mqtt_credentials_file = f'{mqtt_dir}/credentials.yaml'
+config_mqtt_enable_path: str = 'mqtt.enable'
+mqtt_dir: str = 'var/mqtt'
+mqtt_credentials_file: str = f'{mqtt_dir}/credentials.yaml'
 
-def enable(control):
+def enable(control: service.Control) -> None:
     log.info('Enable')
     if config[config_mqtt_enable_path]:
         return
-    def op():
+    def op() -> None:
         config[config_mqtt_enable_path] = True
         config.save(True)
     control.safe_do(op)
 
-def status(control):
+def status(control: service.Control) -> None:
     log.info('Status')
     if not config[config_mqtt_enable_path]:
         s = 'MQTT is disabled'
@@ -48,17 +48,19 @@ def status(control):
     print(s)
 
 
-def disable(control):
+def disable(control: service.Control) -> None:
     log.info('Disable')
     if config[config_mqtt_enable_path] == False:
         return
-    def op():
+    def op() -> None:
         config[config_mqtt_enable_path] = False
         config.save(True)
     control.safe_do(op)
 
-async def _test_connection_async(broker_host, broker_port, broker_username, broker_password,
-                                 tls_enabled, tls_verify_cert, tls_ca_cert_content):
+async def _test_connection_async(broker_host: str, broker_port: int,
+                                 broker_username: str | None, broker_password: str | None,
+                                 tls_enabled: bool, tls_verify_cert: bool,
+                                 tls_ca_cert_content: str | None) -> tuple[bool, str]:
     """Test MQTT broker connection with provided parameters"""
     # Setup TLS if enabled
     tls_context = None
@@ -97,7 +99,7 @@ async def _test_connection_async(broker_host, broker_port, broker_username, brok
         return False, f'Error setting up TLS: {e}'
 
 
-def test(control, args):
+def test(control: service.Control, args: argparse.Namespace) -> None:
     log.info('Test')
 
     success, message = asyncio.run(_test_connection_async(
@@ -113,10 +115,10 @@ def test(control, args):
         print(message)
 
 
-def set_credentials(control, args):
+def set_credentials(control: service.Control, args: argparse.Namespace) -> None:
     log.info('Set MQTT credentials')
 
-    creds = {}
+    creds: dict[str, str] = {}
     try:
         with open(mqtt_credentials_file, 'r') as f:
             creds = yaml.safe_load(f)
@@ -128,13 +130,13 @@ def set_credentials(control, args):
     if args.password is not None:
         creds['password'] = args.password
 
-    def op():
+    def op() -> None:
         with open(mqtt_credentials_file, 'w') as f:
             yaml.safe_dump(creds, f)
     control.safe_do(op)
 
 
-def set_config(control, args):
+def set_config(control: service.Control, args: argparse.Namespace) -> None:
     log.info('Set MQTT configuration')
 
     if args.host is not None:
@@ -156,7 +158,7 @@ def set_config(control, args):
 
     control.safe_do(lambda: config.save(True))
 
-def main():
+def main() -> None:
     arg_parser = argparse.ArgumentParser()
     subparsers = arg_parser.add_subparsers(dest='action', required=True)
 
