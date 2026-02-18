@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2024.
+# Copyright 2024-2026.
 # This file is part of Amity.
 # Amity is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -11,35 +11,39 @@ import tools
 log = tools.logger('var/log/pair_tool.log')
 
 import argparse, logging, subprocess, sys
+from typing import Any, TextIO
 
 from bluepy3 import btle
-from bluepy3.btle import AssignedNumbers
+from bluepy3.btle import AssignedNumbers, DefaultDelegate
 from aconfig import config
 
-class LogAndPrint(object):
-    def __init__(self, log, stdout):
-        self.log = log
-        self.stdout = stdout
+class LogAndPrint:
+    def __init__(self, log: logging.Logger, stdout: TextIO) -> None:
+        self.log: logging.Logger = log
+        self.stdout: TextIO = stdout
 
-    def debug(self, *args):
-        self.log.debug(*args)
+    def debug(self, msg: object, *args: object) -> None:
+        self.log.debug(msg, *args)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
-            self.stdout.write(*args)
+            self.stdout.write(str(msg) % args if args else str(msg))
             self.stdout.write('\n')
 
-    def info(self, *args):
-        self.log.info(*args)
+    def info(self, msg: object, *args: object) -> None:
+        self.log.info(msg, *args)
         if self.log.getEffectiveLevel() <= logging.INFO:
-            self.stdout.write(*args)
+            self.stdout.write(str(msg) % args if args else str(msg))
             self.stdout.write('\n')
 
-class Detector(object):
-    def __init__(self, log):
-        self.is_siri_remote = False
-        self.log = log
+class Detector:
+    def __init__(self, log: LogAndPrint) -> None:
+        self.is_siri_remote: bool = False
+        self.log: LogAndPrint = log
+
+    def probe(self, entry: Any) -> str | None:
+        return None
 
 class SiriRemoteDetector(Detector):
-    def __init__(self, log):
+    def __init__(self, log: LogAndPrint) -> None:
         super().__init__(log)
         self.is_siri_remote = True
 
@@ -49,14 +53,14 @@ class SiriRemoteDetector(Detector):
         # Gen 1.5 - 026D
         # Gen 2 - 0314
         # Gen 3 - 0315
-        self.supported_manufacturer_strings = {
+        self.supported_manufacturer_strings: dict[str, str] = {
             '4c008a076602' : 'Siri Remote, Gen 1',
             '4c008a076d02' : 'Siri Remote, Gen 1.5',
             '4c00070d021403' : 'Siri Remote, Gen 2',
             '4c00070d021503' : 'Siri Remote, Gen 3',
         }
 
-    def probe(self, entry):
+    def probe(self, entry: Any) -> str | None:
         mfr = entry.getValueText(entry.MANUFACTURER).lower()
         for prefix, name in self.supported_manufacturer_strings.items():
             if mfr.startswith(prefix):
@@ -64,11 +68,11 @@ class SiriRemoteDetector(Detector):
         return None
 
 class LgMagicRemoteDetector(Detector):
-    def __init__(self, log):
+    def __init__(self, log: LogAndPrint) -> None:
         super().__init__(log)
-        self.magic = ''.join((f'{ord(c):02x}' for c in 'webOS'))
+        self.magic: str = ''.join((f'{ord(c):02x}' for c in 'webOS'))
 
-    def probe(self, entry):
+    def probe(self, entry: Any) -> str | None:
         mfr = entry.getValueText(entry.MANUFACTURER).lower()
         if not mfr.startswith('c400'):
             return None
@@ -82,10 +86,10 @@ class LgMagicRemoteDetector(Detector):
         return name
 
 class KeyboardDetector(Detector):
-    def __init__(self, log):
+    def __init__(self, log: LogAndPrint) -> None:
         super().__init__(log)
 
-    def probe(self, entry):
+    def probe(self, entry: Any) -> str | None:
         name = None
         service_uuids = entry.getValue(entry.COMPLETE_16B_SERVICES)
         if service_uuids is None:
@@ -93,7 +97,7 @@ class KeyboardDetector(Detector):
         if service_uuids is None:
             service_uuids = []
         self.log.debug(f'service_uuids {service_uuids}')
-        if AssignedNumbers.human_interface_device in service_uuids:
+        if AssignedNumbers.human_interface_device in service_uuids:  # type: ignore[attr-defined]
             name = entry.getValueText(entry.COMPLETE_LOCAL_NAME)
             if name is None:
                 name = entry.getValueText(entry.SHORT_LOCAL_NAME)
@@ -101,24 +105,24 @@ class KeyboardDetector(Detector):
                 name = 'A keyboard'
         return name
 
-class Scanner(object):
-    def __init__(self):
-        self.scanner = btle.Scanner()
+class Scanner(DefaultDelegate):
+    def __init__(self) -> None:
+        self.scanner: btle.Scanner = btle.Scanner()
         self.scanner.withDelegate(self)
-        self.pairing = False
-        self.known_addresses = set()
-        sys.stdout.reconfigure(line_buffering=True)
-        self.log = LogAndPrint(log, sys.stdout)
-        self.detectors = tuple((det(self.log) for det in (
+        self.pairing: bool = False
+        self.known_addresses: set[str] = set()
+        sys.stdout.reconfigure(line_buffering=True) # type: ignore[union-attr]
+        self.log: LogAndPrint = LogAndPrint(log, sys.stdout)
+        self.detectors: tuple[Detector, ...] = tuple((det(self.log) for det in (
             SiriRemoteDetector,
             LgMagicRemoteDetector,
             KeyboardDetector,
         )))
 
-    def handleDiscovery(self, entry, isNewDev, isNewData):
+    def handleDiscovery(self, entry: Any, isNewDev: bool, isNewData: bool) -> None:
         pass
 
-    def check_pair(self, entry):
+    def check_pair(self, entry: Any) -> tuple[bool, str, str] | None:
         device_str = f'Device RSSI {entry.rssi} addr {entry.addr} data {entry.getScanData()}'
         if entry.addr not in self.known_addresses:
             self.known_addresses.add(entry.addr)
@@ -136,19 +140,19 @@ class Scanner(object):
 
         # This is neither an internally supported Siri Remote, nor a generic keyboard device
         if name is None:
-            return
+            return None
 
         self.log.debug(f'is_siri_remote {is_siri_remote}')
 
         if entry.rssi < -50:
             self.log.info(f'Bring {name} closer to me!\n')
-            return
+            return None
 
         try:
             device = btle.Peripheral(entry)
         except btle.BTLEException as e:
             self.log.debug(f'Failed to create peripheral {e}')
-            return
+            return None
 
         self.log.info('Pairing...')
         try:
@@ -169,8 +173,9 @@ class Scanner(object):
             return is_siri_remote, name, public_addr
         except btle.BTLEManagementError:
             self.log.info('Pairing failed. Try resetting the remote.')
+            return None
 
-    def scan(self):
+    def scan(self) -> tuple[bool, str, str]:
         self.log.info('Bring the remote close to me, and start the pairing process on the remote.\n')
         while True:
             try:
@@ -183,7 +188,7 @@ class Scanner(object):
                 if self.pairing:
                     self.log.info('Pairing failed. Try resetting the remote.')
 
-def main():
+def main() -> None:
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-d', '--debug', action='store_true', help='enable debug messages')
     arg_parser.add_argument('-n', '--nowrite', action='store_true',
