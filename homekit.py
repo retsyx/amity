@@ -12,9 +12,9 @@ import asyncio, io, qrcode, signal
 from typing import Any
 
 from PIL import Image
-from pyhap.accessory import Accessory
-from pyhap.accessory_driver import AccessoryDriver
-from pyhap.const import CATEGORY_TELEVISION
+from pyhap.accessory import Accessory # type: ignore[import-untyped]
+from pyhap.accessory_driver import AccessoryDriver # type: ignore[import-untyped]
+from pyhap.const import CATEGORY_TELEVISION # type: ignore[import-untyped]
 
 from hdmi import Key
 from messaging import Pipe
