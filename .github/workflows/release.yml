@@ -1,0 +1,78 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get tag version
+        id: tag
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Find workflow run for this commit
+        id: find-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Looking for successful build at commit $COMMIT_SHA"
+
+          RUN_ID=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/build-image.yml/runs?head_sha=$COMMIT_SHA&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id')
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No successful Build Amity Image run found for commit $COMMIT_SHA"
+            exit 1
+          fi
+
+          echo "Found run $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download build artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download ${{ steps.find-run.outputs.run_id }} \
+            --name amity.img.xz \
+            --dir artifacts/image
+
+          gh run download ${{ steps.find-run.outputs.run_id }} \
+            --name amity-os.json \
+            --dir artifacts/metadata
+
+      - name: Patch amity-os.json with release version
+        run: |
+          VERSION=${{ steps.tag.outputs.version }}
+
+          jq --arg VERSION "$VERSION" '
+            .os_list[0].url = "https://github.com/retsyx/amity/releases/download/\($VERSION)/amity.img.xz" |
+            .os_list[0].icon = "https://github.com/retsyx/amity/releases/download/\($VERSION)/icon.png"
+          ' artifacts/metadata/amity-os.json > artifacts/metadata/amity-os.json.tmp
+
+          mv artifacts/metadata/amity-os.json.tmp artifacts/metadata/amity-os.json
+
+      - name: Prepare icon
+        run: cp management/favicon.png artifacts/icon.png
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ steps.tag.outputs.version }} \
+            artifacts/image/amity.img.xz \
+            artifacts/metadata/amity-os.json \
+            artifacts/icon.png \
+            --title "Amity ${{ steps.tag.outputs.version }}" \
+            --generate-notes
