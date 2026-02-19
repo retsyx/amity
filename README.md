@@ -90,6 +90,8 @@ Amity connects between the TV and the receiver.
 
 ### Pairing a Remote
 
+[Screenshot](doc/ui-images.md#remotes)
+
 The remote **MUST** be unpaired from any other device. If the remote is paired to another device, like a streamer or TV, it will fail to work with Amity in unpredictable ways. Pairing and unpairing steps for supported remotes are listed [here](doc/supported-remotes.md). Ensure the remote is charged.
 
 1. Select the 'Remotes' tab. The 'Remotes' panel shows if a remote or keyboard is paired, and allows pairing. Press the 'Pair' button. Wait for the initial prompt to start the pairing process on the remote.
@@ -103,6 +105,8 @@ The remote **MUST** be unpaired from any other device. If the remote is paired t
 If successful, the remote has been paired, and is ready for use.
 
 ### Activity Configuration
+
+[Screenshot](doc/ui-images.md#hdmi-activities)
 
 Amity uses a concept of activities to organize the different uses of a home theater system, similar to Harmony remotes. Every activity has a source device (i.e. Apple TV, or PlayStation), an audio output device (i.e. a receiver, or TV for volume commands), and a display (typically a TV). The remote's directional buttons are used for activity selection (on remotes that have them, the blue, red, green and yellow color buttons are also used for activity selection). This allows for up to 5 activities - 4 direction buttons and the select button.
 
@@ -207,6 +211,8 @@ This functionality depends on the receiver supporting the feature, and on knowin
 
 ## HomeKit
 
+[Screenshot](doc/ui-images.md#homekit)
+
 Amity can be integrated with HomeKit as a TV accessory. This allows controlling Amity with Siri, and integrating Amity into HomeKit automations. In addition, if using a BLE remote that supports battery level reporting, the remote battery level, and low battery warnings are reported to HomeKit.
 
 It is highly recommended to complete all activity configuration, and setup before adding Amity into HomeKit.
@@ -214,6 +220,8 @@ It is highly recommended to complete all activity configuration, and setup befor
 Select the 'HomeKit' tab, and press 'Enable'. Follow the instructions to pair Amity with HomeKit.
 
 ## Home Assistant / MQTT
+
+[Screenshot](doc/ui-images.md#homeassistant-mqtt)
 
 Amity can be integrated with Home Assistant. This allows integrating Amity into Home Assistant automations.  In addition, if using a BLE remote that supports battery level reporting, the remote battery level and charge state is reported to Home Assistant.
 
