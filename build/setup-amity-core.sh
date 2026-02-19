@@ -76,6 +76,7 @@ cd "$APP_DIR"
 # Clean up git cruft from the build machine
 git reflog expire --expire=now --expire-unreachable=now --all
 git gc --prune=now --aggressive
+git config --remove-section http.https://github.com/ || true
 
 VAR_DIR=$APP_DIR/var
 LOG_DIR=$VAR_DIR/log
