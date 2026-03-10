@@ -24,7 +24,9 @@ HDMI-CEC allows both the TV to select the component to display, and for any comp
 
 ### Amity
 
-Amity fixes the problem by inserting itself on the HDMI-CEC bus between the TV and the rest of the system and mediating with definitive knowledge of the user's intent. To the TV, Amity behaves as the only component available to the TV. To the rest of the system, Amity behaves as the TV. Amity knows user intent based on the user's selected activity on the remote. It can power on and off the entire system, it can select the correct component to display, and it never sends messages that trigger components to request to display themselves. Finally, if a component requests to be displayed when it shouldn't, Amity can catch the request, override it, and send the component a standby message to get it to stop.
+Amity fixes the problem by inserting itself on the HDMI-CEC bus between the TV and the rest of the system and mediating with definitive knowledge of the user's intent. To the TV, Amity behaves as the only component available to the TV. To the rest of the system, Amity behaves as the TV. Amity knows user intent based on the user's selected activity on the remote. It can power on and off the entire system, it can select the correct component to display, and it never sends messages that trigger components to request to display themselves. Finally, if a component requests to be displayed when it shouldn't, Amity can catch the request, override it, and send the component a standby message to stop it from continuing the interruptions.
+
+This architecture requires using the custom Amity Fin (or Board) to be able to passthrough the A/V HDMI signals. Commonly available HDMI breakout boards are not designed to pass through high-speed A/V signals, and break video display in an actual home theater.
 
 ## Cost
 
