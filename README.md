@@ -35,7 +35,7 @@ HDMI-CEC is unevenly implemented by different manufacturers, so it doesn't alway
 Equipment that is known to be compatible with Amity:
 
 - LG OLED TV
-- Denon AVR-X3400H
+- Denon AVR-X3400H, AVR-X3900H
 - Apple TV 4K
 - Sony Playstation 4/5
 - Amazon Fire TV (media player)
@@ -196,7 +196,7 @@ To support a non-HDMI source, Amity can be configured to select the input on the
 1. Select the receiver as the `Switch Device`.
 2. Specify the `Input` number.
 
-This functionality depends on the receiver supporting the feature, and on knowing the correct value for the input. On a Denon AVR-X3400H the numeric input values can be configured in the receiver setup menus. From the factory, the numeric input values on a Denon AVR-X3400H correspond to the named inputs as follows:
+This functionality depends on the receiver supporting the feature, and on knowing the correct value for the input. On Denon AVR-X3400H and AVR-X3900H receivers the numeric input values can be configured in the receiver setup menus. From the factory, the numeric input values on a Denon AVR-X3400H correspond to the named inputs as follows:
 
 1. CBL/SAT
 2. DVD
