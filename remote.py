@@ -187,11 +187,11 @@ class TouchpadProfile:
     Y_AXIS = 1
     def __init__(self, hw_revision: int, fw_revision: int) -> None:
         if hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
-            self.RESOLUTION = (26180, 106)
+            self.RESOLUTION = (1636, 1688)
             self.SIZE_MM = 37 # Side of the square pad
             self.TIMESTAMP_HZ = 2461
         else: # gen 2 or later
-            self.RESOLUTION = (21400, 80)
+            self.RESOLUTION = (1370, 1370)
             self.SIZE_MM = 31 # Diameter of the circular pad
             self.TIMESTAMP_HZ = 2000
 
@@ -502,22 +502,23 @@ class SiriRemote(DefaultDelegate):
         #                gen 2 - 2000 ticks/sec
         # 3  - 1 byte  - ??? Sometimes, 0x01 for one touch, 0x10 for 'other' touch, 0x11 for two
         #                touches. Sometimes 0x00 after a while...
-        # 4  - 2 bytes - X coordinate, signed.
-        # 5  -           Increases right.
-        #                Structured as so [byte 1 low nibble] | [byte 0] | [byte 1 high nibble]
-        #                gen 1 - x = 0 at 16000 units right of center. Resolution is roughly 26180 units.
-        #                gen 2 - x = 0 at 5760 units right of center. Resolution is roughly 21400 units.
-        # 6  - 1 byte  - Y coordinate, signed.
-        #                Increases up.
-        #                gen 1 - y = 0 at 15 units above of center. Resolution is 106 units.
-        #                gen 2 - y = 0 at 25 units above of center. Resolution is 80 units.
-        # 7  - 1 byte  - touch point size 1
-        # 8  - 1 byte  - touch point size 2 (Not clear how/why this is different from touch point size 1)
+        # 4  - 3 bytes - X, Y coordinates, signed.
+        #                X increases right. Y increases up.
+        #                X structure: [byte 1 low nibble] | [byte 0]
+        #                Y structure: [byte 2] | [byte 1 high nibble]
+        #                gen 1 - x = 0 at 1000 units right of center. Resolution is roughly 1636 units.
+        #                        y = 0 at 230 units above of center. Resolution is 1688 units.
+        #                gen 2 - x = 0 at 360 units right of center. Resolution is roughly 1370 units.
+        #                        y = 0 at 360 units above of center. Resolution is 1370 units.
+        # 7  - 1 byte  - touch point size 1 (long axis of the touch ellipse)
+        # 8  - 1 byte  - touch point size 2 (short axis of the touch ellipse)
         # 9  - 1 byte  - pressure
         # 10 - 1 byte  - flags
+        #              - bit 1 - hover
         #              - bit 4 - (0x08) is touch ID. Usually, 1 for first touch, 0 for second touch.
         #                         Though with alternating touches the touch IDs can flip relative
         #                         to the earlier touch.
+        #              - bits 5-7 - ellipse orientation index - angle = index * 22.5 [degrees]
         # If second touch, bytes 11-17, inclusive, are added, and are as bytes 4-10 for the
         # second touch
         timestamp = int.from_bytes(data[1:3], byteorder='little', signed=False)
@@ -530,20 +531,20 @@ class SiriRemote(DefaultDelegate):
         self.__listener.event_audio(self, data)
 
     def __decode_finger(self, timestamp: int, data: bytes) -> Touch:
-        x = ((data[1] & 0x0f) << 12) | (data[0] << 4) | ((data[1] & 0xf0) >> 4)
-        if x & 0x8000:
-            x -= 0x10000
+        x = ((data[1] & 0x0f) << 8) | data[0]
+        if x & 0x800:
+            x -= 0x1000
         if self.__hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
-            x += 16000
+            x += 1000
         else: # Gen 2 or greater
-            x += 5760
-        y = data[2]
-        if y & 0x80:
-            y -= 0x100
+            x += 360
+        y = (data[2] << 4) | ((data[1] & 0xf0) >> 4)
+        if y & 0x800:
+            y -= 0x1000
         if self.__hw_revision in (HwRevisions.GEN_1, HwRevisions.GEN_1_5):
-            y += 15
+            y += 230
         else: # Gen 2 or greater
-            y += 25
+            y += 360
         p = data[5]
         # Make it so first touch is usually 0, and second touch is usually 1.
         # Though, the order is not guaranteed for all touch sequences.
