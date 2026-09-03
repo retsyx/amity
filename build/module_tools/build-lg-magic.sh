@@ -27,7 +27,7 @@ MODULE_EXTRA_DIR=${MODULE_DIR}/${BUILD_ID}/extra
 
 mkdir -p ${MODULE_EXTRA_DIR}
 
-mv lg_magic.ko.xz ${MODULE_EXTRA_DIR}/.
+cp lg_magic.ko.xz ${MODULE_EXTRA_DIR}/.
 
 depmod -b ${KERNEL_DST_DIR} ${BUILD_ID}
 
