@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup build environment
         working-directory: build
@@ -22,7 +22,7 @@ jobs:
 
       - name: Cache compiled kernels
         id: kernel-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/linux-build/out
           key: kernels-${{ hashFiles('build/kernel-commitid') }}
@@ -40,13 +40,13 @@ jobs:
           ./build-image.sh -n
 
       - name: Upload image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: amity.img.xz
           path: ~/amity-build/amity.img.xz
 
       - name: Upload metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: amity-os.json
           path: ~/amity-build/amity-os.json
