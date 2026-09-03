@@ -24,7 +24,7 @@ instpkgs()
 
 sudo apt-get -y update
 
-instpkgs bluez=5.82-1.1+rpt1 bluez-tools=2.0~20170911.0.7cb788c-4+b2 build-essential=12.12
+instpkgs bluez=5.82-1.1+rpt2 bluez-tools=2.0~20170911.0.7cb788c-4+b2 build-essential=12.12
 instpkgs git libglib2.0-dev libbluetooth-dev=5.82-1.1+rpt2
 instpkgs libavahi-compat-libdnssd-dev=0.8-16
 instpkgs libssl-dev python3-dev unzip
