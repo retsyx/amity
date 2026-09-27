@@ -156,6 +156,28 @@ RUN_PATH=$APP_DIR/bin/run-amity-warmup.sh
 cat > "$RUN_PATH" << EOF
 #!/bin/bash
 
+# Configure WiFi connections to never stop reconnection attempts, if not already configured as such.
+if WIFI_CONNECTIONS=\$(LC_ALL=C nmcli -t -f UUID,TYPE connection show); then
+    while IFS=: read -r UUID TYPE; do
+        if [ "\$TYPE" != "802-11-wireless" ]; then
+            continue
+        fi
+        if ! WIFI_SETTINGS=\$(LC_ALL=C nmcli -g connection.autoconnect,connection.autoconnect-retries,connection.auth-retries connection show uuid "\$UUID"); then
+            continue
+        fi
+        if [ "\$WIFI_SETTINGS" = \$'yes\n0\n0' ]; then
+            continue
+        fi
+        # Zero means unlimited retries. These settings persist across reboots.
+        if sudo -n nmcli --wait 10 connection modify uuid "\$UUID" \\
+            connection.autoconnect yes connection.autoconnect-retries 0 connection.auth-retries 0; then
+            echo "Enabled unlimited WiFi retries for \$UUID"
+        else
+            echo "Could not configure WiFi retries for \$UUID" >&2
+        fi
+    done <<< "\$WIFI_CONNECTIONS"
+fi
+
 # Unblock bluetooth
 BLUETOOTH_RFKILL_ID=\$(rfkill | grep bluetooth | awk '{print \$1}')
 sudo rfkill unblock \$BLUETOOTH_RFKILL_ID
