@@ -2,7 +2,7 @@ evdev == 1.9.2
 HAP-python[QRCode] == 4.9.2
 fastapi == 0.129.0
 nicegui == 3.12.0
-pillow == 12.1.1
+pillow == 13.0.0
 pyyaml == 6.0.3
 qrcode == 8.2
 scrypt == 0.9.4
