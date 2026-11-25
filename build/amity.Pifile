@@ -1,4 +1,4 @@
-FROM https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2025-12-04/2025-12-04-raspios-trixie-arm64-lite.img.xz
+FROM https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2026-10-06/2026-10-06-raspios-trixie-arm64-lite.img.xz
 
 PUMP 800M
 
@@ -11,6 +11,8 @@ done
 INSTALL amity.tar.gz "/tmp/"
 RUN sudo -u pi tar xvzf /tmp/amity.tar.gz
 WORKDIR /home/pi/amity
+# Raspberry Pi OS 6.2+ no longer gives the pi user passwordless sudo, so add it back...
+RUN bash -c 'echo "pi ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/010_pi-nopasswd && chmod 0440 /etc/sudoers.d/010_pi-nopasswd && visudo -cf /etc/sudoers.d/010_pi-nopasswd'
 RUN sudo -u pi python -m venv --without-scm-ignore-files /home/pi/amity
 RUN sudo -u pi bash build/setup-amity-core.sh
 
